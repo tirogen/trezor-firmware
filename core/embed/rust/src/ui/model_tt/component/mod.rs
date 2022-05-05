@@ -11,7 +11,7 @@ mod swipe;
 
 pub use button::{
     Button, ButtonContent, ButtonMsg, ButtonStyle, ButtonStyleSheet, CancelConfirmMsg,
-    CancelInfoConfirmMsg, SelectWordMsg,
+    CancelInfoConfirmMsg, IconText, SelectWordMsg,
 };
 pub use dialog::{Dialog, DialogMsg, IconDialog};
 pub use frame::{Frame, NotificationFrame};

@@ -5,6 +5,7 @@ import tools
 
 TREZOR_MODEL = ARGUMENTS.get('TREZOR_MODEL', 'T')
 DMA2D = False
+UI2 = ARGUMENTS.get('UI2', '1') == '1' or TREZOR_MODEL in ('R',)
 
 if TREZOR_MODEL in ('1', ):
     # skip bootloader build
@@ -76,6 +77,11 @@ SOURCE_MOD += [
     'vendor/micropython/lib/uzlib/crc32.c',
     'vendor/micropython/lib/uzlib/tinflate.c',
 ]
+
+if UI2:
+    CPPDEFINES_MOD += [
+        'TREZOR_UI2',
+    ]
 
 SOURCE_STMHAL = [
     'vendor/micropython/lib/stm32lib/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal.c',

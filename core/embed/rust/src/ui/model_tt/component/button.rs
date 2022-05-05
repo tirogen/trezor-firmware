@@ -538,7 +538,7 @@ impl IconText {
         Self { text, icon }
     }
 
-    pub fn paint(&self, area: Rect, style: &ButtonStyle, baseline_offset: i32) {
+    pub fn paint(&self, area: Rect, style: &ButtonStyle, baseline_offset: i16) {
         let width = style.font.text_width(self.text);
         let height = style.font.text_height();
 
