@@ -1,5 +1,7 @@
 #include "common.h"
 #include "display.h"
+#include "button.h"
+#include "touch.h"
 #include "rgb_led.h"
 #include "secbool.h"
 #include "storage.h"

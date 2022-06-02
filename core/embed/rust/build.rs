@@ -282,6 +282,11 @@ fn generate_trezorhal_bindings() {
         .allowlist_function("display_get_glyph")
         .allowlist_var("DISPLAY_CMD_ADDRESS")
         .allowlist_var("DISPLAY_DATA_ADDRESS")
+        // io
+        .allowlist_function("touch_read")
+        .allowlist_function("touch_unpack_x")
+        .allowlist_function("touch_unpack_y")
+        .allowlist_function("button_read")
         // uzlib
         .allowlist_function("uzlib_uncompress_init")
         .allowlist_function("uzlib_uncompress")
