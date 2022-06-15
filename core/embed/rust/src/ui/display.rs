@@ -441,6 +441,176 @@ pub fn rect_rounded2_partial(
     pixeldata_dirty();
 }
 
+pub fn loader_rust(
+    area: Rect,
+    fg_color: Color,
+    bg_color: Color,
+    show_percent: i32,
+    icon: Option<(&[u8], Color)>,
+) {
+    const OUTER: f32 = 60_f32;
+    const INNER: f32 = 42_f32;
+
+    const IN_INNER_ANTI: i32 = ((INNER - 0.5) * (INNER - 0.5)) as i32;
+    const INNER_MIN: i32 = ((INNER + 0.5) * (INNER + 0.5)) as i32;
+    const INNER_MAX: i32 = ((INNER + 1.5) * (INNER + 1.5)) as i32;
+    const INNER_OUTER_ANTI: i32 = ((INNER + 2.5) * (INNER + 2.5)) as i32;
+    const OUTER_OUT_ANTI: i32 = ((OUTER - 1.5) * (OUTER - 1.5)) as i32;
+    const OUTER_MAX: i32 = ((OUTER - 0.5) * (OUTER - 0.5)) as i32;
+
+    const ICON_MAX_SIZE: usize = 64;
+
+    let r = area.translate(get_offset());
+    let clamped = r.clamp(constant::screen());
+    set_window(clamped);
+
+    let center = r.center();
+    let colortable = get_color_table(fg_color, bg_color);
+    let mut icon_colortable = colortable.clone();
+
+    let mut use_icon = false;
+    let mut icon_area = Rect::zero();
+    let mut icon_width = 0;
+    let mut icon_area_clamped = Rect::zero();
+    let mut icon_data = [0_u8; ((ICON_MAX_SIZE * ICON_MAX_SIZE) / 2) as usize];
+
+    if let Some(i) = icon {
+        let toif_info = display::toif_info(i.0).unwrap();
+        assert!(toif_info.grayscale);
+
+        if toif_info.width <= (ICON_MAX_SIZE as u16) && toif_info.height <= (ICON_MAX_SIZE as u16) {
+            icon_width = toif_info.width.into();
+            icon_area = Rect::from_center_and_size(
+                center,
+                Offset::new(icon_width, toif_info.height.into()),
+            );
+            let mut ctx = uzlib::UzlibContext::new(&i.0[12..], false, &mut icon_data);
+            if let Ok(_data) = ctx.uncompress() {};
+            icon_area_clamped = icon_area.clamp(constant::screen());
+            icon_colortable = get_color_table(i.1, bg_color);
+            use_icon = true;
+        }
+    }
+
+    let start = 0;
+    let end = (start + ((360 * show_percent) / 100)) % 360;
+
+    let start_vector;
+    let end_vector;
+
+    let mut show_all = false;
+    let mut inverted = false;
+
+    if show_percent >= 100 {
+        show_all = true;
+        start_vector = (0, 0);
+        end_vector = (0, 0);
+    } else if show_percent > 50 {
+        inverted = true;
+        start_vector = get_vector(end);
+        end_vector = get_vector(start);
+    } else {
+        start_vector = get_vector(start);
+        end_vector = get_vector(end);
+    }
+
+    let n_start = (-start_vector.1, start_vector.0);
+
+    for y_c in r.y0..r.y1 {
+        for x_c in r.x0..r.x1 {
+            let mut icon_pixel = false;
+            if use_icon {
+                if x_c >= icon_area_clamped.x0
+                    && x_c < icon_area_clamped.x1
+                    && y_c >= icon_area_clamped.y0
+                    && y_c < icon_area_clamped.y1
+                {
+                    let x = x_c - center.x;
+                    let y = y_c - center.y;
+                    if (x * x + y * y) <= IN_INNER_ANTI {
+                        let x_i = x_c - icon_area.x0;
+                        let y_i = y_c - icon_area.y0;
+
+                        let data = icon_data[(((x_i & 0xFE) + (y_i * icon_width)) / 2) as usize];
+                        if (x_i & 0x01) == 0 {
+                            pixeldata(icon_colortable[(data >> 4) as usize]);
+                        } else {
+                            pixeldata(icon_colortable[(data & 0xF) as usize]);
+                        }
+                        icon_pixel = true;
+                    }
+                }
+            }
+
+            if x_c < clamped.x0
+                || x_c >= clamped.x1
+                || y_c < clamped.y0
+                || y_c >= clamped.y1
+                || icon_pixel
+            {
+                continue;
+            }
+
+            let y_p = -(y_c - center.y);
+            let x_p = x_c - center.x;
+
+            let vx = (x_p, y_p);
+            let n_vx = (-y_p, x_p);
+
+            let is_past_start = is_clockwise_or_equal(n_start, vx);
+            let is_before_end = is_clockwise_or_equal_inc(n_vx, end_vector);
+
+            let d = y_p * y_p + x_p * x_p;
+
+            if show_all
+                || (!inverted && (is_past_start && is_before_end))
+                || (inverted && !(is_past_start && is_before_end))
+            {
+                //active part
+                if d <= IN_INNER_ANTI {
+                    pixeldata(bg_color);
+                } else if d <= INNER_MIN {
+                    let c_i = ((15 * (d - IN_INNER_ANTI)) / (INNER_MIN - IN_INNER_ANTI)) as usize;
+                    pixeldata(colortable[c_i]);
+                } else if d <= INNER_MAX {
+                    pixeldata(fg_color);
+                } else if d <= INNER_OUTER_ANTI {
+                    pixeldata(fg_color);
+                } else if d <= OUTER_OUT_ANTI {
+                    pixeldata(fg_color);
+                } else if d <= OUTER_MAX {
+                    let c_i = ((15 * (d - OUTER_OUT_ANTI)) / (OUTER_MAX - OUTER_OUT_ANTI)) as usize;
+                    pixeldata(colortable[15 - c_i]);
+                } else {
+                    pixeldata(bg_color);
+                }
+            } else {
+                //inactive part
+                if d <= IN_INNER_ANTI {
+                    pixeldata(bg_color);
+                } else if d <= INNER_MIN {
+                    let c_i = ((15 * (d - IN_INNER_ANTI)) / (INNER_MIN - IN_INNER_ANTI)) as usize;
+                    pixeldata(colortable[c_i]);
+                } else if d <= INNER_MAX {
+                    pixeldata(fg_color);
+                } else if d <= INNER_OUTER_ANTI {
+                    let c_i = ((10 * (d - INNER_MAX)) / (INNER_OUTER_ANTI - INNER_MAX)) as usize;
+                    pixeldata(colortable[15 - c_i]);
+                } else if d <= OUTER_OUT_ANTI {
+                    pixeldata(colortable[5]);
+                } else if d <= OUTER_MAX {
+                    let c_i = ((5 * (d - OUTER_OUT_ANTI)) / (OUTER_MAX - OUTER_OUT_ANTI)) as usize;
+                    pixeldata(colortable[5 - c_i]);
+                } else {
+                    pixeldata(bg_color);
+                }
+            }
+        }
+    }
+
+    pixeldata_dirty();
+}
+
 pub fn rect_rounded2_get_pixel(
     x: i32,
     y: i32,
