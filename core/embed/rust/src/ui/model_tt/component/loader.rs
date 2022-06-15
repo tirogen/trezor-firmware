@@ -8,6 +8,8 @@ use crate::{
         model_tt::constant,
     },
 };
+use crate::trezorhal::time::{clear_acc, get_ticks, init_ticks};
+use crate::ui::geometry::Point;
 
 use super::theme;
 
@@ -134,6 +136,7 @@ impl Component for Loader {
                 if self.is_completely_grown(now) {
                     return Some(LoaderMsg::GrownCompletely);
                 } else if self.is_completely_shrunk(now) {
+                    clear_acc();
                     return Some(LoaderMsg::ShrunkCompletely);
                 } else {
                     // There is further progress in the animation, request an animation frame event.
@@ -158,13 +161,30 @@ impl Component for Loader {
             } else {
                 self.styles.active
             };
-            display::loader(
-                progress,
-                self.offset_y,
+
+            let r = Rect::new(Point::new(60, 60), Point::new(180, 180));
+
+            init_ticks();
+
+            // display::loader(
+            //     progress,
+            //     self.offset_y,
+            //     style.loader_color,
+            //     style.background_color,
+            //     None,
+            // );
+
+            display::rect_rounded2(
+                r,
                 style.loader_color,
                 style.background_color,
+                100 * progress as i32 / 1000,
                 style.icon,
             );
+
+            //display::icon_rust(r.center(), theme::ICON_HS, style.loader_color, style.background_color);
+            get_ticks();
+
         }
     }
 }

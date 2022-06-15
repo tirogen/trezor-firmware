@@ -30,6 +30,8 @@ use fwinfo::FwInfo;
 use intro::Intro;
 use menu::Menu;
 use progress::Progress;
+use crate::time::Duration;
+use crate::trezorhal::time;
 
 pub trait ReturnToC {
     fn return_to_c(&self) -> u32;
@@ -41,7 +43,6 @@ pub struct BootloaderLayout<F> {
 impl<F> BootloaderLayout<F>
 where
     F: Component,
-    F::Msg: ReturnToC,
 {
     pub fn new(frame: F) -> BootloaderLayout<F> {
         Self { frame }
@@ -57,12 +58,15 @@ where
             if let Some(e) = event {
                 let mut ctx = EventCtx::new();
                 let msg = self.frame.event(&mut ctx, Event::Touch(e));
-
                 self.frame.paint();
-                if let Some(message) = msg {
-                    return message.return_to_c();
-                }
+            } else {
+                let mut ctx = EventCtx::new();
+                let msg = self
+                    .frame
+                    .event(&mut ctx, Event::Timer(EventCtx::ANIM_FRAME_TIMER));
+                self.frame.paint();
             }
+            time::sleep(Duration::from_millis(1));
         }
     }
 }

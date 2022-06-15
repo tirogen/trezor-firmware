@@ -266,7 +266,7 @@ int main(void) {
   display_clear();
 
   // was there reboot with request to stay in bootloader?
-  secbool stay_in_bootloader = secfalse;
+  secbool stay_in_bootloader = sectrue;
   if (stay_in_bootloader_flag == STAY_IN_BOOTLOADER_FLAG) {
     stay_in_bootloader = sectrue;
   }

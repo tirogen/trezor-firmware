@@ -1,21 +1,21 @@
+use crate::ui::component::text::paragraphs::Paragraphs;
+use crate::ui::component::Pad;
+use crate::ui::geometry::{LinearPlacement, Point};
+use crate::ui::model_tt::bootloader::theme::{
+    button_bld_menu, button_bld_menu_item, TTBootloaderText, BLD_BG, MENU,
+};
+use crate::ui::model_tt::bootloader::title::{Title, TitleMsg};
+use crate::ui::model_tt::bootloader::ReturnToC;
+use crate::ui::model_tt::component::ButtonMsg::Clicked;
+use crate::ui::model_tt::theme::FONT_MEDIUM;
 use crate::ui::{
-    component::{text::paragraphs::Paragraphs, Child, Component, Event, EventCtx, Pad},
-    geometry::{LinearPlacement, Point, Rect},
-    model_tt::{
-        bootloader::{
-            theme::{button_bld_menu, button_bld_menu_item, TTBootloaderText, BLD_BG, MENU},
-            title::Title,
-            ReturnToC,
-        },
-        component::ButtonMsg::Clicked,
-        theme::FONT_MEDIUM,
-    },
+    component::{Child, Component, Event, EventCtx},
+    geometry::Rect,
 };
+use crate::ui::display::Color;
 
-use crate::ui::model_tt::{
-    component::Button,
-    constant::{HEIGHT, WIDTH},
-};
+use crate::ui::model_tt::component::{Button, HoldToConfirm, HoldToConfirmMsg};
+use crate::ui::model_tt::constant::{HEIGHT, WIDTH};
 
 #[repr(u32)]
 #[derive(Copy, Clone)]
@@ -33,7 +33,7 @@ pub struct Intro {
     bg: Pad,
     title: Child<Title>,
     menu: Child<Button<&'static str>>,
-    host: Child<Button<&'static str>>,
+    host: Child<HoldToConfirm<Title>>,
     text: Child<Paragraphs<&'static str>>,
 }
 
@@ -45,10 +45,10 @@ impl Intro {
             .with_placement(LinearPlacement::vertical().align_at_start());
 
         let mut instance = Self {
-            bg: Pad::with_background(BLD_BG),
+            bg: Pad::with_background(Color::rgb(0,0,0)),
             title: Child::new(Title::new(bld_version)),
             menu: Child::new(Button::with_icon(MENU).styled(button_bld_menu())),
-            host: Child::new(Button::with_text("Connect to host").styled(button_bld_menu_item())),
+            host: Child::new(HoldToConfirm::new(Title::new("aaa"))),
             text: Child::new(p1),
         };
 
@@ -58,7 +58,7 @@ impl Intro {
 }
 
 impl Component for Intro {
-    type Msg = IntroMsg;
+    type Msg = HoldToConfirmMsg<TitleMsg>;
 
     fn place(&mut self, bounds: Rect) -> Rect {
         self.bg
@@ -70,8 +70,8 @@ impl Component for Intro {
             Point::new(187 + 38, 15 + 38),
         ));
         self.host.place(Rect::new(
-            Point::new(16, 178),
-            Point::new(16 + 209, 178 + 48),
+            Point::new(0, 0),
+            Point::new(240, 240),
         ));
         self.text
             .place(Rect::new(Point::new(15, 75), Point::new(225, 200)));
@@ -79,21 +79,16 @@ impl Component for Intro {
     }
 
     fn event(&mut self, ctx: &mut EventCtx, event: Event) -> Option<Self::Msg> {
-        if let Some(Clicked) = self.menu.event(ctx, event) {
-            return Some(Self::Msg::Menu);
-        };
-        if let Some(Clicked) = self.host.event(ctx, event) {
-            return Some(Self::Msg::Host);
-        };
+        return self.host.event(ctx, event);
         None
     }
 
     fn paint(&mut self) {
         self.bg.paint();
-        self.title.paint();
-        self.text.paint();
         self.host.paint();
-        self.menu.paint();
+
+
+
     }
 
     fn bounds(&self, sink: &mut dyn FnMut(Rect)) {
