@@ -566,7 +566,7 @@ void fsm_msgGetFirmwareHash(const GetFirmwareHash *msg) {
     fsm_sendFailure(FailureType_Failure_FirmwareError, NULL);
     return;
   }
-
+  sha256_Raw(msg->challenge.bytes, msg->challenge.size, resp->hash.bytes);
   resp->hash.size = sizeof(resp->hash.bytes);
   msg_write(MessageType_MessageType_FirmwareHash, resp);
   layoutHome();

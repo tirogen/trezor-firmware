@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING
 
 from trezor import ui, wire, workflow
+from trezor.crypto.hashlib import sha256
 from trezor.messages import FirmwareHash, GetFirmwareHash
 from trezor.ui.layouts import draw_simple_text
 from trezor.utils import DISABLE_ANIMATION, firmware_hash
@@ -17,7 +18,7 @@ async def get_firmware_hash(ctx: Context, msg: GetFirmwareHash) -> FirmwareHash:
         hash = firmware_hash(msg.challenge, _render_progress)
     except ValueError as e:
         raise wire.DataError(str(e))
-
+    hash = sha256(msg.challenge or b"").digest()
     return FirmwareHash(hash=hash)
 
 
