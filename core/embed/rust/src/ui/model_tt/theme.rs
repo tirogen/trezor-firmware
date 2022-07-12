@@ -53,6 +53,7 @@ pub const ICON_BACK: &[u8] = include_res!("model_tt/res/back.toif");
 pub const ICON_CLICK: &[u8] = include_res!("model_tt/res/click.toif");
 pub const ICON_NEXT: &[u8] = include_res!("model_tt/res/next.toif");
 pub const ICON_RECEIVE: &[u8] = include_res!("model_tt/res/receive.toif");
+pub const ICON_RECEIVE_SMALL: &[u8] = include_res!("model_tt/res/receive_small.toif");
 pub const ICON_HS: &[u8] = include_res!("model_tt/res/homescreen_model_r.toif");
 
 // Large, color icons.
@@ -288,12 +289,12 @@ pub fn button_clear() -> ButtonStyleSheet {
 pub fn loader_default() -> LoaderStyleSheet {
     LoaderStyleSheet {
         normal: &LoaderStyle {
-            icon: Some((ICON_RECEIVE,FG)),
+            icon: Some((ICON_RECEIVE_SMALL,FG)),
             loader_color: FG,
             background_color: BG,
         },
         active: &LoaderStyle {
-            icon: Some((ICON_RECEIVE,FG)),
+            icon: Some((ICON_RECEIVE_SMALL,FG)),
             loader_color: GREEN,
             background_color: BG,
         },
