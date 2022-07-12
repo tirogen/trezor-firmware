@@ -171,10 +171,10 @@ impl Component for Loader {
             //     self.offset_y,
             //     style.loader_color,
             //     style.background_color,
-            //     None,
+            //     style.icon,
             // );
 
-            display::rect_rounded2(
+            display::loader_rust(
                 r,
                 style.loader_color,
                 style.background_color,
