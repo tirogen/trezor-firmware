@@ -283,18 +283,42 @@ impl TextOverlay {
     }
 }
 
-#[inline(always)]
-fn get_vector(angle: i32) -> (i32, i32) {
-    let adj = (100 * (angle % 90)) / 90;
+fn get_point_on_line(v0: (i32, i32), v1: (i32, i32), position: f32) -> (i32, i32) {
+    let rel1 = position;
+    let rel0 = 1_f32 - position;
 
-    if (0..90).contains(&angle) {
-        (adj, 100 - adj)
-    } else if (90..180).contains(&angle) {
-        (100 - adj, -adj)
-    } else if (180..270).contains(&angle) {
-        (-adj, -100 + adj)
-    } else {
-        (-100 + adj, adj)
+    (
+        ((v0.0 as f32 * rel0 + v1.0 as f32 * rel1) / 2_f32) as i32,
+        ((v0.1 as f32 * rel0 + v1.1 as f32 * rel1) / 2_f32) as i32,
+    )
+}
+
+fn get_vector(angle: i32) -> (i32, i32) {
+    // This could be replaced by (cos(angle), sin(angle)), if we allow trigonometric
+    // functions. In the meantime, approximate this with predefined octagon
+
+    //octagon vertices
+    let v = [
+        (0, 1000),
+        (707, 707),
+        (1000, 0),
+        (707, -707),
+        (0, -1000),
+        (-707, -707),
+        (-1000, 0),
+        (-707, 707),
+    ];
+
+    match angle % 360 {
+        0..=44 => get_point_on_line(v[0], v[1], (angle) as f32 / 45_f32),
+        45..=89 => get_point_on_line(v[1], v[2], (angle - 45) as f32 / 45_f32),
+        90..=134 => get_point_on_line(v[2], v[3], (angle - 90) as f32 / 45_f32),
+        135..=179 => get_point_on_line(v[3], v[4], (angle - 135) as f32 / 45_f32),
+        180..=224 => get_point_on_line(v[4], v[5], (angle - 180) as f32 / 45_f32),
+        225..=269 => get_point_on_line(v[5], v[6], (angle - 225) as f32 / 45_f32),
+        270..=314 => get_point_on_line(v[6], v[7], (angle - 270) as f32 / 45_f32),
+        315..=359 => get_point_on_line(v[7], v[0], (angle - 315) as f32 / 45_f32),
+        _ => (1000, 0),
     }
 }
 
