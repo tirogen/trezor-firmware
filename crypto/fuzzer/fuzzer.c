@@ -540,7 +540,7 @@ int fuzz_ecdsa_sign_digest_functions(void) {
   int res = 0;
 
   // TODO idea: optionally set a function for is_canonical() callback
-  int res1 = ecdsa_sign_digest(curve, priv_key, digest, sig1, &pby1, NULL);
+  int res1 = tc_ecdsa_sign_digest(curve, priv_key, digest, sig1, &pby1, NULL);
 
   // the zkp function variant is only defined for a specific curve
   if (curve == &secp256k1) {
@@ -561,13 +561,13 @@ int fuzz_ecdsa_sign_digest_functions(void) {
   // successful signing
   if (res1 == 0) {
     uint8_t pub_key[33] = {0};
-    res = ecdsa_get_public_key33(curve, priv_key, pub_key);
+    res = tc_ecdsa_get_public_key33(curve, priv_key, pub_key);
     if (res != 0) {
       // pubkey derivation did not succeed
       crash();
     }
 
-    res = ecdsa_verify_digest(curve, pub_key, sig1, digest);
+    res = tc_ecdsa_verify_digest(curve, pub_key, sig1, digest);
     if (res != 0) {
       // verification did not succeed
       crash();
@@ -599,8 +599,9 @@ int fuzz_ecdsa_verify_digest_functions(void) {
     curve = &nist256p1;
   }
 
-  int res1 = ecdsa_verify_digest(curve, (const uint8_t *)&pub_key,
-                                 (const uint8_t *)&sig, (const uint8_t *)&hash);
+  int res1 =
+      tc_ecdsa_verify_digest(curve, (const uint8_t *)&pub_key,
+                             (const uint8_t *)&sig, (const uint8_t *)&hash);
   if (res1 == 0) {
     // See if the fuzzer ever manages to get find a correct verification
     // intentionally trigger a crash to make this case observable
@@ -1021,9 +1022,9 @@ int fuzz_ecdsa_get_public_key_functions(void) {
   }
   memcpy(privkey, fuzzer_input(sizeof(privkey)), sizeof(privkey));
 
-  int res_33_1 = ecdsa_get_public_key33(curve, privkey, pubkey33_1);
+  int res_33_1 = tc_ecdsa_get_public_key33(curve, privkey, pubkey33_1);
   int res_33_2 = zkp_ecdsa_get_public_key33(curve, privkey, pubkey33_2);
-  int res_65_1 = ecdsa_get_public_key65(curve, privkey, pubkey65_1);
+  int res_65_1 = tc_ecdsa_get_public_key65(curve, privkey, pubkey65_1);
   int res_65_2 = zkp_ecdsa_get_public_key65(curve, privkey, pubkey65_2);
 
   // the function pairs have different return error codes for the same input
@@ -1070,7 +1071,7 @@ int fuzz_ecdsa_recover_pub_from_sig_functions(void) {
   recid = recid & 0x03;
 
   int res1 = zkp_ecdsa_recover_pub_from_sig(curve, pubkey1, sig, digest, recid);
-  int res2 = ecdsa_recover_pub_from_sig(curve, pubkey2, sig, digest, recid);
+  int res2 = tc_ecdsa_recover_pub_from_sig(curve, pubkey2, sig, digest, recid);
 
   uint8_t zero_pubkey[65] = {0};
   zero_pubkey[0] = 0x04;
