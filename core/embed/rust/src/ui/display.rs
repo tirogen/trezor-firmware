@@ -2,7 +2,7 @@ use super::constant;
 use crate::{
     error::Error,
     time::Duration,
-    trezorhal::{display, qr, time, uzlib},
+    trezorhal::{display,  display::get_offset, qr, time, uzlib},
 };
 use core::cmp::{max, min};
 
@@ -16,13 +16,6 @@ pub fn clamp_coords(r: Rect) -> Rect {
 
     Rect::new(Point::new(x0, y0), Point::new(x1, y1))
 }
-
-pub fn adjust_offset(r: Rect) -> Rect {
-    let offset = display::get_offset();
-    let p = r.top_left() + Offset::new(offset.0, offset.1);
-    Rect::from_top_left_and_size(p, r.size())
-}
-
 pub fn backlight() -> i32 {
     display::backlight(-1)
 }
@@ -155,7 +148,7 @@ pub fn icon_rust(center: Point, data: &[u8], fg_color: Color, bg_color: Color) {
         Offset::new(toif_info.width.into(), toif_info.height.into()),
     );
 
-    let area = adjust_offset(r);
+    let area = r.translate(get_offset());
     let clamped = clamp_coords(area);
     let colortable = get_color_table(fg_color, bg_color);
 
@@ -342,7 +335,7 @@ pub fn rect_rounded2_partial(
 ) {
     const MAX_ICON_SIZE: u16 = 64;
 
-    let r = adjust_offset(area);
+    let r = area.translate(get_offset());
     let clamped = clamp_coords(r);
 
     set_window(clamped);
@@ -502,7 +495,7 @@ pub fn bar_with_text_and_fill(
     fill_from: i32,
     fill_to: i32,
 ) {
-    let r = adjust_offset(area);
+    let r = area.translate(get_offset());
     let clamped = clamp_coords(r);
     let colortable = get_color_table(fg_color, bg_color);
 
@@ -707,7 +700,7 @@ impl Glyph {
         let pos_adj = pos + bearing;
         let r = Rect::from_top_left_and_size(pos_adj, size);
 
-        let area = adjust_offset(r);
+        let area = r.translate(get_offset());
         let window = clamp_coords(area);
 
         set_window(window);
