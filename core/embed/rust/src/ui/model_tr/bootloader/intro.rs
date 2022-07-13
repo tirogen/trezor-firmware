@@ -12,6 +12,7 @@ use crate::ui::{
     component::{Child, Component, Event, EventCtx},
     geometry::Rect,
 };
+use crate::ui::display::icon_rust;
 
 use crate::ui::model_tr::component::{
     ButtonPos, HoldToConfirm, HoldToConfirmMsg, ResultAnim, ResultPopup, ResultPopupMessage,
@@ -19,7 +20,8 @@ use crate::ui::model_tr::component::{
 
 // use crate::ui::model_tr::component::Button;
 use crate::ui::model_tr::constant::{HEIGHT, WIDTH};
-use crate::ui::model_tr::theme::{BG, ICON_FAIL, ICON_SUCCESS};
+use crate::ui::model_tr::theme;
+use crate::ui::model_tr::theme::{BG, ICON_FAIL, ICON_SUCCESS, loader_default};
 
 #[repr(u32)]
 #[derive(Copy, Clone)]
@@ -60,7 +62,7 @@ impl Intro {
         let mut instance = Self {
             bg: Pad::with_background(BG),
             state: Initial,
-            confirm: Child::new(HoldToConfirm::new(ButtonPos::Right, "HOLD TO CONFIRM")),
+            confirm: Child::new(HoldToConfirm::new(ButtonPos::Right, "HOLD TO CONFIRM", loader_default())),
             result: Child::new(result_popup),
             anim: Child::new(ResultAnim::new(ICON_FAIL)),
         };
@@ -134,6 +136,8 @@ impl Component for Intro {
             self.anim.paint();
             self.confirm.paint();
         }
+
+        icon_rust(Point::new(50,50), ICON_SUCCESS,theme::FG, theme::BG);
     }
 
     fn bounds(&self, _sink: &mut dyn FnMut(Rect)) {}
