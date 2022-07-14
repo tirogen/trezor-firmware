@@ -323,11 +323,7 @@ fn is_firmware() -> bool {
 }
 
 fn is_bootloader() -> bool {
-    if cfg!(feature = "bootloader") {
-        true
-    } else {
-        false
-    }
+    cfg!(feature = "bootloader")
 }
 
 #[cfg(feature = "test")]
