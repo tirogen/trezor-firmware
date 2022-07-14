@@ -30,18 +30,30 @@ pub struct Loader {
     growing_duration: Duration,
     shrinking_duration: Duration,
     styles: LoaderStyleSheet,
+    text: display::TextOverlay<'static>,
 }
 
 impl Loader {
     pub const SIZE: Offset = Offset::new(120, 120);
 
     pub fn new() -> Self {
+
+        let overlay = display::TextOverlay::new(
+            theme::BG,
+            theme::FG,
+            // theme::loader_default().normal.background_color,
+            // theme::loader_default().normal.loader_color,
+            "TEXT OVERLAY",
+            theme::FONT_BOLD,
+        );
+
         Self {
             offset_y: 0,
             state: State::Initial,
             growing_duration: Duration::from_millis(1000),
             shrinking_duration: Duration::from_millis(500),
             styles: theme::loader_default(),
+            text: overlay,
         }
     }
 
@@ -120,7 +132,12 @@ impl Component for Loader {
     fn place(&mut self, bounds: Rect) -> Rect {
         // Current loader API only takes Y-offset relative to screen center, which we
         // compute from the bounds center point.
+
         let screen_center = constant::screen().center();
+
+        let baseline = Offset::new(bounds.width() / 2 + 1, bounds.height() - 30);
+        self.text.place(baseline);
+
         self.offset_y = bounds.center().y - screen_center.y;
         Rect::from_center_and_size(screen_center + Offset::y(self.offset_y), Self::SIZE)
     }
@@ -181,6 +198,7 @@ impl Component for Loader {
                 style.background_color,
                 100 * progress as i32 / 1000,
                 style.icon,
+                self.text,
             );
 
             //display::icon_rust(r.center(), theme::ICON_HS, style.loader_color, style.background_color);
