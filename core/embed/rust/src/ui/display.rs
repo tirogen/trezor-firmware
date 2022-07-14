@@ -667,21 +667,24 @@ pub struct Glyph {
 }
 
 impl Glyph {
-    pub fn new(
-        width: i32,
-        height: i32,
-        adv: i32,
-        bearing_x: i32,
-        bearing_y: i32,
-        data: *const u8,
-    ) -> Self {
-        Glyph {
-            width,
-            height,
-            adv,
-            bearing_x,
-            bearing_y,
-            data,
+    /// Construct a `Glyph` from a raw pointer.
+    ///
+    /// # Safety
+    ///
+    /// This function is unsafe because the caller has to guarantee that `data`
+    /// is pointing to a memory containing a valid glyph data, that is:
+    /// - contains valid glyph metadata
+    /// - data has appropriate size
+    pub unsafe fn load(data: *const u8) -> Self {
+        unsafe {
+            Glyph {
+                width: *data.offset(0) as i32,
+                height: *data.offset(1) as i32,
+                adv: *data.offset(2) as i32,
+                bearing_x: *data.offset(3) as i32,
+                bearing_y: *data.offset(4) as i32,
+                data: data.offset(5),
+            }
         }
     }
 
@@ -795,16 +798,7 @@ impl Font {
         if gl_data.is_null() {
             return None;
         }
-
-        unsafe {
-            let width = *gl_data.offset(0) as i32;
-            let height = *gl_data.offset(1) as i32;
-            let adv = *gl_data.offset(2) as i32;
-            let bearing_x = *gl_data.offset(3) as i32;
-            let bearing_y = *gl_data.offset(4) as i32;
-            let data = gl_data.offset(5);
-            Some(Glyph::new(width, height, adv, bearing_x, bearing_y, data))
-        }
+        unsafe { Some(Glyph::load(gl_data)) }
     }
 
     pub fn display_text(
