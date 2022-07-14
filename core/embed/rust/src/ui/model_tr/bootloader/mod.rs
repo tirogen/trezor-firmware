@@ -1,12 +1,15 @@
-use crate::ui::component::{Component, Event, EventCtx};
-use crate::ui::model_tr::constant;
+use crate::ui::{
+    component::{Component, Event, EventCtx},
+    model_tr::constant,
+};
 
 pub mod intro;
 
-use crate::time::Duration;
-use crate::trezorhal::io::io_button_read;
-use crate::trezorhal::time;
-use crate::ui::event::ButtonEvent;
+use crate::{
+    time::Duration,
+    trezorhal::{io::io_button_read, time},
+    ui::event::ButtonEvent,
+};
 use intro::Intro;
 
 pub trait ReturnToC {

@@ -1,27 +1,33 @@
-use crate::time::Instant;
-use crate::ui::component::{ComponentExt, Pad};
-use crate::ui::geometry::{Offset, Point};
+use crate::{
+    time::Instant,
+    ui::{
+        component::{ComponentExt, Pad},
+        geometry::{Offset, Point},
+    },
+};
 // use crate::ui::model_tr::bootloader::theme::{
 //     button_bld_menu, button_bld_menu_item, TTBootloaderText, BLD_BG, MENU,
 // };
 use crate::ui::model_tr::bootloader::ReturnToC;
 // use crate::ui::model_tr::component::ButtonMsg::Clicked;
 // use crate::ui::model_tr::theme::FONT_MEDIUM;
-use crate::ui::model_tr::bootloader::intro::State::{Confirmed, Initial, Returned};
 use crate::ui::{
     component::{Child, Component, Event, EventCtx},
+    display::icon_rust,
     geometry::Rect,
+    model_tr::bootloader::intro::State::{Confirmed, Initial, Returned},
 };
-use crate::ui::display::icon_rust;
 
 use crate::ui::model_tr::component::{
     ButtonPos, HoldToConfirm, HoldToConfirmMsg, ResultAnim, ResultPopup, ResultPopupMessage,
 };
 
 // use crate::ui::model_tr::component::Button;
-use crate::ui::model_tr::constant::{HEIGHT, WIDTH};
-use crate::ui::model_tr::theme;
-use crate::ui::model_tr::theme::{BG, ICON_FAIL, ICON_SUCCESS, loader_default};
+use crate::ui::model_tr::{
+    constant::{HEIGHT, WIDTH},
+    theme,
+    theme::{loader_default, BG, ICON_FAIL, ICON_SUCCESS},
+};
 
 #[repr(u32)]
 #[derive(Copy, Clone)]
@@ -62,7 +68,11 @@ impl Intro {
         let mut instance = Self {
             bg: Pad::with_background(BG),
             state: Initial,
-            confirm: Child::new(HoldToConfirm::new(ButtonPos::Right, "HOLD TO CONFIRM", loader_default())),
+            confirm: Child::new(HoldToConfirm::new(
+                ButtonPos::Right,
+                "HOLD TO CONFIRM",
+                loader_default(),
+            )),
             result: Child::new(result_popup),
             anim: Child::new(ResultAnim::new(ICON_FAIL)),
         };
@@ -137,7 +147,7 @@ impl Component for Intro {
             self.confirm.paint();
         }
 
-        icon_rust(Point::new(50,50), ICON_SUCCESS,theme::FG, theme::BG);
+        icon_rust(Point::new(50, 50), ICON_SUCCESS, theme::FG, theme::BG);
     }
 
     fn bounds(&self, _sink: &mut dyn FnMut(Rect)) {}

@@ -2,7 +2,7 @@ use super::constant;
 use crate::{
     error::Error,
     time::Duration,
-    trezorhal::{display,  display::get_offset, qr, time, uzlib},
+    trezorhal::{display, display::get_offset, qr, time, uzlib},
 };
 
 use super::geometry::{Offset, Point, Rect};
