@@ -134,6 +134,7 @@ impl Component for Loader {
                 ctx.request_paint();
 
                 if self.is_completely_grown(now) {
+                    clear_acc();
                     return Some(LoaderMsg::GrownCompletely);
                 } else if self.is_completely_shrunk(now) {
                     clear_acc();
