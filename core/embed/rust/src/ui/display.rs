@@ -245,7 +245,7 @@ impl<'a> TextOverlay<'a> {
                         if overlay_data > 0 {
                             if let Some(u) = underlying {
                                 overlay_color = Some(interpolate_colors(
-                                    self.colortable[15],
+                                    if u.luminance() > 128 {Color::from_u16(0)} else {Color::from_u16(0xffff)},
                                     u,
                                     overlay_data as u16,
                                 ));
@@ -442,11 +442,12 @@ pub fn rect_rounded2_partial(
 }
 
 pub fn loader_rust(
-    area: Rect,
+    r: Rect,
     fg_color: Color,
     bg_color: Color,
     show_percent: i32,
     icon: Option<(&[u8], Color)>,
+    text: TextOverlay,
 ) {
     const OUTER: f32 = 60_f32;
     const INNER: f32 = 42_f32;
@@ -460,7 +461,7 @@ pub fn loader_rust(
 
     const ICON_MAX_SIZE: usize = 64;
 
-    let r = area.translate(get_offset());
+    //let r = area.translate(get_offset());
     let clamped = r.clamp(constant::screen());
     set_window(clamped);
 
@@ -519,6 +520,9 @@ pub fn loader_rust(
     for y_c in r.y0..r.y1 {
         for x_c in r.x0..r.x1 {
             let mut icon_pixel = false;
+
+            let mut underlying_color= bg_color ;
+
             if use_icon {
                 if x_c >= icon_area_clamped.x0
                     && x_c < icon_area_clamped.x1
@@ -533,78 +537,88 @@ pub fn loader_rust(
 
                         let data = icon_data[(((x_i & 0xFE) + (y_i * icon_width)) / 2) as usize];
                         if (x_i & 0x01) == 0 {
-                            pixeldata(icon_colortable[(data >> 4) as usize]);
+                            underlying_color = icon_colortable[(data >> 4) as usize];
                         } else {
-                            pixeldata(icon_colortable[(data & 0xF) as usize]);
+                            underlying_color = icon_colortable[(data & 0xF) as usize];
                         }
                         icon_pixel = true;
                     }
                 }
             }
 
-            if x_c < clamped.x0
+            if !(x_c < clamped.x0
                 || x_c >= clamped.x1
                 || y_c < clamped.y0
                 || y_c >= clamped.y1
-                || icon_pixel
+                || icon_pixel)
             {
-                continue;
-            }
+                let y_p = -(y_c - center.y);
+                let x_p = x_c - center.x;
 
-            let y_p = -(y_c - center.y);
-            let x_p = x_c - center.x;
+                let vx = (x_p, y_p);
+                let n_vx = (-y_p, x_p);
 
-            let vx = (x_p, y_p);
-            let n_vx = (-y_p, x_p);
+                let is_past_start = is_clockwise_or_equal(n_start, vx);
+                let is_before_end = is_clockwise_or_equal_inc(n_vx, end_vector);
 
-            let is_past_start = is_clockwise_or_equal(n_start, vx);
-            let is_before_end = is_clockwise_or_equal_inc(n_vx, end_vector);
+                let d = y_p * y_p + x_p * x_p;
 
-            let d = y_p * y_p + x_p * x_p;
-
-            if show_all
-                || (!inverted && (is_past_start && is_before_end))
-                || (inverted && !(is_past_start && is_before_end))
-            {
-                //active part
-                if d <= IN_INNER_ANTI {
-                    pixeldata(bg_color);
-                } else if d <= INNER_MIN {
-                    let c_i = ((15 * (d - IN_INNER_ANTI)) / (INNER_MIN - IN_INNER_ANTI)) as usize;
-                    pixeldata(colortable[c_i]);
-                } else if d <= INNER_MAX {
-                    pixeldata(fg_color);
-                } else if d <= INNER_OUTER_ANTI {
-                    pixeldata(fg_color);
-                } else if d <= OUTER_OUT_ANTI {
-                    pixeldata(fg_color);
-                } else if d <= OUTER_MAX {
-                    let c_i = ((15 * (d - OUTER_OUT_ANTI)) / (OUTER_MAX - OUTER_OUT_ANTI)) as usize;
-                    pixeldata(colortable[15 - c_i]);
+                if show_all
+                    || (!inverted && (is_past_start && is_before_end))
+                    || (inverted && !(is_past_start && is_before_end))
+                {
+                    //active part
+                    if d <= IN_INNER_ANTI {
+                        underlying_color = bg_color;
+                    } else if d <= INNER_MIN {
+                        let c_i = ((15 * (d - IN_INNER_ANTI)) / (INNER_MIN - IN_INNER_ANTI)) as usize;
+                        underlying_color = colortable[c_i];
+                    } else if d <= INNER_MAX {
+                        underlying_color = fg_color;
+                    } else if d <= INNER_OUTER_ANTI {
+                        underlying_color = fg_color;
+                    } else if d <= OUTER_OUT_ANTI {
+                        underlying_color = fg_color;
+                    } else if d <= OUTER_MAX {
+                        let c_i = ((15 * (d - OUTER_OUT_ANTI)) / (OUTER_MAX - OUTER_OUT_ANTI)) as usize;
+                        underlying_color = colortable[15 - c_i];
+                    } else {
+                        underlying_color = bg_color;
+                    }
                 } else {
-                    pixeldata(bg_color);
-                }
-            } else {
-                //inactive part
-                if d <= IN_INNER_ANTI {
-                    pixeldata(bg_color);
-                } else if d <= INNER_MIN {
-                    let c_i = ((15 * (d - IN_INNER_ANTI)) / (INNER_MIN - IN_INNER_ANTI)) as usize;
-                    pixeldata(colortable[c_i]);
-                } else if d <= INNER_MAX {
-                    pixeldata(fg_color);
-                } else if d <= INNER_OUTER_ANTI {
-                    let c_i = ((10 * (d - INNER_MAX)) / (INNER_OUTER_ANTI - INNER_MAX)) as usize;
-                    pixeldata(colortable[15 - c_i]);
-                } else if d <= OUTER_OUT_ANTI {
-                    pixeldata(colortable[5]);
-                } else if d <= OUTER_MAX {
-                    let c_i = ((5 * (d - OUTER_OUT_ANTI)) / (OUTER_MAX - OUTER_OUT_ANTI)) as usize;
-                    pixeldata(colortable[5 - c_i]);
-                } else {
-                    pixeldata(bg_color);
+                    //inactive part
+                    if d <= IN_INNER_ANTI {
+                        underlying_color = bg_color;
+                    } else if d <= INNER_MIN {
+                        let c_i = ((15 * (d - IN_INNER_ANTI)) / (INNER_MIN - IN_INNER_ANTI)) as usize;
+                        underlying_color = colortable[c_i];
+                    } else if d <= INNER_MAX {
+                        underlying_color = fg_color;
+                    } else if d <= INNER_OUTER_ANTI {
+                        let c_i = ((10 * (d - INNER_MAX)) / (INNER_OUTER_ANTI - INNER_MAX)) as usize;
+                        underlying_color = colortable[15 - c_i];
+                    } else if d <= OUTER_OUT_ANTI {
+                        underlying_color = colortable[5];
+                    } else if d <= OUTER_MAX {
+                        let c_i = ((5 * (d - OUTER_OUT_ANTI)) / (OUTER_MAX - OUTER_OUT_ANTI)) as usize;
+                        underlying_color = colortable[5 - c_i];
+                    } else {
+                        underlying_color = bg_color;
+                    }
                 }
             }
+            let y = y_c - r.y0;
+            let x = x_c - r.x0;
+
+            let overlay_color = text.get_pixel(Some(underlying_color), x_c, y_c);
+
+            let mut final_color = underlying_color;
+
+            if let Some(o) = overlay_color {
+                final_color = o;
+            }
+
+            pixeldata(underlying_color);
         }
     }
 
@@ -1026,6 +1040,10 @@ impl Color {
         let g = (g & 0xFC) << 3;
         let b = (b & 0xF8) >> 3;
         Self(r | g | b)
+    }
+
+    pub const fn luminance(self) -> u32 {
+        return ((self.r() as u32 * 299) / 1000) + (self.g() as u32 * 587) / 1000 + (self.b() as u32 * 114) / 1000;
     }
 
     pub const fn r(self) -> u8 {
