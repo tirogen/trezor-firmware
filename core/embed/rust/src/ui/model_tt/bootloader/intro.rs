@@ -80,7 +80,6 @@ impl Component for Intro {
 
     fn event(&mut self, ctx: &mut EventCtx, event: Event) -> Option<Self::Msg> {
         return self.host.event(ctx, event);
-        None
     }
 
     fn paint(&mut self) {
