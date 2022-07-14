@@ -274,8 +274,6 @@ fn generate_trezorhal_bindings() {
         .allowlist_function("display_image")
         .allowlist_function("display_toif_info")
         .allowlist_function("display_loader")
-        .allowlist_function("display_pixeldata")
-        .allowlist_function("display_pixeldata_dirty")
         .allowlist_function("display_fadein")
         .allowlist_function("display_fadeout")
         .allowlist_function("display_pixeldata")
@@ -305,10 +303,10 @@ fn generate_trezorhal_bindings() {
         .allowlist_function("rgb_led_set_color")
         // time
         .allowlist_function("hal_delay")
-        .allowlist_function("hal_ticks_ms");
+        .allowlist_function("hal_ticks_ms")
         .allowlist_function("init_ticks")
         .allowlist_function("get_ticks")
-        .allowlist_function("clear_acc")
+        .allowlist_function("clear_acc");
 
     // Write the bindings to a file in the OUR_DIR.
     bindings
