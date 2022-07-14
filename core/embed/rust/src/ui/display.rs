@@ -100,7 +100,6 @@ pub fn icon(center: Point, data: &[u8], fg_color: Color, bg_color: Color) {
     );
 }
 
-
 pub fn image(center: Point, data: &[u8]) {
     let toif_info = display::toif_info(data).unwrap();
     assert!(!toif_info.grayscale);
@@ -128,7 +127,6 @@ pub fn toif_info(data: &[u8]) -> Option<(Offset, bool)> {
         None
     }
 }
-
 
 pub fn icon_rust(center: Point, data: &[u8], fg_color: Color, bg_color: Color) {
     let toif_info = display::toif_info(data).unwrap();
@@ -638,7 +636,6 @@ pub fn text_top_left(position: Point, text: &str, font: Font, fg_color: Color, b
         bg_color.into(),
     );
 }
-
 
 pub fn interpolate_colors(color0: Color, color1: Color, step: u16) -> Color {
     let cr: u16 = ((color0.r() as u16) * step + (color1.r() as u16) * (15 - step)) / 15;
