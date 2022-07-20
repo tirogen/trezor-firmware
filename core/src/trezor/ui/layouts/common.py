@@ -45,12 +45,14 @@ async def interact(
     try:
         previous_layout = ui.RUNNING_LAYOUT
         if previous_layout is not None:
-            await previous_layout.cancel()
+            print(previous_layout, type(previous_layout))
+            await previous_layout.do_cancel()
 
-        # while ui.RUNNING_LAYOUT is not None:
-        #     yield
+        while ui.RUNNING_LAYOUT is not None:
+            yield
         assert ui.RUNNING_LAYOUT is None
         ui.RUNNING_LAYOUT = layout
+        print("setting new:", layout, type(layout))
 
         if layout.__class__.__name__ == "Paginated":
             from ..components.tt.scroll import Paginated

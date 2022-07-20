@@ -2,7 +2,30 @@ from typing import TYPE_CHECKING
 
 from trezor import loop, ui, wire
 
-from ...layouts.common import interact
+async def interact(
+    layout,
+    br_type,
+    br_code,
+):
+    ctx = wire.get_context()
+    try:
+        previous_layout = ui.RUNNING_LAYOUT
+        if previous_layout is not None:
+            print(previous_layout, type(previous_layout))
+            await previous_layout.cancel()
+
+        # while ui.RUNNING_LAYOUT is not None:
+        #     yield
+        assert ui.RUNNING_LAYOUT is None
+        ui.RUNNING_LAYOUT = layout
+        print("setting new:", layout, type(layout))
+
+        return await ctx.wait(layout)
+
+    finally:
+        ui.RUNNING_LAYOUT = None
+
+
 
 if TYPE_CHECKING:
     from typing import Callable, Any, Awaitable, TypeVar

@@ -345,7 +345,7 @@ class Layout(Component):
         self._cancel_chan = loop.chan()
         self.should_notify_layout_change = False
 
-    async def cancel(self):
+    async def do_cancel(self):
         await self._cancel_chan.put(Cancelled())
 
     async def __iter__(self) -> Any:
@@ -364,7 +364,7 @@ class Layout(Component):
             # If any other layout is running (waiting on the layout channel),
             # we close it with the Cancelled exception, and wait until it is
             # closed, just to be sure.
-            assert RUNNING_LAYOUT is self
+            assert RUNNING_LAYOUT is self, f"running_layout is {RUNNING_LAYOUT}"
 
             # Now, no other layout should be running.  In a loop, we create new
             # layout tasks and execute them in parallel, while waiting on the

@@ -9,6 +9,7 @@ from trezor.enums import BackupType, MessageType
 from trezor.errors import MnemonicError
 from trezor.messages import Success
 from trezor.ui.layouts import show_success
+from trezor.ui.layouts.common import interact
 
 from apps.common import mnemonic
 from apps.homescreen.homescreen import homescreen

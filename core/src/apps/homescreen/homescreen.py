@@ -6,6 +6,7 @@ import storage.cache
 import storage.device
 from trezor import config, ui, utils
 from trezor.ui.loader import Loader, LoaderNeutral
+from trezor.ui.layouts.common import interact
 
 from apps.base import lock_device
 
@@ -16,7 +17,7 @@ _LOADER_TOTAL_MS = const(2500)
 
 
 async def homescreen() -> None:
-    await Homescreen()
+    await interact(Homescreen(), None)
     lock_device()
 
 

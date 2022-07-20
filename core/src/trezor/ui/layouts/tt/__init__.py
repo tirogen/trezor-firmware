@@ -1045,7 +1045,7 @@ async def request_pin_on_device(
 
     dialog = pin.PinDialog(prompt, subprompt, allow_cancel)
     while True:
-        result = interact(dialog, "pin_device", ButtonRequestType.PinEntry)
+        result = await interact(dialog, "pin_device", ButtonRequestType.PinEntry)
         if result is pin.CANCELLED:
             raise wire.PinCancelled
         assert isinstance(result, str)
