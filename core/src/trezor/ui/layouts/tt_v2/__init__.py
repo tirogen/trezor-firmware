@@ -205,6 +205,8 @@ async def show_error_and_raise(
         content=content,
         button_confirm=None,
         button_cancel=button,
+        icon=ui.ICON_WRONG,
+        icon_color=ui.RED,
         exc=exc,
     )
     raise exc
