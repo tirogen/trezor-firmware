@@ -7,7 +7,7 @@ if TYPE_CHECKING:
 
 
 async def confirm_total_ethereum(
-    text, total_amount: str, gas_price: str, fee_max: str
+    total_amount: str, gas_price: str, fee_max: str
 ) -> None:
     raise NotImplementedError
 

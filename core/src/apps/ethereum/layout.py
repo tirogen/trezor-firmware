@@ -27,7 +27,6 @@ if TYPE_CHECKING:
 
 
 def require_confirm_tx(
-    ctx: Context,
     to_bytes: bytes,
     value: int,
     chain_id: int,
@@ -47,7 +46,6 @@ def require_confirm_tx(
 
 
 def require_confirm_fee(
-    ctx: Context,
     spending: int,
     gas_price: int,
     gas_limit: int,
@@ -62,7 +60,6 @@ def require_confirm_fee(
 
 
 async def require_confirm_eip1559_fee(
-    ctx: Context,
     spending: int,
     max_priority_fee: int,
     max_gas_fee: int,
@@ -88,9 +85,7 @@ async def require_confirm_eip1559_fee(
     )
 
 
-def require_confirm_unknown_token(
-    ctx: Context, address_bytes: bytes
-) -> Awaitable[None]:
+def require_confirm_unknown_token(address_bytes: bytes) -> Awaitable[None]:
     contract_address_hex = "0x" + hexlify(address_bytes).decode()
     return confirm_address(
         "Unknown token",
@@ -102,7 +97,7 @@ def require_confirm_unknown_token(
     )
 
 
-def require_confirm_data(ctx: Context, data: bytes, data_total: int) -> Awaitable[None]:
+def require_confirm_data(data: bytes, data_total: int) -> Awaitable[None]:
     return confirm_blob(
         "confirm_data",
         title="Confirm data",
@@ -132,7 +127,7 @@ def confirm_empty_typed_message(ctx: Context) -> Awaitable[None]:
     )
 
 
-async def should_show_domain(ctx: Context, name: bytes, version: bytes) -> bool:
+async def should_show_domain(name: bytes, version: bytes) -> bool:
     domain_name = decode_typed_data(name, "string")
     domain_version = decode_typed_data(version, "string")
 
