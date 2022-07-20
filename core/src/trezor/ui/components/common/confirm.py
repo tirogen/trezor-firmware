@@ -2,6 +2,8 @@ from typing import TYPE_CHECKING
 
 from trezor import loop, ui, wire
 
+from ...layouts.common import interact
+
 if TYPE_CHECKING:
     from typing import Callable, Any, Awaitable, TypeVar
 
@@ -31,7 +33,7 @@ async def is_confirmed_info(
     info_func: Callable,
 ) -> bool:
     while True:
-        result = await ctx.wait(dialog)
+        result = await interact(dialog, None)
 
         if result is INFO:
             await info_func()

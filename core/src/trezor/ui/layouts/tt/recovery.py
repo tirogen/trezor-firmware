@@ -20,18 +20,17 @@ from ..common import button_request, interact
 
 
 async def request_word_count(dry_run: bool) -> int:
-    ctx = wire.get_context()
-    await button_request(ctx, "word_count", code=ButtonRequestType.MnemonicWordCount)
-
     if dry_run:
         text = Text("Seed check", ui.ICON_RECOVERY)
     else:
         text = Text("Recovery mode", ui.ICON_RECOVERY)
     text.normal("Number of words?")
 
-    count = await ctx.wait(WordSelector(text))
+    count = await interact(
+        WordSelector(text), "word_count", ButtonRequestType.MnemonicWordCount
+    )
     # WordSelector can return int, or string if the value came from debuglink
-    # ctx.wait has a return type Any
+    # interact has a return type Any
     # Hence, it is easier to convert the returned value to int explicitly
     return int(count)
 
@@ -44,8 +43,7 @@ async def request_word(word_index: int, word_count: int, is_slip39: bool) -> str
     else:
         keyboard = Bip39Keyboard(f"Type word {word_index + 1} of {word_count}:")
 
-    ctx = wire.get_context()
-    word: str = await ctx.wait(keyboard)
+    word: str = await interact(keyboard, None)
     return word
 
 

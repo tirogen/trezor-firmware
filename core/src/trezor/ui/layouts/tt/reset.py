@@ -125,7 +125,7 @@ async def confirm_word(
 
     # let the user pick a word
     select = MnemonicWordSelect(choices, share_index, checked_index, count, group_index)
-    selected_word: str = await ctx.wait(select)
+    selected_word: str = await interact(select, None)
     # confirm it is the correct one
     return selected_word == checked_word
 
