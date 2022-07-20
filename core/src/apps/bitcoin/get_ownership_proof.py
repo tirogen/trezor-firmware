@@ -76,8 +76,6 @@ async def get_ownership_proof(
                 title="Proof of ownership",
                 description="Commitment data:",
                 data=msg.commitment_data,
-                icon=ui.ICON_CONFIG,
-                icon_color=ui.ORANGE_ICON,
             )
 
     ownership_proof, signature = generate_proof(

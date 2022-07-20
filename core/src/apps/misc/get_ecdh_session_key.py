@@ -50,8 +50,6 @@ async def require_confirm_ecdh_session_key(
         f"Decrypt {proto}",
         serialize_identity_without_proto(identity),
         description=None,
-        icon=ui.ICON_DEFAULT,
-        icon_color=ui.ORANGE_ICON,
     )
 
 

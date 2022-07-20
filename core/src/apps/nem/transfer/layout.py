@@ -145,6 +145,5 @@ async def _require_confirm_payload(
         title="Confirm payload",
         description="Encrypted:" if encrypted else "Unencrypted:",
         data=bytes(payload).decode(),
-        icon_color=ui.GREEN if encrypted else ui.RED,
         br_code=ButtonRequestType.ConfirmOutput,
     )

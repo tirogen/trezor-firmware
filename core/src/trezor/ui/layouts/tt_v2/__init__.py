@@ -167,7 +167,6 @@ def show_pubkey(pubkey: str) -> Awaitable[None]:
         title="Confirm public key",
         data=pubkey,
         br_code=ButtonRequestType.PublicKey,
-        icon=ui.ICON_RECEIVE,
     )
 
 
@@ -335,8 +334,6 @@ async def confirm_blob(
     description: str | None = None,
     hold: bool = False,
     br_code: ButtonRequestType = ButtonRequestType.Other,
-    icon: str = ui.ICON_SEND,  # TODO cleanup @ redesign
-    icon_color: int = ui.GREEN,  # TODO cleanup @ redesign
     ask_pagination: bool = False,
 ) -> None:
     if isinstance(data, bytes):
@@ -365,8 +362,6 @@ def confirm_address(
     description: str | None = "Address:",
     br_type: str = "confirm_address",
     br_code: ButtonRequestType = ButtonRequestType.Other,
-    icon: str = ui.ICON_SEND,  # TODO cleanup @ redesign
-    icon_color: int = ui.GREEN,  # TODO cleanup @ redesign
 ) -> Awaitable[None]:
     raise NotImplementedError
 
@@ -377,8 +372,6 @@ async def confirm_text(
     data: str,
     description: str | None = None,
     br_code: ButtonRequestType = ButtonRequestType.Other,
-    icon: str = ui.ICON_SEND,  # TODO cleanup @ redesign
-    icon_color: int = ui.GREEN,  # TODO cleanup @ redesign
 ) -> None:
     raise NotImplementedError
 
@@ -389,8 +382,6 @@ def confirm_amount(
     description: str = "Amount:",
     br_type: str = "confirm_amount",
     br_code: ButtonRequestType = ButtonRequestType.Other,
-    icon: str = ui.ICON_SEND,  # TODO cleanup @ redesign
-    icon_color: int = ui.GREEN,  # TODO cleanup @ redesign
 ) -> Awaitable[None]:
     raise NotImplementedError
 
@@ -399,8 +390,6 @@ async def confirm_properties(
     br_type: str,
     title: str,
     props: Iterable[PropertyType],
-    icon: str = ui.ICON_SEND,  # TODO cleanup @ redesign
-    icon_color: int = ui.GREEN,  # TODO cleanup @ redesign
     hold: bool = False,
     br_code: ButtonRequestType = ButtonRequestType.ConfirmOutput,
 ) -> None:
@@ -466,39 +455,19 @@ async def confirm_metadata(
     br_type: str,
     title: str,
     content: str,
+    *,
     param: str | None = None,
     br_code: ButtonRequestType = ButtonRequestType.SignTx,
-    hide_continue: bool = False,
-    hold: bool = False,
-    param_font: int = ui.BOLD,
-    icon: str = ui.ICON_SEND,  # TODO cleanup @ redesign
-    icon_color: int = ui.GREEN,  # TODO cleanup @ redesign
-    larger_vspace: bool = False,  # TODO cleanup @ redesign
 ) -> None:
     if param:
+        # TODO format param as bold
         content = content.format(param)
 
-    if br_type == "fee_over_threshold":
-        layout = trezorui2.show_warning(
-            title="Unusually high fee",
-            description=param or "",
-        )
-    elif br_type == "change_count_over_threshold":
-        layout = trezorui2.show_warning(
-            title="A lot of change-outputs",
-            description=f"{param} outputs" if param is not None else "",
-        )
-    else:
-        if param is not None:
-            content = content.format(param)
-        # TODO: "unverified external inputs"
-
-        layout = trezorui2.confirm_action(
-            title=title.upper(),
-            verb="NEXT",
-            description=content,
-            hold=hold,
-        )
+    layout = trezorui2.confirm_action(
+        title=title.upper(),
+        verb="NEXT",
+        description=content,
+    )
 
     result = await interact(
         RustLayout(layout),

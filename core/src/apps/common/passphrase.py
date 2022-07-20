@@ -68,8 +68,6 @@ async def _request_on_host(ctx: wire.Context) -> str:
             title="Hidden wallet",
             description="Use this passphrase?\n",
             data=ack.passphrase,
-            icon=ui.ICON_CONFIG,
-            icon_color=ui.ORANGE_ICON,
         )
 
     return ack.passphrase

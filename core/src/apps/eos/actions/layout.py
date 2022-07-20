@@ -36,7 +36,6 @@ async def confirm_action_buyram(msg: EosActionBuyRam) -> None:
             ("Receiver:", helpers.eos_name_to_string(msg.receiver)),
             ("Amount:", helpers.eos_asset_to_string(msg.quantity)),
         ],
-        icon=ui.ICON_CONFIRM,
         br_code=ButtonRequestType.ConfirmOutput,
     )
 
@@ -50,7 +49,6 @@ async def confirm_action_buyrambytes(msg: EosActionBuyRamBytes) -> None:
             ("Receiver:", helpers.eos_name_to_string(msg.receiver)),
             ("Bytes:", str(msg.bytes)),
         ],
-        icon=ui.ICON_CONFIRM,
         br_code=ButtonRequestType.ConfirmOutput,
     )
 
@@ -72,7 +70,6 @@ async def confirm_action_delegate(msg: EosActionDelegate) -> None:
         "confirm_delegate",
         title="Delegate",
         props=props,
-        icon=ui.ICON_CONFIRM,
         br_code=ButtonRequestType.ConfirmOutput,
     )
 
@@ -85,7 +82,6 @@ async def confirm_action_sellram(msg: EosActionSellRam) -> None:
             ("Receiver:", helpers.eos_name_to_string(msg.account)),
             ("Bytes:", str(msg.bytes)),
         ],
-        icon=ui.ICON_CONFIRM,
         br_code=ButtonRequestType.ConfirmOutput,
     )
 
@@ -100,7 +96,6 @@ async def confirm_action_undelegate(msg: EosActionUndelegate) -> None:
             ("CPU:", helpers.eos_asset_to_string(msg.cpu_quantity)),
             ("NET:", helpers.eos_asset_to_string(msg.net_quantity)),
         ],
-        icon=ui.ICON_CONFIRM,
         br_code=ButtonRequestType.ConfirmOutput,
     )
 
@@ -112,7 +107,6 @@ async def confirm_action_refund(msg: EosActionRefund) -> None:
         props=[
             ("Owner:", helpers.eos_name_to_string(msg.owner)),
         ],
-        icon=ui.ICON_CONFIRM,
         br_code=ButtonRequestType.ConfirmOutput,
     )
 
@@ -127,7 +121,6 @@ async def confirm_action_voteproducer(msg: EosActionVoteProducer) -> None:
                 ("Voter:", helpers.eos_name_to_string(msg.voter)),
                 ("Proxy:", helpers.eos_name_to_string(msg.proxy)),
             ],
-            icon=ui.ICON_CONFIRM,
             br_code=ButtonRequestType.ConfirmOutput,
         )
 
@@ -140,7 +133,6 @@ async def confirm_action_voteproducer(msg: EosActionVoteProducer) -> None:
                 (f"{wi:2d}. {helpers.eos_name_to_string(producer)}", None)
                 for wi, producer in enumerate(msg.producers, 1)
             ),
-            icon=ui.ICON_CONFIRM,
             br_code=ButtonRequestType.ConfirmOutput,
         )
 
@@ -152,7 +144,6 @@ async def confirm_action_voteproducer(msg: EosActionVoteProducer) -> None:
             props=[
                 ("Voter:", helpers.eos_name_to_string(msg.voter)),
             ],
-            icon=ui.ICON_CONFIRM,
             br_code=ButtonRequestType.ConfirmOutput,
         )
 
@@ -170,7 +161,6 @@ async def confirm_action_transfer(msg: EosActionTransfer, account: str) -> None:
         "confirm_transfer",
         title="Transfer",
         props=props,
-        icon=ui.ICON_CONFIRM,
         br_code=ButtonRequestType.ConfirmOutput,
     )
 
@@ -186,7 +176,6 @@ async def confirm_action_updateauth(msg: EosActionUpdateAuth) -> None:
         "confirm_updateauth",
         title="Update Auth",
         props=props,
-        icon=ui.ICON_CONFIRM,
         br_code=ButtonRequestType.ConfirmOutput,
     )
 
@@ -199,7 +188,6 @@ async def confirm_action_deleteauth(msg: EosActionDeleteAuth) -> None:
             ("Account:", helpers.eos_name_to_string(msg.account)),
             ("Permission:", helpers.eos_name_to_string(msg.permission)),
         ],
-        icon=ui.ICON_CONFIRM,
         br_code=ButtonRequestType.ConfirmOutput,
     )
 
@@ -214,7 +202,6 @@ async def confirm_action_linkauth(msg: EosActionLinkAuth) -> None:
             ("Type:", helpers.eos_name_to_string(msg.type)),
             ("Requirement:", helpers.eos_name_to_string(msg.requirement)),
         ],
-        icon=ui.ICON_CONFIRM,
         br_code=ButtonRequestType.ConfirmOutput,
     )
 
@@ -228,7 +215,6 @@ async def confirm_action_unlinkauth(msg: EosActionUnlinkAuth) -> None:
             ("Code:", helpers.eos_name_to_string(msg.code)),
             ("Type:", helpers.eos_name_to_string(msg.type)),
         ],
-        icon=ui.ICON_CONFIRM,
         br_code=ButtonRequestType.ConfirmOutput,
     )
 
@@ -244,7 +230,6 @@ async def confirm_action_newaccount(msg: EosActionNewAccount) -> None:
         "confirm_newaccount",
         title="New Account",
         props=props,
-        icon=ui.ICON_CONFIRM,
         br_code=ButtonRequestType.ConfirmOutput,
     )
 
@@ -258,8 +243,6 @@ async def confirm_action_unknown(action: EosActionCommon, checksum: bytes) -> No
             ("Action Name:", helpers.eos_name_to_string(action.name)),
             ("Checksum:", checksum),
         ],
-        icon=ui.ICON_WIPE,
-        icon_color=ui.RED,
         br_code=ButtonRequestType.ConfirmOutput,
     )
 

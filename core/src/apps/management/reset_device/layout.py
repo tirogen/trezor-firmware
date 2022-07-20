@@ -19,8 +19,6 @@ async def show_internal_entropy(entropy: bytes) -> None:
         "entropy",
         "Internal entropy",
         data=entropy,
-        icon=ui.ICON_RESET,
-        icon_color=ui.ORANGE_ICON,
         br_code=ButtonRequestType.ResetDevice,
     )
 

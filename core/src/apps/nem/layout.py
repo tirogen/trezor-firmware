@@ -15,18 +15,17 @@ async def require_confirm_text(ctx: Context, action: str) -> None:
         "confirm_nem",
         title="Confirm action",
         content=action,
-        hide_continue=True,
         br_code=ButtonRequestType.ConfirmOutput,
     )
 
 
 async def require_confirm_fee(ctx: Context, action: str, fee: int) -> None:
+    # TODO confirm_fee
     await confirm_metadata(
         "confirm_fee",
         title="Confirm fee",
         content=action + "\n{}",
         param=f"{format_amount(fee, NEM_MAX_DIVISIBILITY)} XEM",
-        hide_continue=True,
         br_code=ButtonRequestType.ConfirmOutput,
     )
 
@@ -41,11 +40,10 @@ async def require_confirm_content(ctx: Context, headline: str, content: list) ->
 
 async def require_confirm_final(ctx: Context, fee: int) -> None:
     # we use SignTx, not ConfirmOutput, for compatibility with T1
+    # TODO confirm fee + confirm_total
     await confirm_metadata(
         "confirm_final",
         title="Final confirm",
         content="Sign this transaction\n{}\nfor network fee?",
         param=f"and pay {format_amount(fee, NEM_MAX_DIVISIBILITY)} XEM",
-        hide_continue=True,
-        hold=True,
     )

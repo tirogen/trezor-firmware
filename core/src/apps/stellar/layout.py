@@ -34,7 +34,6 @@ async def require_confirm_init(
         address=address,
         br_type="confirm_init",
         description=description,
-        icon=ui.ICON_SEND,
     )
 
     network = get_network_warning(network_passphrase)
@@ -44,9 +43,7 @@ async def require_confirm_init(
             title="Confirm network",
             content="Transaction is on {}",
             param=network,
-            icon=ui.ICON_CONFIRM,
             br_code=ButtonRequestType.ConfirmOutput,
-            hide_continue=True,
         )
 
 
@@ -97,13 +94,12 @@ async def require_confirm_memo(
 
 async def require_confirm_final(ctx: Context, fee: int, num_operations: int) -> None:
     op_str = strings.format_plural("{count} {plural}", num_operations, "operation")
+    # TODO confirm_fee + confirm_total
     await confirm_metadata(
         "confirm_final",
         title="Final confirm",
         content="Sign this transaction made up of " + op_str + " and pay {}\nfor fee?",
         param=format_amount(fee),
-        hide_continue=True,
-        hold=True,
     )
 
 

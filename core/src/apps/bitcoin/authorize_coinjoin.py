@@ -74,8 +74,8 @@ async def authorize_coinjoin(
             "fee_over_threshold",
             "High mining fee",
             "The mining fee of\n{} sats/vbyte\nis unexpectedly high.",
-            max_fee_per_vbyte,
-            ButtonRequestType.FeeOverThreshold,
+            param=max_fee_per_vbyte,
+            br_code=ButtonRequestType.FeeOverThreshold,
         )
 
     authorization.set(msg)

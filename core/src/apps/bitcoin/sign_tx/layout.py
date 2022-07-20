@@ -189,30 +189,27 @@ async def confirm_feeoverthreshold(
     fee: int, coin: CoinInfo, amount_unit: AmountUnit
 ) -> None:
     fee_amount = format_coin_amount(fee, coin, amount_unit)
-    await layouts.confirm_metadata(
+    await layouts.show_warning(
         "fee_over_threshold",
-        "High fee",
-        "The fee of\n{}is unexpectedly high.",
-        fee_amount,
-        ButtonRequestType.FeeOverThreshold,
+        header="Unusually high fee",
+        content=fee_amount,
+        br_code=ButtonRequestType.FeeOverThreshold,
     )
 
 
 async def confirm_change_count_over_threshold(change_count: int) -> None:
-    await layouts.confirm_metadata(
+    await layouts.show_warning(
         "change_count_over_threshold",
-        "Warning",
-        "There are {}\nchange-outputs.\n",
-        str(change_count),
-        ButtonRequestType.SignTx,
+        header="A lot of change-outputs",
+        content=f"{change_count} outputs",
+        br_code=ButtonRequestType.SignTx,
     )
 
 
 async def confirm_unverified_external_input() -> None:
-    await layouts.confirm_metadata(
+    await layouts.show_warning(
         "unverified_external_input",
-        "Warning",
-        "The transaction contains unverified external inputs.",
+        content="Unverified external inputs",
         br_code=ButtonRequestType.SignTx,
     )
 
@@ -235,6 +232,6 @@ async def confirm_nondefault_locktime(lock_time: int, lock_time_disabled: bool) 
         "nondefault_locktime",
         title,
         text,
-        param,
+        param=param,
         br_code=ButtonRequestType.SignTx,
     )

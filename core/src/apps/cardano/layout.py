@@ -379,8 +379,6 @@ async def _show_credential(
         "confirm_credential",
         title=title,
         props=props,
-        icon=icon,
-        icon_color=icon_color,
         br_code=ButtonRequestType.Other,
     )
 
@@ -398,7 +396,6 @@ async def warn_tx_output_contains_tokens(is_collateral_return: bool = False) -> 
         "confirm_tokens",
         title="Confirm transaction",
         content=content,
-        larger_vspace=True,
         br_code=ButtonRequestType.Other,
     )
 
@@ -408,7 +405,6 @@ async def warn_tx_contains_mint() -> None:
         "confirm_tokens",
         title="Confirm transaction",
         content="The transaction contains minting or burning of tokens.",
-        larger_vspace=True,
         br_code=ButtonRequestType.Other,
     )
 
@@ -766,7 +762,6 @@ async def warn_tx_network_unverifiable() -> None:
         "warning_no_outputs",
         title="Warning",
         content="Transaction has no outputs, network cannot be verified.",
-        larger_vspace=True,
         br_code=ButtonRequestType.Other,
     )
 

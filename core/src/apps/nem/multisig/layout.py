@@ -57,5 +57,4 @@ async def _require_confirm_address(ctx: Context, action: str, address: str) -> N
         description=action,
         address=address,
         br_code=ButtonRequestType.ConfirmOutput,
-        icon=ui.ICON_SEND,
     )

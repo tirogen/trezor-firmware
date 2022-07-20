@@ -90,7 +90,6 @@ def require_confirm_unknown_token(address_bytes: bytes) -> Awaitable[None]:
         contract_address_hex,
         description="Contract:",
         br_type="unknown_token",
-        icon_color=ui.ORANGE,
         br_code=ButtonRequestType.SignTx,
     )
 

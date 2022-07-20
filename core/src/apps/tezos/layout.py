@@ -40,7 +40,6 @@ async def require_confirm_origination(ctx: Context, address: str) -> None:
         address=address,
         description="Address:",
         br_type="confirm_origination",
-        icon_color=ui.ORANGE,
         br_code=ButtonRequestType.SignTx,
     )
 
@@ -52,7 +51,6 @@ async def require_confirm_origination_fee(ctx: Context, balance: int, fee: int) 
             ("Balance:", format_tezos_amount(balance)),
             ("Fee:", format_tezos_amount(fee)),
         ),
-        icon_color=ui.ORANGE,
         br_type="confirm_origination_final",
         hold=True,
     )
@@ -64,7 +62,6 @@ async def require_confirm_delegation_baker(ctx: Context, baker: str) -> None:
         address=baker,
         description="Baker address:",
         br_type="confirm_delegation",
-        icon_color=ui.BLUE,
         br_code=ButtonRequestType.SignTx,
     )
 
@@ -75,9 +72,6 @@ async def require_confirm_set_delegate(ctx: Context, fee: int) -> None:
         title="Confirm delegation",
         content="Fee:\n{}",
         param=format_tezos_amount(fee),
-        hold=True,
-        hide_continue=True,
-        icon_color=ui.BLUE,
         br_code=ButtonRequestType.SignTx,
     )
 
@@ -92,7 +86,6 @@ async def require_confirm_register_delegate(
             ("Fee:", format_tezos_amount(fee)),
             ("Address:", address),
         ),
-        icon_color=ui.BLUE,
         br_code=ButtonRequestType.SignTx,
     )
 
@@ -110,7 +103,6 @@ async def require_confirm_ballot(ctx: Context, proposal: str, ballot: str) -> No
             ("Ballot:", ballot),
             ("Proposal:", proposal),
         ),
-        icon_color=ui.PURPLE,
         br_code=ButtonRequestType.SignTx,
     )
 
@@ -127,7 +119,6 @@ async def require_confirm_proposals(ctx: Context, proposals: list[str]) -> None:
         props=[
             ("Proposal " + str(i), proposal) for i, proposal in enumerate(proposals, 1)
         ],
-        icon_color=ui.PURPLE,
         br_code=ButtonRequestType.SignTx,
     )
 
@@ -140,8 +131,6 @@ async def require_confirm_delegation_manager_withdraw(
         address=address,
         description="Delegator:",
         br_type="confirm_undelegation",
-        icon=ui.ICON_RECEIVE,
-        icon_color=ui.RED,
         br_code=ButtonRequestType.SignTx,
     )
 
@@ -152,9 +141,5 @@ async def require_confirm_manager_remove_delegate(ctx: Context, fee: int) -> Non
         title="Remove delegation",
         content="Fee:\n{}",
         param=format_tezos_amount(fee),
-        hold=True,
-        hide_continue=True,
-        icon=ui.ICON_RECEIVE,
-        icon_color=ui.RED,
         br_code=ButtonRequestType.SignTx,
     )

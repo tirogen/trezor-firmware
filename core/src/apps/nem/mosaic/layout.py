@@ -111,5 +111,4 @@ async def require_confirm_properties(
         "confirm_properties",
         title="Confirm properties",
         props=properties,
-        icon_color=ui.ORANGE_ICON,
     )
