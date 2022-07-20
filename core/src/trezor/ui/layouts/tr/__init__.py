@@ -210,6 +210,7 @@ async def request_pin_on_device(
     prompt: str,
     attempts_remaining: int | None,
     allow_cancel: bool,
+    wrong_attempt: bool = False,
 ) -> str:
     ctx = wire.get_context()
     await button_request(ctx, "pin_device", code=ButtonRequestType.PinEntry)

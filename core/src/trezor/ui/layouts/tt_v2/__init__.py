@@ -615,6 +615,7 @@ def draw_simple_text(title: str, description: str = "") -> None:
     log.error(__name__, "draw_simple_text not implemented")
 
 
+# TODO remove max_len from python
 async def request_passphrase_on_device(max_len: int) -> str:
     ctx = wire.get_context()
     await button_request(
@@ -636,19 +637,18 @@ async def request_pin_on_device(
     prompt: str,
     attempts_remaining: int | None,
     allow_cancel: bool,
+    wrong_attempt: bool = False,
 ) -> str:
     ctx = wire.get_context()
     await button_request(ctx, "pin_device", code=ButtonRequestType.PinEntry)
 
-    warning = "Wrong PIN" if "Wrong" in prompt else None
+    warning = "Wrong PIN" if wrong_attempt else None
 
     if attempts_remaining is None:
         subprompt = ""
     elif attempts_remaining == 1:
-        prompt = "Enter PIN"
         subprompt = "Last attempt"
     else:
-        prompt = "Enter PIN"
         subprompt = f"{attempts_remaining} tries left"
 
     dialog = RustLayout(
