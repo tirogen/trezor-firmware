@@ -78,18 +78,13 @@ if __debug__:
             SWIPE_RIGHT,
         )
 
-        if UI2:
-            confirm = trezorui2
-        else:
-            from trezor.ui.components.tt import confirm
-
         if msg.button is not None:
             if msg.button == DebugButton.NO:
-                await confirm_chan.put(Result(confirm.CANCELLED))
+                await confirm_chan.put(Result(trezorui2.CANCELLED))
             elif msg.button == DebugButton.YES:
-                await confirm_chan.put(Result(confirm.CONFIRMED))
+                await confirm_chan.put(Result(trezorui2.CONFIRMED))
             elif msg.button == DebugButton.INFO:
-                await confirm_chan.put(Result(confirm.INFO))
+                await confirm_chan.put(Result(trezorui2.INFO))
         if msg.swipe is not None:
             if msg.swipe == DebugSwipeDirection.UP:
                 await swipe_chan.put(SWIPE_UP)

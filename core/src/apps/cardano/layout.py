@@ -181,11 +181,8 @@ async def show_tx_init(title: str) -> bool:
             ),
             (ui.NORMAL, "Choose level of details:"),
         ),
-        button_text="Show All",
-        icon=ui.ICON_SEND,
-        icon_color=ui.GREEN,
+        show_more="Show All",
         confirm="Show Simple",
-        major_confirm=True,
     )
 
     return should_show_details

@@ -6,9 +6,6 @@ from trezor.enums import ButtonRequestType
 
 import trezorui2
 
-from ...components.tt.button import ButtonContent
-from ...components.tt.confirm import Confirm
-from ...constants.tt import MONO_ADDR_PER_LINE
 from ..common import RustLayout, button_request, interact
 
 if TYPE_CHECKING:
@@ -322,13 +319,11 @@ async def confirm_payment_request(
 async def should_show_more(
     title: str,
     para: Iterable[tuple[int, str]],
-    button_text: str = "Show all",
+    *,
+    show_more: str = "Show all",
+    confirm: str | None = None,
     br_type: str = "should_show_more",
     br_code: ButtonRequestType = ButtonRequestType.Other,
-    icon: str = ui.ICON_DEFAULT,
-    icon_color: int = ui.ORANGE_ICON,
-    confirm: ButtonContent = Confirm.DEFAULT_CONFIRM,
-    major_confirm: bool = False,
 ) -> bool:
     raise NotImplementedError
 

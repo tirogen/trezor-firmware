@@ -137,7 +137,7 @@ async def should_show_domain(name: bytes, version: bytes) -> bool:
     return await should_show_more(
         title="Confirm domain",
         para=para,
-        button_text="Show full domain",
+        show_more="Show full domain",
         br_type="should_show_domain",
     )
 
@@ -160,7 +160,7 @@ async def should_show_struct(
     return await should_show_more(
         title=title,
         para=para,
-        button_text=button_text,
+        show_more=button_text,
         br_type="should_show_struct",
     )
 
@@ -175,7 +175,7 @@ async def should_show_array(
     return await should_show_more(
         title=limit_str(".".join(parent_objects)),
         para=para,
-        button_text="Show full array",
+        show_more="Show full array",
         br_type="should_show_array",
     )
 
