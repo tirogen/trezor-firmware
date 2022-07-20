@@ -134,9 +134,7 @@ async def show_address(
 async def confirm_output(
     address: str,
     amount: str,
-    font_amount: int = ui.NORMAL,  # TODO cleanup @ redesign
     title: str = "Confirm sending",
-    icon: str = ui.ICON_SEND,
 ) -> None:
     result = await interact(
         RustLayout(

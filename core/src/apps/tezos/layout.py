@@ -21,9 +21,6 @@ async def require_confirm_tx(ctx: Context, to: str, value: int) -> None:
     await confirm_output(
         to,
         format_tezos_amount(value),
-        font_amount=ui.BOLD,
-        to_str="\nto\n",
-        width=18,
         br_code=ButtonRequestType.SignTx,
     )
 

@@ -39,8 +39,6 @@ def require_confirm_tx(
     return confirm_output(
         address=to_str,
         amount=format_ethereum_amount(value, token, chain_id),
-        font_amount=ui.BOLD,
-        color_to=ui.GREY,
         br_code=ButtonRequestType.SignTx,
     )
 

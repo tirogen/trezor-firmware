@@ -257,16 +257,9 @@ async def show_success(
 async def confirm_output(
     address: str,
     amount: str,
-    font_amount: int = ui.NORMAL,  # TODO cleanup @ redesign
     title: str = "SENDING",
     subtitle: str | None = None,  # TODO cleanup @ redesign
-    color_to: int = ui.FG,  # TODO cleanup @ redesign
-    to_str: str = " to\n",  # TODO cleanup @ redesign
-    to_paginated: bool = False,  # TODO cleanup @ redesign
-    width: int = MONO_ADDR_PER_LINE,
-    width_paginated: int = MONO_ADDR_PER_LINE - 1,
     br_code: ButtonRequestType = ButtonRequestType.ConfirmOutput,
-    icon: str = ui.ICON_SEND,
 ) -> None:
     title = title.upper()
     if title.startswith("CONFIRM "):

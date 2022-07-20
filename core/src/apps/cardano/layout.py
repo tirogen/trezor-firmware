@@ -223,10 +223,6 @@ async def confirm_sending(
         format_coin_amount(ada_amount, network_id),
         title="Confirm transaction",
         subtitle=f"{message}:",
-        font_amount=ui.BOLD,
-        width_paginated=17,
-        to_str="\nto\n",
-        to_paginated=True,
         br_code=ButtonRequestType.Other,
     )
 

@@ -127,7 +127,6 @@ async def _require_confirm_output(
     await confirm_output(
         address=addr,
         amount=_format_amount(dst.amount),
-        font_amount=ui.BOLD,
         br_code=ButtonRequestType.SignTx,
     )
 

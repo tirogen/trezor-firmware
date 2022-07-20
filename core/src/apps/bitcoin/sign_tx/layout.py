@@ -76,7 +76,6 @@ async def confirm_output(
             address_short,
             format_coin_amount(output.amount, coin, amount_unit),
             title=title,
-            icon=icon,
         )
 
     await layout
