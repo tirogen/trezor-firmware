@@ -14,8 +14,8 @@ async def list_resident_credentials(
 ) -> WebAuthnCredentials:
     await confirm_action(
         "credentials_list",
-        title="List credentials",
-        description="Do you want to export information about the resident credentials stored on this device?",
+        "List credentials",
+        "Do you want to export information about the resident credentials stored on this device?",
     )
     creds = [
         WebAuthnCredential(

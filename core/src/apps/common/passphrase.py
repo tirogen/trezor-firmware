@@ -59,8 +59,8 @@ async def _request_on_host(ctx: wire.Context) -> str:
 
         await confirm_action(
             "passphrase_host1",
-            title="Hidden wallet",
-            description="Access hidden wallet?\n\nNext screen will show\nthe passphrase!",
+            "Hidden wallet",
+            "Access hidden wallet?\n\nNext screen will show\nthe passphrase!",
         )
 
         await confirm_blob(

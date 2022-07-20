@@ -67,8 +67,8 @@ async def get_ownership_proof(
     if msg.user_confirmation and not authorization:
         await confirm_action(
             "confirm_ownership_proof",
-            title="Proof of ownership",
-            description="Do you want to create a proof of ownership?",
+            "Proof of ownership",
+            "Do you want to create a proof of ownership?",
         )
         if msg.commitment_data:
             await confirm_blob(

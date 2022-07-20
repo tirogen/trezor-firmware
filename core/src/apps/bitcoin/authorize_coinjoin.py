@@ -49,7 +49,8 @@ async def authorize_coinjoin(
 
     await confirm_action(
         "coinjoin_coordinator",
-        title="Authorize CoinJoin",
+        "Authorize CoinJoin",
+        "TODO",  # TODO: use some other way to format action
         description="Do you really want to take part in a CoinJoin transaction at:\n{}",
         description_param=msg.coordinator,
         # TODO change to another widget so that we can use MONO font

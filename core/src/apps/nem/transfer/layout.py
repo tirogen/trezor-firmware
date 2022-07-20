@@ -83,11 +83,9 @@ async def ask_transfer_mosaic(
     else:
         await confirm_action(
             "confirm_mosaic_unknown",
-            title="Confirm mosaic",
-            action="Unknown mosaic!",
+            "Confirm mosaic",
+            "Unknown mosaic!",
             description="Divisibility and levy cannot be shown for unknown mosaics",
-            icon=ui.ICON_SEND,
-            icon_color=ui.RED,
             br_code=ButtonRequestType.ConfirmOutput,
         )
 

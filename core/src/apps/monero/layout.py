@@ -31,9 +31,7 @@ async def require_confirm_watchkey() -> None:
     await confirm_action(
         "get_watchkey",
         "Confirm export",
-        description="Do you really want to export watch-only credentials?",
-        icon=ui.ICON_SEND,
-        icon_color=ui.GREEN,
+        "Do you really want to export watch-only credentials?",
         br_code=ButtonRequestType.SignTx,
     )
 
@@ -42,9 +40,7 @@ async def require_confirm_keyimage_sync() -> None:
     await confirm_action(
         "key_image_sync",
         "Confirm ki sync",
-        description="Do you really want to\nsync key images?",
-        icon=ui.ICON_SEND,
-        icon_color=ui.GREEN,
+        "Do you really want to\nsync key images?",
         br_code=ButtonRequestType.SignTx,
     )
 
@@ -53,23 +49,20 @@ async def require_confirm_live_refresh() -> None:
     await confirm_action(
         "live_refresh",
         "Confirm refresh",
-        description="Do you really want to\nstart refresh?",
-        icon=ui.ICON_SEND,
-        icon_color=ui.GREEN,
+        "Do you really want to\nstart refresh?",
         br_code=ButtonRequestType.SignTx,
     )
 
 
 async def require_confirm_tx_key(export_key: bool = False) -> None:
     if export_key:
-        description = "Do you really want to export tx_key?"
+        action = "Do you really want to export tx_key?"
     else:
-        description = "Do you really want to export tx_der\nfor tx_proof?"
+        action = "Do you really want to export tx_der\nfor tx_proof?"
     await confirm_action(
         "export_tx_key",
         "Confirm export",
-        description=description,
-        icon=ui.ICON_SEND,
+        action,
         icon_color=ui.GREEN,
         br_code=ButtonRequestType.SignTx,
     )

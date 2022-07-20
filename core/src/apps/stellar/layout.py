@@ -81,11 +81,9 @@ async def require_confirm_memo(
     else:
         return await confirm_action(
             "confirm_memo",
-            title="Confirm memo",
-            action="No memo set!",
+            "Confirm memo",
+            "No memo set!",
             description="Important: Many exchanges require a memo when depositing",
-            icon=ui.ICON_CONFIRM,
-            icon_color=ui.GREEN,
             br_code=ButtonRequestType.ConfirmOutput,
         )
 

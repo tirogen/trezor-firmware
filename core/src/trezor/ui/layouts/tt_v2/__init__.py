@@ -60,7 +60,7 @@ async def confirm_reset_device(prompt: str, recovery: bool = False) -> None:
     return await confirm_action(
         "recover_device" if recovery else "setup_device",
         "not implemented",
-        action="not implemented",
+        "not implemented",
     )
 
 
@@ -240,7 +240,6 @@ async def show_success(
     content: str,
     subheader: str | None = None,
     button: str = "Continue",
-    ctx: wire.GenericContext | None = None,
 ) -> None:
     result = await interact(
         RustLayout(
@@ -252,7 +251,6 @@ async def show_success(
         ),
         br_type,
         ButtonRequestType.Success,
-        ctx=ctx,
     )
     if result is not trezorui2.CONFIRMED:
         raise wire.ActionCancelled
