@@ -52,8 +52,8 @@ async def authorize_coinjoin(
         title="Authorize CoinJoin",
         description="Do you really want to take part in a CoinJoin transaction at:\n{}",
         description_param=msg.coordinator,
-        description_param_font=ui.MONO,
-        icon=ui.ICON_RECOVERY,
+        # TODO change to another widget so that we can use MONO font
+        # description_param_font=ui.MONO,
     )
 
     max_fee_per_vbyte = format_amount(msg.max_fee_per_kvbyte, 3)

@@ -14,9 +14,9 @@ async def set_u2f_counter(ctx: wire.Context, msg: SetU2FCounter) -> Success:
     await confirm_action(
         "set_u2f_counter",
         title="Set U2F counter",
+        action="TODO",  # use different widget
         description="Do you really want to\nset the U2F counter\nto {}?",
         description_param=str(msg.u2f_counter),
-        icon=ui.ICON_CONFIG,
         br_code=ButtonRequestType.ProtectCall,
     )
 

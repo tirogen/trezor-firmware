@@ -103,7 +103,7 @@ async def require_confirm_change_homescreen(ctx: wire.GenericContext) -> None:
     await confirm_action(
         "set_homescreen",
         "Set homescreen",
-        description="Do you really want to change the homescreen image?",
+        action="Do you really want to change the homescreen image?",
         br_code=ButtonRequestType.ProtectCall,
     )
 
@@ -112,6 +112,7 @@ async def require_confirm_change_label(ctx: wire.GenericContext, label: str) -> 
     await confirm_action(
         "set_label",
         "Change label",
+        action="TODO",  # TODO use format-capable widget?
         description="Do you really want to change the label to {}?",
         description_param=label,
         br_code=ButtonRequestType.ProtectCall,
@@ -122,13 +123,13 @@ async def require_confirm_change_passphrase(
     ctx: wire.GenericContext, use: bool
 ) -> None:
     if use:
-        description = "Do you really want to enable passphrase encryption?"
+        action = "Do you really want to enable passphrase encryption?"
     else:
-        description = "Do you really want to disable passphrase encryption?"
+        action = "Do you really want to disable passphrase encryption?"
     await confirm_action(
         "set_passphrase",
         "Enable passphrase" if use else "Disable passphrase",
-        description=description,
+        action,
         br_code=ButtonRequestType.ProtectCall,
     )
 
@@ -137,13 +138,13 @@ async def require_confirm_change_passphrase_source(
     ctx: wire.GenericContext, passphrase_always_on_device: bool
 ) -> None:
     if passphrase_always_on_device:
-        description = "Do you really want to enter passphrase always on the device?"
+        action = "Do you really want to enter passphrase always on the device?"
     else:
-        description = "Do you want to revoke the passphrase on device setting?"
+        action = "Do you want to revoke the passphrase on device setting?"
     await confirm_action(
         "set_passphrase_source",
         "Passphrase source",
-        description=description,
+        action,
         br_code=ButtonRequestType.ProtectCall,
     )
 
@@ -164,6 +165,7 @@ async def require_confirm_change_display_rotation(
     await confirm_action(
         "set_rotation",
         "Change rotation",
+        action="TODO",  # TODO use different widget
         description="Do you really want to change display rotation to {}?",
         description_param=label,
         br_code=ButtonRequestType.ProtectCall,
@@ -176,6 +178,7 @@ async def require_confirm_change_autolock_delay(
     await confirm_action(
         "set_autolock_delay",
         "Auto-lock delay",
+        action="TODO",  # TODO use different widget
         description="Do you really want to auto-lock your device after {}?",
         description_param=format_duration_ms(delay_ms),
         br_code=ButtonRequestType.ProtectCall,
@@ -190,11 +193,9 @@ async def require_confirm_safety_checks(
             "set_safety_checks",
             "Safety override",
             hold=True,
-            verb="Hold to confirm",
+            #verb="Hold to confirm",
+            action="Override safety checks?",
             description="Trezor will allow you to approve some actions which might be unsafe.",
-            action="Are you sure?",
-            reverse=True,
-            larger_vspace=True,
             br_code=ButtonRequestType.ProtectCall,
         )
     elif level == SafetyCheckLevel.PromptTemporarily:
@@ -204,15 +205,14 @@ async def require_confirm_safety_checks(
             hold=True,
             verb="Hold to confirm",
             description="Trezor will temporarily allow you to approve some actions which might be unsafe.",
-            action="Are you sure?",
-            reverse=True,
+            action="Override safety checks?",
             br_code=ButtonRequestType.ProtectCall,
         )
     elif level == SafetyCheckLevel.Strict:
         await confirm_action(
             "set_safety_checks",
             "Safety checks",
-            description="Do you really want to enforce strict safety checks (recommended)?",
+            "Do you really want to enforce strict safety checks (recommended)?",
             br_code=ButtonRequestType.ProtectCall,
         )
     else:
@@ -226,8 +226,7 @@ async def require_confirm_experimental_features(
         await confirm_action(
             "set_experimental_features",
             "Experimental mode",
-            description="Enable experimental features?",
-            action="Only for development and beta testing!",
-            reverse=True,
+            action="Enable experimental features?",
+            description="Only for development and beta testing!",
             br_code=ButtonRequestType.ProtectCall,
         )

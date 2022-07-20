@@ -20,31 +20,22 @@ if TYPE_CHECKING:
 async def confirm_action(
     br_type: str,
     title: str,
-    action: str | None = None,
+    action: str,
+    *,
     description: str | None = None,
     description_param: str | None = None,
-    description_param_font: int = ui.BOLD,
-    verb: str | bytes | None = "CONFIRM",
-    verb_cancel: str | bytes | None = None,
+    verb: str = "CONFIRM",
+    verb_cancel: str | None = None,
     hold: bool = False,
-    hold_danger: bool = False,
-    icon: str | None = None,
-    icon_color: int | None = None,
-    reverse: bool = False,
-    larger_vspace: bool = False,
     exc: ExceptionType = wire.ActionCancelled,
     br_code: ButtonRequestType = ButtonRequestType.Other,
 ) -> None:
-    if isinstance(verb, bytes) or isinstance(verb_cancel, bytes):
-        raise NotImplementedError
-    if isinstance(verb, str):
-        verb = verb.upper()
+    verb = verb.upper()
     if isinstance(verb_cancel, str):
         verb_cancel = verb_cancel.upper()
 
     if description is not None and description_param is not None:
-        if description_param_font != ui.BOLD:
-            log.error(__name__, "confirm_action description_param_font not implemented")
+        # TODO propagate param into Rust for bold formatting
         description = description.format(description_param)
 
     result = await interact(
@@ -56,7 +47,6 @@ async def confirm_action(
                 verb=verb,
                 verb_cancel=verb_cancel,
                 hold=hold,
-                reverse=reverse,
             )
         ),
         br_type,

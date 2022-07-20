@@ -28,7 +28,10 @@ async def cipher_key_value(ctx: wire.Context, msg: CipherKeyValue) -> CipheredKe
             title = "Encrypt value"
         else:
             title = "Decrypt value"
-        await confirm_action("cipher_key_value", title, description=msg.key)
+        # TODO use confirm_text / confirm_blob / something that is explicitly for user-submitted data?
+        await confirm_action(
+            "cipher_key_value", title, title + "?", description=msg.key
+        )
 
     node = keychain.derive(msg.address_n)
     value = compute_cipher_key_value(msg, node.private_key())

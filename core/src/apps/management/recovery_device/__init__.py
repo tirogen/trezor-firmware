@@ -95,8 +95,7 @@ async def _continue_dialog(msg: RecoveryDevice) -> None:
     else:
         await confirm_action(
             "confirm_seedcheck",
-            title="Seed check",
-            description="Do you really want to check the recovery seed?",
-            icon=ui.ICON_RECOVERY,
+            "Seed check",
+            "Do you really want to check the recovery seed?",
             br_code=ButtonRequestType.ProtectCall,
         )

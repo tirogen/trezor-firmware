@@ -68,27 +68,21 @@ def require_confirm_change_pin(msg: ChangePin) -> Awaitable[None]:
         return confirm_action(
             "set_pin",
             "Remove PIN",
-            description="Do you really want to",
-            action="disable PIN protection?",
-            reverse=True,
+            "Do you really want to disable PIN protection?",
         )
 
     if not msg.remove and has_pin:  # changing pin
         return confirm_action(
             "set_pin",
             "Change PIN",
-            description="Do you really want to",
-            action="change your PIN?",
-            reverse=True,
+            "Do you really want to change your PIN?",
         )
 
     if not msg.remove and not has_pin:  # setting new pin
         return confirm_action(
             "set_pin",
             "Enable PIN",
-            description="Do you really want to",
-            action="enable PIN protection?",
-            reverse=True,
+            "Do you really want to enable PIN protection?",
         )
 
     # removing non-existing PIN

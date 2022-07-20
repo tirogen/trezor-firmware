@@ -164,4 +164,4 @@ def require_confirm_sd_protect(msg: SdProtect) -> Awaitable[None]:
     else:
         raise wire.ProcessError("Unknown operation")
 
-    return confirm_action("set_sd", "SD card protection", description=text)
+    return confirm_action("set_sd", "SD card protection", text)

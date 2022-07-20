@@ -94,10 +94,9 @@ async def show_backup_warning(slip39: bool = False) -> None:
     await confirm_action(
         "backup_warning",
         "Caution",
-        description=description,
+        description,
         verb="I understand",
         verb_cancel=None,
-        icon=ui.ICON_NOCOPY,
         br_code=ButtonRequestType.ResetDevice,
     )
 

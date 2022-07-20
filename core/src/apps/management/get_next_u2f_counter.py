@@ -13,9 +13,8 @@ async def get_next_u2f_counter(
 
     await confirm_action(
         "get_u2f_counter",
-        title="Get next U2F counter",
-        description="Do you really want to increase and retrieve\nthe U2F counter?",
-        icon=ui.ICON_CONFIG,
+        "Get next U2F counter",
+        "Do you really want to increase and retrieve\nthe U2F counter?",
         br_code=ButtonRequestType.ProtectCall,
     )
 

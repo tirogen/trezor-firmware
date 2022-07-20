@@ -17,8 +17,6 @@ async def _confirm_retry_wrong_card() -> None:
             description="Please insert the correct SD card for this device.",
             verb="Retry",
             verb_cancel="Abort",
-            icon=ui.ICON_WRONG,
-            larger_vspace=True,
             exc=SdCardUnavailable("Wrong SD card."),
         )
     else:
@@ -40,8 +38,6 @@ async def _confirm_retry_insert_card() -> None:
             description="Please insert your SD card.",
             verb="Retry",
             verb_cancel="Abort",
-            icon=ui.ICON_WRONG,
-            larger_vspace=True,
             exc=SdCardUnavailable("SD card required."),
         )
     else:
@@ -61,11 +57,7 @@ async def _confirm_format_card() -> None:
         "SD card error",
         action="Unknown filesystem.",
         description="Use a different card or format the SD card to the FAT32 filesystem.",
-        icon=ui.ICON_WRONG,
-        icon_color=ui.RED,
         verb="Format",
-        verb_cancel="Cancel",
-        larger_vspace=True,
         exc=SdCardUnavailable("SD card not formatted."),
     )
 
@@ -73,14 +65,10 @@ async def _confirm_format_card() -> None:
     await confirm_action(
         "confirm_format_sd",
         "Format SD card",
-        action="All data on the SD card will be lost.",
-        description="Do you really want to format the SD card?",
-        reverse=True,
+        action="Do you really want to format the SD card?",
+        description="All data on the SD card will be lost.",
         verb="Format SD card",
-        icon=ui.ICON_WIPE,
-        icon_color=ui.RED,
         hold=True,
-        larger_vspace=True,
         exc=SdCardUnavailable("SD card not formatted."),
     )
 
@@ -91,10 +79,7 @@ async def confirm_retry_sd(
     await confirm_action(
         "warning_sd_retry",
         "SD card problem",
-        action=None,
-        description="There was a problem accessing the SD card.",
-        icon=ui.ICON_WRONG,
-        icon_color=ui.RED,
+        "There was a problem accessing the SD card.",
         verb="Retry",
         verb_cancel="Abort",
         exc=exc,

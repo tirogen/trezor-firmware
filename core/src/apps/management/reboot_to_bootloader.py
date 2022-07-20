@@ -19,7 +19,8 @@ async def reboot_to_bootloader(ctx: wire.Context, msg: RebootToBootloader) -> No
         "reboot",
         "Go to bootloader",
         "Do you want to restart Trezor in bootloader mode?",
-        hold_danger=True,
+        hold=True,
+        # TODO hold_danger=True,
         verb="Restart",
     )
     await ctx.write(Success(message="Rebooting"))

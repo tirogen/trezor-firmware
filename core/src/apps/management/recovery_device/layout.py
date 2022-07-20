@@ -27,18 +27,15 @@ async def confirm_abort(dry_run: bool = False) -> None:
         await confirm_action(
             "abort_recovery",
             "Abort seed check",
-            description="Do you really want to abort the seed check?",
-            icon=ui.ICON_WIPE,
+            "Do you really want to abort the seed check?",
             br_code=ButtonRequestType.ProtectCall,
         )
     else:
         await confirm_action(
             "abort_recovery",
             "Abort recovery",
-            description="Do you really want to abort the recovery process?",
-            action="All progress will be lost.",
-            reverse=True,
-            icon=ui.ICON_WIPE,
+            action="Do you really want to abort the recovery process?",
+            description="All progress will be lost.",
             br_code=ButtonRequestType.ProtectCall,
         )
 
