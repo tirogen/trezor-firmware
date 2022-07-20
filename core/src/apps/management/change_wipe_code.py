@@ -63,31 +63,22 @@ def _require_confirm_action(
     if msg.remove and has_wipe_code:
         return confirm_action(
             "disable_wipe_code",
-            title="Disable wipe code",
-            description="Do you really want to",
-            action="disable wipe code protection?",
-            reverse=True,
-            icon=ui.ICON_CONFIG,
+            "Disable wipe code",
+            "Do you really want to disable wipe code protection?",
         )
 
     if not msg.remove and has_wipe_code:
         return confirm_action(
             "change_wipe_code",
-            title="Change wipe code",
-            description="Do you really want to",
-            action="change the wipe code?",
-            reverse=True,
-            icon=ui.ICON_CONFIG,
+            "Change wipe code",
+            "Do you really want to change the wipe code?",
         )
 
     if not msg.remove and not has_wipe_code:
         return confirm_action(
             "set_wipe_code",
-            title="Set wipe code",
-            description="Do you really want to",
-            action="set the wipe code?",
-            reverse=True,
-            icon=ui.ICON_CONFIG,
+            "Set wipe code",
+            "Do you really want to set the wipe code?",
         )
 
     # Removing non-existing wipe code.
