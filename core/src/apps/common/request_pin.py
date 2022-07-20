@@ -119,7 +119,6 @@ async def error_pin_invalid() -> NoReturn:
         "warning_wrong_pin",
         header="Wrong PIN",
         content="The PIN you entered is invalid.",
-        red=True,
         exc=wire.PinInvalid,
     )
     assert False
@@ -132,7 +131,6 @@ async def error_pin_matches_wipe_code() -> NoReturn:
         "warning_invalid_new_pin",
         header="Invalid PIN",
         content="The new PIN must be different from your\nwipe code.",
-        red=True,
         exc=wire.PinInvalid,
     )
     assert False

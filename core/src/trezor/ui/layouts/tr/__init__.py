@@ -226,7 +226,6 @@ async def show_error_and_raise(
     header: str = "Error",
     subheader: str | None = None,
     button: str = "Close",
-    red: bool = False,
     exc: ExceptionType = wire.ActionCancelled,
 ) -> NoReturn:
     raise NotImplementedError

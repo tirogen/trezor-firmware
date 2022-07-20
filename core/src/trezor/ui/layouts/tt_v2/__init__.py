@@ -164,7 +164,7 @@ async def show_address(
                     return
 
 
-def show_pubkey(pubkey: str, title: str = "Confirm public key") -> Awaitable[None]:
+def show_pubkey(pubkey: str) -> Awaitable[None]:
     return confirm_blob(
         br_type="show_pubkey",
         title="Confirm public key",
@@ -195,7 +195,6 @@ async def show_error_and_raise(
     header: str = "Error",
     subheader: str | None = None,
     button: str = "Close",
-    red: bool = False,
     exc: ExceptionType = wire.ActionCancelled,
 ) -> NoReturn:
     await _show_modal(
@@ -206,8 +205,6 @@ async def show_error_and_raise(
         content=content,
         button_confirm=None,
         button_cancel=button,
-        icon=ui.ICON_WRONG,
-        icon_color=ui.RED if red else ui.ORANGE_ICON,
         exc=exc,
     )
     raise exc
