@@ -43,12 +43,11 @@ async def sign_tx(
 
     data_total = msg.data_length
 
-    await require_confirm_tx(ctx, recipient, value, msg.chain_id, token)
+    await require_confirm_tx(recipient, value, msg.chain_id, token)
     if token is None and msg.data_length > 0:
-        await require_confirm_data(ctx, msg.data_initial_chunk, data_total)
+        await require_confirm_data(msg.data_initial_chunk, data_total)
 
     await require_confirm_fee(
-        ctx,
         value,
         int.from_bytes(msg.gas_price, "big"),
         int.from_bytes(msg.gas_limit, "big"),
@@ -112,7 +111,7 @@ async def handle_erc20(
         value = int.from_bytes(msg.data_initial_chunk[36:68], "big")
 
         if token is tokens.UNKNOWN_TOKEN:
-            await require_confirm_unknown_token(ctx, address_bytes)
+            await require_confirm_unknown_token(address_bytes)
 
     return token, address_bytes, recipient, value
 

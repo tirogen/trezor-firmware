@@ -64,12 +64,11 @@ async def sign_tx_eip1559(
 
     data_total = msg.data_length
 
-    await require_confirm_tx(ctx, recipient, value, msg.chain_id, token)
+    await require_confirm_tx(recipient, value, msg.chain_id, token)
     if token is None and msg.data_length > 0:
-        await require_confirm_data(ctx, msg.data_initial_chunk, data_total)
+        await require_confirm_data(msg.data_initial_chunk, data_total)
 
     await require_confirm_eip1559_fee(
-        ctx,
         value,
         int.from_bytes(msg.max_priority_fee, "big"),
         int.from_bytes(msg.max_gas_fee, "big"),

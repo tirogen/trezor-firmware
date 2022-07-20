@@ -75,7 +75,7 @@ async def generate_typed_data_hash(
     await typed_data_envelope.collect_types()
 
     name, version = await get_name_and_version_for_domain(ctx, typed_data_envelope)
-    show_domain = await should_show_domain(ctx, name, version)
+    show_domain = await should_show_domain(name, version)
     domain_separator = await typed_data_envelope.hash_struct(
         primary_type="EIP712Domain",
         member_path=[0],
