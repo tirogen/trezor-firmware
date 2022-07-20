@@ -219,8 +219,6 @@ def show_warning(
     subheader: str | None = None,
     button: str = "Try again",
     br_code: ButtonRequestType = ButtonRequestType.Warning,
-    icon: str = ui.ICON_WRONG,
-    icon_color: int = ui.RED,
 ) -> Awaitable[None]:
     return _show_modal(
         br_type=br_type,
@@ -230,8 +228,8 @@ def show_warning(
         content=content,
         button_confirm=button,
         button_cancel=None,
-        icon=icon,
-        icon_color=icon_color,
+        icon=ui.ICON_WRONG,
+        icon_color=ui.RED,
     )
 
 

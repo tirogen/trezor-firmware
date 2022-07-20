@@ -89,8 +89,6 @@ async def show_dry_run_different_type() -> None:
         "warning_dry_recovery",
         header="Dry run failure",
         content="Seed in the device was\ncreated using another\nbackup mechanism.",
-        icon=ui.ICON_CANCEL,
-        icon_color=ui.ORANGE_ICON,
         br_code=ButtonRequestType.ProtectCall,
     )
 
