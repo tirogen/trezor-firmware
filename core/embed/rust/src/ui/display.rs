@@ -149,22 +149,25 @@ pub fn icon_rust(center: Point, data: &[u8], fg_color: Color, bg_color: Color) {
 
     let mut prev_data = 0;
 
-    for p in area {
-        let x = p.x - area.x0;
+    for py in area.y0..area.y1 {
+        for px in area.x0..area.x1 {
+            let p = Point::new(px, py);
+            let x = p.x - area.x0;
 
-        if clamped.contains(p) {
-            if x % 2 == 0 {
+            if clamped.contains(p) {
+                if x % 2 == 0 {
+                    if let Ok(data) = ctx.uncompress() {
+                        prev_data = data[0];
+                    }
+                    pixeldata(colortable[(prev_data >> 4) as usize]);
+                } else {
+                    pixeldata(colortable[(prev_data & 0xF) as usize]);
+                }
+            } else if x % 2 == 0 {
+                //continue unzipping but dont write to display
                 if let Ok(data) = ctx.uncompress() {
                     prev_data = data[0];
                 }
-                pixeldata(colortable[(prev_data >> 4) as usize]);
-            } else {
-                pixeldata(colortable[(prev_data & 0xF) as usize]);
-            }
-        } else if x % 2 == 0 {
-            //continue unzipping but dont write to display
-            if let Ok(data) = ctx.uncompress() {
-                prev_data = data[0];
             }
         }
     }
@@ -382,44 +385,48 @@ pub fn rect_rounded2_partial(
 
     let n_start = Point::new(-start_vector.y, start_vector.x);
 
-    for p in r {
-        let mut icon_pixel = false;
-        if use_icon && icon_area_clamped.contains(p) {
-            let x_i = p.x - icon_area.x0;
-            let y_i = p.y - icon_area.y0;
+    for y_c in r.y0..r.y1 {
+        for x_c in r.x0..r.x1 {
+            let p = Point::new(x_c, y_c);
 
-            let data = icon_data[(((x_i & 0xFE) + (y_i * icon_width)) / 2) as usize];
-            if (x_i & 0x01) == 0 {
-                pixeldata(icon_colortable[(data >> 4) as usize]);
-            } else {
-                pixeldata(icon_colortable[(data & 0xF) as usize]);
+            let mut icon_pixel = false;
+            if use_icon && icon_area_clamped.contains(p) {
+                let x_i = p.x - icon_area.x0;
+                let y_i = p.y - icon_area.y0;
+
+                let data = icon_data[(((x_i & 0xFE) + (y_i * icon_width)) / 2) as usize];
+                if (x_i & 0x01) == 0 {
+                    pixeldata(icon_colortable[(data >> 4) as usize]);
+                } else {
+                    pixeldata(icon_colortable[(data & 0xF) as usize]);
+                }
+                icon_pixel = true;
             }
-            icon_pixel = true;
-        }
 
-        if !clamped.contains(p) || icon_pixel {
-            continue;
-        }
+            if !clamped.contains(p) || icon_pixel {
+                continue;
+            }
 
-        if !icon_pixel {
-            let y_p = -(p.y - center.y);
-            let x_p = p.x - center.x;
+            if !icon_pixel {
+                let y_p = -(p.y - center.y);
+                let x_p = p.x - center.x;
 
-            let vx = Point::new(x_p, y_p);
-            let n_vx = Point::new(-y_p, x_p);
+                let vx = Point::new(x_p, y_p);
+                let n_vx = Point::new(-y_p, x_p);
 
-            let is_past_start = is_clockwise_or_equal(n_start, vx);
-            let is_before_end = is_clockwise_or_equal_inc(n_vx, end_vector);
+                let is_past_start = is_clockwise_or_equal(n_start, vx);
+                let is_before_end = is_clockwise_or_equal_inc(n_vx, end_vector);
 
-            if show_all
-                || (!inverted && (is_past_start && is_before_end))
-                || (inverted && !(is_past_start && is_before_end))
-            {
-                let p_b = p - r.top_left();
-                let c = rect_rounded2_get_pixel(p_b, r.width(), r.height(), colortable, false, 2);
-                pixeldata(c);
-            } else {
-                pixeldata(bg_color);
+                if show_all
+                    || (!inverted && (is_past_start && is_before_end))
+                    || (inverted && !(is_past_start && is_before_end))
+                {
+                    let p_b = p - r.top_left();
+                    let c = rect_rounded2_get_pixel(p_b, r.width(), r.height(), colortable, false, 2);
+                    pixeldata(c);
+                } else {
+                    pixeldata(bg_color);
+                }
             }
         }
     }
@@ -510,23 +517,21 @@ pub fn loader_rust(
 
             let mut underlying_color= bg_color ;
 
-            if use_icon {
-                if icon_area_clamped.contains(p)
-                {
-                    let x = x_c - center.x;
-                    let y = y_c - center.y;
-                    if (x * x + y * y) <= IN_INNER_ANTI {
-                        let x_i = x_c - icon_area.x0;
-                        let y_i = y_c - icon_area.y0;
+            if use_icon && icon_area_clamped.contains(p)
+            {
+                let x = x_c - center.x;
+                let y = y_c - center.y;
+                if (x * x + y * y) <= IN_INNER_ANTI {
+                    let x_i = x_c - icon_area.x0;
+                    let y_i = y_c - icon_area.y0;
 
-                        let data = icon_data[(((x_i & 0xFE) + (y_i * icon_width)) / 2) as usize];
-                        if (x_i & 0x01) == 0 {
-                            underlying_color = icon_colortable[(data >> 4) as usize];
-                        } else {
-                            underlying_color = icon_colortable[(data & 0xF) as usize];
-                        }
-                        icon_pixel = true;
+                    let data = icon_data[(((x_i & 0xFE) + (y_i * icon_width)) / 2) as usize];
+                    if (x_i & 0x01) == 0 {
+                        underlying_color = icon_colortable[(data >> 4) as usize];
+                    } else {
+                        underlying_color = icon_colortable[(data & 0xF) as usize];
                     }
+                    icon_pixel = true;
                 }
             }
 
@@ -653,30 +658,33 @@ pub fn bar_with_text_and_fill(
 
     set_window(clamped);
 
-    for p in clamped {
-        let r_offset = p - r.top_left();
+    for y_c in clamped.y0..clamped.y1 {
+        for x_c in clamped.x0..clamped.x1 {
+            let p = Point::new(x_c, y_c);
+            let r_offset = p - r.top_left();
 
-        let filled =
-            (r_offset.x >= fill_from && fill_from >= 0 && (r_offset.x <= fill_to || fill_to < fill_from))
-                || (r_offset.x < fill_to && fill_to >= 0);
+            let filled =
+                (r_offset.x >= fill_from && fill_from >= 0 && (r_offset.x <= fill_to || fill_to < fill_from))
+                    || (r_offset.x < fill_to && fill_to >= 0);
 
-        let underlying_color =
-            rect_rounded2_get_pixel(r_offset, r.width(), r.height(), colortable, filled, 1);
+            let underlying_color =
+                rect_rounded2_get_pixel(r_offset, r.width(), r.height(), colortable, filled, 1);
 
-        let mut overlay_color = None;
-        if let Some(o) = overlay {
-            overlay_color = o.get_pixel(None, p);
-        }
-
-        let mut final_color = underlying_color;
-
-        if let Some(overlay) = overlay_color {
-            if overlay == fg_color {
-                final_color = underlying_color.negate();
+            let mut overlay_color = None;
+            if let Some(o) = overlay {
+                overlay_color = o.get_pixel(None, p);
             }
-        }
 
-        pixeldata(final_color);
+            let mut final_color = underlying_color;
+
+            if let Some(overlay) = overlay_color {
+                if overlay == fg_color {
+                    final_color = underlying_color.negate();
+                }
+            }
+
+            pixeldata(final_color);
+        }
     }
 
     pixeldata_dirty();
@@ -859,10 +867,13 @@ impl Glyph {
 
         set_window(window);
 
-        for p in window {
-            let r = p - pos_adj;
-            let c = self.get_pixel_data(r);
-            pixeldata(colortable[c as usize]);
+        for y in window.y0..window.y1 {
+            for x in window.x0..window.x1 {
+                let p = Point::new(x,y);
+                let r = p - pos_adj;
+                let c = self.get_pixel_data(r);
+                pixeldata(colortable[c as usize]);
+            }
         }
         self.adv
     }
