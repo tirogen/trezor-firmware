@@ -149,24 +149,22 @@ pub fn icon_rust(center: Point, data: &[u8], fg_color: Color, bg_color: Color) {
 
     let mut prev_data = 0;
 
-    for py in area.y0..area.y1 {
-        for px in area.x0..area.x1 {
-            let x = px - area.x0;
+    for p in area {
+        let x = p.x - area.x0;
 
-            if px >= clamped.x0 && px < clamped.x1 && py >= clamped.y0 && py < clamped.y1 {
-                if x % 2 == 0 {
-                    if let Ok(data) = ctx.uncompress() {
-                        prev_data = data[0];
-                    }
-                    pixeldata(colortable[(prev_data >> 4) as usize]);
-                } else {
-                    pixeldata(colortable[(prev_data & 0xF) as usize]);
-                }
-            } else if x % 2 == 0 {
-                //continue unzipping but dont write to display
+        if clamped.contains(p) {
+            if x % 2 == 0 {
                 if let Ok(data) = ctx.uncompress() {
                     prev_data = data[0];
                 }
+                pixeldata(colortable[(prev_data >> 4) as usize]);
+            } else {
+                pixeldata(colortable[(prev_data & 0xF) as usize]);
+            }
+        } else if x % 2 == 0 {
+            //continue unzipping but dont write to display
+            if let Ok(data) = ctx.uncompress() {
+                prev_data = data[0];
             }
         }
     }
@@ -233,12 +231,14 @@ impl<'a> TextOverlay<'a> {
                     let b_x = g.bearing_x;
                     let b_y = g.bearing_y;
 
-                    let char_rect = Rect::new( Point::new(tot_adv + b_x, h - b_y),
-                    Point::new(tot_adv + b_x + w, b_y));
+                    let char_area = Rect::new(
+                        Point::new(tot_adv + b_x, h - b_y),
+                    Point::new(tot_adv + b_x + w, b_y)
+                    );
 
-                    if char_rect.contains(p_rel)
+                    if char_area.contains(p_rel)
                     {
-                        let p_inner = p_rel - char_rect.top_left();
+                        let p_inner = p_rel - char_area.top_left();
 
                         let overlay_data = g.get_pixel_data(p_inner);
 
@@ -659,8 +659,8 @@ pub fn bar_with_text_and_fill(
 
     set_window(clamped);
 
-    for p_clamped in clamped {
-        let r_offset = p_clamped - r.top_left();
+    for p in clamped {
+        let r_offset = p - r.top_left();
 
         let filled =
             (r_offset.x >= fill_from && fill_from >= 0 && (r_offset.x <= fill_to || fill_to < fill_from))
@@ -671,7 +671,7 @@ pub fn bar_with_text_and_fill(
 
         let mut overlay_color = None;
         if let Some(o) = overlay {
-            overlay_color = o.get_pixel(None, p_clamped);
+            overlay_color = o.get_pixel(None, p);
         }
 
         let mut final_color = underlying_color;
