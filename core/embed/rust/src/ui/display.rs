@@ -2,8 +2,9 @@ use super::constant;
 use crate::{
     error::Error,
     time::Duration,
-    trezorhal::{display, display::get_offset, qr, time, uzlib},
+    trezorhal::{display,  display::get_offset, qr, time, uzlib},
 };
+use core::slice;
 
 use super::geometry::{Offset, Point, Rect};
 
@@ -100,6 +101,7 @@ pub fn icon(center: Point, data: &[u8], fg_color: Color, bg_color: Color) {
     );
 }
 
+
 pub fn image(center: Point, data: &[u8]) {
     let toif_info = display::toif_info(data).unwrap();
     assert!(!toif_info.grayscale);
@@ -127,6 +129,7 @@ pub fn toif_info(data: &[u8]) -> Option<(Offset, bool)> {
         None
     }
 }
+
 
 pub fn icon_rust(center: Point, data: &[u8], fg_color: Color, bg_color: Color) {
     let toif_info = display::toif_info(data).unwrap();
@@ -206,7 +209,6 @@ impl<'a> TextOverlay<'a> {
         }
     }
 
-    // baseline relative to the underlying render area
     pub fn place(&mut self, baseline: Offset) {
         let text_width = self.font.text_width(self.text);
         let text_height = self.font.text_height();
@@ -229,10 +231,10 @@ impl<'a> TextOverlay<'a> {
 
             for c in self.text.chars() {
                 if let Some(g) = self.font.get_glyph(c) {
-                    let w = g.get_width();
-                    let h = g.get_height();
-                    let b_x = g.get_bearing_x();
-                    let b_y = g.get_bearing_y();
+                    let w = g.width;
+                    let h = g.height;
+                    let b_x = g.bearing_x;
+                    let b_y = g.bearing_y;
 
                     if x_t >= (tot_adv + b_x)
                         && x_t < (tot_adv + b_x + w)
@@ -255,7 +257,7 @@ impl<'a> TextOverlay<'a> {
                         }
                         break;
                     }
-                    tot_adv += g.get_advance();
+                    tot_adv += g.adv;
                 }
             }
         }
@@ -821,6 +823,7 @@ pub fn text_top_left(position: Point, text: &str, font: Font, fg_color: Color, b
     );
 }
 
+
 pub fn interpolate_colors(color0: Color, color1: Color, step: u16) -> Color {
     let cr: u16 = ((color0.r() as u16) * step + (color1.r() as u16) * (15 - step)) / 15;
     let cg: u16 = ((color0.g() as u16) * step + (color1.g() as u16) * (15 - step)) / 15;
@@ -839,12 +842,12 @@ pub fn get_color_table(fg_color: Color, bg_color: Color) -> [Color; 16] {
 }
 
 pub struct Glyph {
-    width: i32,
-    height: i32,
-    adv: i32,
-    bearing_x: i32,
-    bearing_y: i32,
-    data: *const u8,
+    pub width: i32,
+    pub height: i32,
+    pub adv: i32,
+    pub bearing_x: i32,
+    pub bearing_y: i32,
+    data: &'static [u8],
 }
 
 impl Glyph {
@@ -858,20 +861,22 @@ impl Glyph {
     /// - data has appropriate size
     pub unsafe fn load(data: *const u8) -> Self {
         unsafe {
+            let width = *data.offset(0) as i32;
+            let height = *data.offset(1) as i32;
             Glyph {
-                width: *data.offset(0) as i32,
-                height: *data.offset(1) as i32,
+                width,
+                height,
                 adv: *data.offset(2) as i32,
                 bearing_x: *data.offset(3) as i32,
                 bearing_y: *data.offset(4) as i32,
-                data: data.offset(5),
+                data: slice::from_raw_parts(data.offset(5), (width * height) as usize),
             }
         }
     }
 
     pub fn print(&self, pos: Point, colortable: [Color; 16]) -> i32 {
-        let bearing = Offset::new(self.bearing_x as i32, -(self.bearing_y as i32));
-        let size = Offset::new((self.width) as i32, (self.height) as i32);
+        let bearing = Offset::new(self.bearing_x, -self.bearing_y);
+        let size = Offset::new(self.width, self.height);
         let pos_adj = pos + bearing;
         let r = Rect::from_top_left_and_size(pos_adj, size);
 
@@ -893,47 +898,23 @@ impl Glyph {
     }
 
     pub fn unpack_bpp1(&self, a: i32) -> u8 {
-        unsafe {
-            let c_data = self.data.offset((a / 8) as isize);
-            ((*c_data >> (7 - (a % 8))) & 0x01) * 15
-        }
+        let c_data = self.data[(a / 8) as usize];
+        ((c_data >> (7 - (a % 8))) & 0x01) * 15
     }
 
     pub fn unpack_bpp2(&self, a: i32) -> u8 {
-        unsafe {
-            let c_data = self.data.offset((a / 4) as isize);
-            ((*c_data >> (6 - (a % 4) * 2)) & 0x03) * 5
-        }
+        let c_data = self.data[(a / 4) as usize];
+        ((c_data >> (6 - (a % 4) * 2)) & 0x03) * 5
     }
 
     pub fn unpack_bpp4(&self, a: i32) -> u8 {
-        unsafe {
-            let c_data = self.data.offset((a / 2) as isize);
-            (*c_data >> (4 - (a % 2) * 4)) & 0x0F
-        }
+        let c_data = self.data[(a / 2) as usize];
+        (c_data >> (4 - (a % 2) * 4)) & 0x0F
     }
 
     pub fn unpack_bpp8(&self, a: i32) -> u8 {
-        unsafe {
-            let c_data = self.data.offset((a) as isize);
-            *c_data >> 4
-        }
-    }
-
-    pub fn get_advance(&self) -> i32 {
-        self.adv
-    }
-    pub fn get_width(&self) -> i32 {
-        self.width
-    }
-    pub fn get_height(&self) -> i32 {
-        self.height
-    }
-    pub fn get_bearing_x(&self) -> i32 {
-        self.bearing_x
-    }
-    pub fn get_bearing_y(&self) -> i32 {
-        self.bearing_y
+        let c_data = self.data[a as usize];
+        c_data >> 4
     }
 
     pub fn get_pixel_data(&self, x: i32, y: i32) -> u8 {
@@ -982,13 +963,7 @@ impl Font {
         unsafe { Some(Glyph::load(gl_data)) }
     }
 
-    pub fn display_text(
-        self,
-        text: &'static str,
-        baseline: Point,
-        fg_color: Color,
-        bg_color: Color,
-    ) {
+    pub fn display_text(self, text: &str, baseline: Point, fg_color: Color, bg_color: Color) {
         let colortable = get_color_table(fg_color, bg_color);
         let mut adv_total = 0;
         for c in text.chars() {
