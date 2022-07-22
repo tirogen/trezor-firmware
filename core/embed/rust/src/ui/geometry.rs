@@ -319,6 +319,41 @@ impl Rect {
     }
 }
 
+impl IntoIterator for Rect {
+    type Item = Point;
+    type IntoIter = RectIntoIterator;
+
+    fn into_iter(self) -> Self::IntoIter {
+        RectIntoIterator {
+            rect: self,
+            x: self.x0,
+            y: self.y0,
+        }
+    }
+}
+
+pub struct RectIntoIterator {
+    rect: Rect,
+    x: i32,
+    y: i32,
+}
+
+impl Iterator for RectIntoIterator {
+    type Item = Point;
+    fn next(&mut self) -> Option<Point> {
+        if self.x >= self.rect.x1 {
+            self.x = self.rect.x0;
+            self.y += 1;
+        }
+        if self.y > self.rect.y1 {
+            return None;
+        }
+        let result = Point::new(self.x, self.y);
+        self.x += 1;
+        Some(result)
+    }
+}
+
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub struct Insets {
     pub top: i32,

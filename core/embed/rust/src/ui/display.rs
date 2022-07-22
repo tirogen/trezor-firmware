@@ -266,30 +266,30 @@ impl<'a> TextOverlay<'a> {
     }
 }
 
-fn get_point_on_line(v0: (i32, i32), v1: (i32, i32), position: f32) -> (i32, i32) {
+fn get_point_on_line(v0: Point, v1: Point, position: f32) -> Point {
     let rel1 = position;
     let rel0 = 1_f32 - position;
 
-    (
-        ((v0.0 as f32 * rel0 + v1.0 as f32 * rel1) / 2_f32) as i32,
-        ((v0.1 as f32 * rel0 + v1.1 as f32 * rel1) / 2_f32) as i32,
+    Point::new(
+        ((v0.x as f32 * rel0 + v1.x as f32 * rel1) / 2_f32) as i32,
+        ((v0.y as f32 * rel0 + v1.y as f32 * rel1) / 2_f32) as i32,
     )
 }
 
-fn get_vector(angle: i32) -> (i32, i32) {
+fn get_vector(angle: i32) -> Point {
     // This could be replaced by (cos(angle), sin(angle)), if we allow trigonometric
     // functions. In the meantime, approximate this with predefined octagon
 
     //octagon vertices
     let v = [
-        (0, 1000),
-        (707, 707),
-        (1000, 0),
-        (707, -707),
-        (0, -1000),
-        (-707, -707),
-        (-1000, 0),
-        (-707, 707),
+        Point::new(0, 1000),
+        Point::new(707, 707),
+        Point::new(1000, 0),
+        Point::new(707, -707),
+        Point::new(0, -1000),
+        Point::new(-707, -707),
+        Point::new(-1000, 0),
+        Point::new(-707, 707),
     ];
 
     match angle % 360 {
@@ -301,19 +301,19 @@ fn get_vector(angle: i32) -> (i32, i32) {
         225..=269 => get_point_on_line(v[5], v[6], (angle - 225) as f32 / 45_f32),
         270..=314 => get_point_on_line(v[6], v[7], (angle - 270) as f32 / 45_f32),
         315..=359 => get_point_on_line(v[7], v[0], (angle - 315) as f32 / 45_f32),
-        _ => (1000, 0),
+        _ => Point::new(1000, 0),
     }
 }
 
 #[inline(always)]
-fn is_clockwise_or_equal(n_v1: (i32, i32), v2: (i32, i32)) -> bool {
-    let psize = v2.0 * n_v1.0 + v2.1 * n_v1.1;
+fn is_clockwise_or_equal(n_v1: Point, v2: Point) -> bool {
+    let psize = v2.x * n_v1.x + v2.y * n_v1.y;
     psize < 0
 }
 
 #[inline(always)]
-fn is_clockwise_or_equal_inc(n_v1: (i32, i32), v2: (i32, i32)) -> bool {
-    let psize = v2.0 * n_v1.0 + v2.1 * n_v1.1;
+fn is_clockwise_or_equal_inc(n_v1: Point, v2: Point) -> bool {
+    let psize = v2.x * n_v1.x + v2.y * n_v1.y;
     psize <= 0
 }
 
@@ -371,8 +371,8 @@ pub fn rect_rounded2_partial(
 
     if show_percent >= 100 {
         show_all = true;
-        start_vector = (0, 0);
-        end_vector = (0, 0);
+        start_vector = Point::zero();
+        end_vector = Point::zero();
     } else if show_percent > 50 {
         inverted = true;
         start_vector = get_vector(end);
@@ -382,60 +382,47 @@ pub fn rect_rounded2_partial(
         end_vector = get_vector(end);
     }
 
-    let n_start = (-start_vector.1, start_vector.0);
+    let n_start = Point::new(-start_vector.y, start_vector.x);
 
-    for y_c in r.y0..r.y1 {
-        for x_c in r.x0..r.x1 {
-            let mut icon_pixel = false;
-            if use_icon
-                && x_c >= icon_area_clamped.x0
-                && x_c < icon_area_clamped.x1
-                && y_c >= icon_area_clamped.y0
-                && y_c < icon_area_clamped.y1
-            {
-                let x_i = x_c - icon_area.x0;
-                let y_i = y_c - icon_area.y0;
+    for p in r {
+        let mut icon_pixel = false;
+        if use_icon && icon_area_clamped.contains(p) {
+            let x_i = p.x - icon_area.x0;
+            let y_i = p.y - icon_area.y0;
 
-                let data = icon_data[(((x_i & 0xFE) + (y_i * icon_width)) / 2) as usize];
-                if (x_i & 0x01) == 0 {
-                    pixeldata(icon_colortable[(data >> 4) as usize]);
-                } else {
-                    pixeldata(icon_colortable[(data & 0xF) as usize]);
-                }
-                icon_pixel = true;
+            let data = icon_data[(((x_i & 0xFE) + (y_i * icon_width)) / 2) as usize];
+            if (x_i & 0x01) == 0 {
+                pixeldata(icon_colortable[(data >> 4) as usize]);
+            } else {
+                pixeldata(icon_colortable[(data & 0xF) as usize]);
             }
+            icon_pixel = true;
+        }
 
-            if x_c < clamped.x0
-                || x_c >= clamped.x1
-                || y_c < clamped.y0
-                || y_c >= clamped.y1
-                || icon_pixel
+        if !clamped.contains(p) || icon_pixel {
+            continue;
+        }
+
+        if !icon_pixel {
+            let y_p = -(p.y - center.y);
+            let x_p = p.x - center.x;
+
+            let vx = Point::new(x_p, y_p);
+            let n_vx = Point::new(-y_p, x_p);
+
+            let is_past_start = is_clockwise_or_equal(n_start, vx);
+            let is_before_end = is_clockwise_or_equal_inc(n_vx, end_vector);
+
+            if show_all
+                || (!inverted && (is_past_start && is_before_end))
+                || (inverted && !(is_past_start && is_before_end))
             {
-                continue;
-            }
-
-            if !icon_pixel {
-                let y_p = -(y_c - center.y);
-                let x_p = x_c - center.x;
-
-                let vx = (x_p, y_p);
-                let n_vx = (-y_p, x_p);
-
-                let is_past_start = is_clockwise_or_equal(n_start, vx);
-                let is_before_end = is_clockwise_or_equal_inc(n_vx, end_vector);
-
-                if show_all
-                    || (!inverted && (is_past_start && is_before_end))
-                    || (inverted && !(is_past_start && is_before_end))
-                {
-                    let y = y_c - r.y0;
-                    let x = x_c - r.x0;
-                    let c =
-                        rect_rounded2_get_pixel(x, y, r.width(), r.height(), colortable, false, 2);
-                    pixeldata(c);
-                } else {
-                    pixeldata(bg_color);
-                }
+                let y = p.y - r.y0;
+                let x = p.x - r.x0;
+                let c = rect_rounded2_get_pixel(x, y, r.width(), r.height(), colortable, false, 2);
+                pixeldata(c);
+            } else {
+                pixeldata(bg_color);
             }
         }
     }
