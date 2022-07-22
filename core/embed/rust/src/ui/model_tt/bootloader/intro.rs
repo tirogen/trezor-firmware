@@ -17,6 +17,8 @@ use crate::ui::model_tt::{
     component::Button,
     constant::{HEIGHT, WIDTH},
 };
+use crate::ui::model_tt::bootloader::title::TitleMsg;
+use crate::ui::model_tt::component::{HoldToConfirm, HoldToConfirmMsg};
 
 #[repr(u32)]
 #[derive(Copy, Clone)]
