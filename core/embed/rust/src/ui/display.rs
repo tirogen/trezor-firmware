@@ -433,7 +433,7 @@ pub fn loader_rust(
     bg_color: Color,
     show_percent: i32,
     icon: Option<(&[u8], Color)>,
-    text: TextOverlay,
+    text: Option<TextOverlay>,
 ) {
     const OUTER: f32 = 60_f32;
     const INNER: f32 = 42_f32;
@@ -594,12 +594,14 @@ pub fn loader_rust(
                 }
             }
 
-            let overlay_color = text.get_pixel(Some(underlying_color), Point::new(x_c, y_c));
 
             let mut final_color = underlying_color;
 
-            if let Some(o) = overlay_color {
-                final_color = o;
+            if let Some(text_overlay) = text {
+                let overlay_color = text_overlay.get_pixel(Some(underlying_color), Point::new(x_c, y_c));
+                if let Some(o) = overlay_color {
+                    final_color = o;
+                }
             }
 
             pixeldata(final_color);

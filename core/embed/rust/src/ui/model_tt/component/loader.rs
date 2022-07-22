@@ -198,7 +198,7 @@ impl Component for Loader {
                 style.background_color,
                 100 * progress as i32 / 1000,
                 style.icon,
-                self.text,
+                None,
             );
 
             //display::icon_rust(r.center(), theme::ICON_HS, style.loader_color, style.background_color);
