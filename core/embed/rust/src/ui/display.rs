@@ -4,7 +4,7 @@ use crate::{
     time::Duration,
     trezorhal::{display, display::get_offset, qr, time, uzlib},
 };
-use core::{slice};
+use core::slice;
 
 use super::geometry::{Offset, Point, Rect};
 
@@ -212,7 +212,7 @@ impl<'a> TextOverlay<'a> {
         let text_width = self.font.text_width(self.text);
         let text_height = self.font.text_height();
 
-        let text_area_start = baseline + Offset::new( -(text_width / 2), -text_height);
+        let text_area_start = baseline + Offset::new(-(text_width / 2), -text_height);
         let text_area_end = baseline + Offset::new(text_width / 2, 0);
         let area = Rect::new(text_area_start, text_area_end);
 
@@ -236,11 +236,10 @@ impl<'a> TextOverlay<'a> {
 
                     let char_area = Rect::new(
                         Point::new(tot_adv + b_x, h - b_y),
-                    Point::new(tot_adv + b_x + w, b_y)
+                        Point::new(tot_adv + b_x + w, b_y),
                     );
 
-                    if char_area.contains(p_rel)
-                    {
+                    if char_area.contains(p_rel) {
                         let p_inner = p_rel - char_area.top_left();
 
                         let overlay_data = g.get_pixel_data(p_inner);
@@ -422,7 +421,8 @@ pub fn rect_rounded2_partial(
                     || (inverted && !(is_past_start && is_before_end))
                 {
                     let p_b = p - r.top_left();
-                    let c = rect_rounded2_get_pixel(p_b, r.width(), r.height(), colortable, false, 2);
+                    let c =
+                        rect_rounded2_get_pixel(p_b, r.width(), r.height(), colortable, false, 2);
                     pixeldata(c);
                 } else {
                     pixeldata(bg_color);
@@ -663,9 +663,10 @@ pub fn bar_with_text_and_fill(
             let p = Point::new(x_c, y_c);
             let r_offset = p - r.top_left();
 
-            let filled =
-                (r_offset.x >= fill_from && fill_from >= 0 && (r_offset.x <= fill_to || fill_to < fill_from))
-                    || (r_offset.x < fill_to && fill_to >= 0);
+            let filled = (r_offset.x >= fill_from
+                && fill_from >= 0
+                && (r_offset.x <= fill_to || fill_to < fill_from))
+                || (r_offset.x < fill_to && fill_to >= 0);
 
             let underlying_color =
                 rect_rounded2_get_pixel(r_offset, r.width(), r.height(), colortable, filled, 1);
@@ -686,7 +687,6 @@ pub fn bar_with_text_and_fill(
             pixeldata(final_color);
         }
     }
-
     pixeldata_dirty();
 }
 
@@ -869,7 +869,7 @@ impl Glyph {
 
         for y in window.y0..window.y1 {
             for x in window.x0..window.x1 {
-                let p = Point::new(x,y);
+                let p = Point::new(x, y);
                 let r = p - pos_adj;
                 let c = self.get_pixel_data(r);
                 pixeldata(colortable[c as usize]);
