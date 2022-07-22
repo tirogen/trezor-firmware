@@ -490,8 +490,8 @@ pub fn loader_rust(
 
     if show_percent >= 100 {
         show_all = true;
-        start_vector = (0, 0);
-        end_vector = (0, 0);
+        start_vector = Point::zero();
+        end_vector = Point::zero();
     } else if show_percent > 50 {
         inverted = true;
         start_vector = get_vector(end);
@@ -501,7 +501,7 @@ pub fn loader_rust(
         end_vector = get_vector(end);
     }
 
-    let n_start = (-start_vector.1, start_vector.0);
+    let n_start = Point::new(-start_vector.y, start_vector.x);
 
     for y_c in r.y0..r.y1 {
         for x_c in r.x0..r.x1 {
@@ -541,8 +541,8 @@ pub fn loader_rust(
                 let y_p = -(y_c - center.y);
                 let x_p = x_c - center.x;
 
-                let vx = (x_p, y_p);
-                let n_vx = (-y_p, x_p);
+                let vx = Point::new(x_p, y_p);
+                let n_vx = Point::new(-y_p, x_p);
 
                 let is_past_start = is_clockwise_or_equal(n_start, vx);
                 let is_before_end = is_clockwise_or_equal_inc(n_vx, end_vector);
@@ -593,10 +593,8 @@ pub fn loader_rust(
                     }
                 }
             }
-            let y = y_c - r.y0;
-            let x = x_c - r.x0;
 
-            let overlay_color = text.get_pixel(Some(underlying_color), x_c, y_c);
+            let overlay_color = text.get_pixel(Some(underlying_color), Point::new(x_c, y_c));
 
             let mut final_color = underlying_color;
 

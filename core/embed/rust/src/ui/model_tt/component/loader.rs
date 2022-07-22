@@ -135,7 +135,7 @@ impl Component for Loader {
 
         let screen_center = constant::screen().center();
 
-        let baseline = Offset::new(bounds.width() / 2 + 1, bounds.height() - 30);
+        let baseline = bounds.bottom_center() + Offset::new(1, -30);
         self.text.place(baseline);
 
         self.offset_y = bounds.center().y - screen_center.y;
