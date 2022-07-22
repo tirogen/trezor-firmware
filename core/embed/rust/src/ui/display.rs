@@ -505,15 +505,13 @@ pub fn loader_rust(
 
     for y_c in r.y0..r.y1 {
         for x_c in r.x0..r.x1 {
+            let p = Point::new(x_c, y_c);
             let mut icon_pixel = false;
 
             let mut underlying_color= bg_color ;
 
             if use_icon {
-                if x_c >= icon_area_clamped.x0
-                    && x_c < icon_area_clamped.x1
-                    && y_c >= icon_area_clamped.y0
-                    && y_c < icon_area_clamped.y1
+                if icon_area_clamped.contains(p)
                 {
                     let x = x_c - center.x;
                     let y = y_c - center.y;
@@ -532,11 +530,7 @@ pub fn loader_rust(
                 }
             }
 
-            if !(x_c < clamped.x0
-                || x_c >= clamped.x1
-                || y_c < clamped.y0
-                || y_c >= clamped.y1
-                || icon_pixel)
+            if clamped.contains(p) && !icon_pixel
             {
                 let y_p = -(y_c - center.y);
                 let x_p = x_c - center.x;
@@ -598,7 +592,7 @@ pub fn loader_rust(
             let mut final_color = underlying_color;
 
             if let Some(text_overlay) = text {
-                let overlay_color = text_overlay.get_pixel(Some(underlying_color), Point::new(x_c, y_c));
+                let overlay_color = text_overlay.get_pixel(Some(underlying_color), p);
                 if let Some(o) = overlay_color {
                     final_color = o;
                 }
