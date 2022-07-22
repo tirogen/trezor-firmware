@@ -37,11 +37,11 @@ where
             let event = button_eval();
             if let Some(e) = event {
                 let mut ctx = EventCtx::new();
-                let msg = self.frame.event(&mut ctx, Event::Button(e));
+                let _msg = self.frame.event(&mut ctx, Event::Button(e));
                 self.frame.paint();
             } else {
                 let mut ctx = EventCtx::new();
-                let msg = self
+                let _msg = self
                     .frame
                     .event(&mut ctx, Event::Timer(EventCtx::ANIM_FRAME_TIMER));
                 self.frame.paint();
@@ -66,11 +66,11 @@ fn button_eval() -> Option<ButtonEvent> {
 
 #[no_mangle]
 extern "C" fn screen_install_confirm(
-    vendor_str: *const cty::c_char,
-    vendor_str_len: u8,
-    version: *const cty::c_char,
-    downgrade: bool,
-    vendor: bool,
+    _vendor_str: *const cty::c_char,
+    _vendor_str_len: u8,
+    _version: *const cty::c_char,
+    _downgrade: bool,
+    _vendor: bool,
 ) -> u32 {
     0
 }
@@ -81,23 +81,23 @@ extern "C" fn screen_wipe_confirm() -> u32 {
 }
 
 #[no_mangle]
-extern "C" fn screen_menu(bld_version: *const cty::c_char) -> u32 {
+extern "C" fn screen_menu(_bld_version: *const cty::c_char) -> u32 {
     0
 }
 
 #[no_mangle]
 extern "C" fn screen_intro(
-    bld_version: *const cty::c_char,
-    vendor_str: *const cty::c_char,
-    vendor_str_len: u8,
-    version: *const cty::c_char,
+    _bld_version: *const cty::c_char,
+    _vendor_str: *const cty::c_char,
+    _vendor_str_len: u8,
+    _version: *const cty::c_char,
 ) -> u32 {
     let mut layout = BootloaderLayout::new(Intro::new());
     return layout.process();
 }
 
 #[no_mangle]
-extern "C" fn screen_progress(text: *const cty::c_char, progress: u16, initialize: bool) -> u32 {
+extern "C" fn screen_progress(_text: *const cty::c_char, _progress: u16, _initialize: bool) -> u32 {
     0
 }
 
@@ -107,6 +107,6 @@ extern "C" fn screen_connect() -> u32 {
 }
 
 #[no_mangle]
-extern "C" fn screen_fwinfo(fingerprint: *const cty::c_char) -> u32 {
+extern "C" fn screen_fwinfo(_fingerprint: *const cty::c_char) -> u32 {
     0
 }
