@@ -602,7 +602,7 @@ pub fn loader_rust(
                 final_color = o;
             }
 
-            pixeldata(underlying_color);
+            pixeldata(final_color);
         }
     }
 
