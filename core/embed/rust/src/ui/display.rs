@@ -2,9 +2,9 @@ use super::constant;
 use crate::{
     error::Error,
     time::Duration,
-    trezorhal::{display,  display::get_offset, qr, time, uzlib},
+    trezorhal::{display, display::get_offset, qr, time, uzlib},
 };
-use core::slice;
+use core::{slice};
 
 use super::geometry::{Offset, Point, Rect};
 
@@ -101,7 +101,6 @@ pub fn icon(center: Point, data: &[u8], fg_color: Color, bg_color: Color) {
     );
 }
 
-
 pub fn image(center: Point, data: &[u8]) {
     let toif_info = display::toif_info(data).unwrap();
     assert!(!toif_info.grayscale);
@@ -129,7 +128,6 @@ pub fn toif_info(data: &[u8]) -> Option<(Offset, bool)> {
         None
     }
 }
-
 
 pub fn icon_rust(center: Point, data: &[u8], fg_color: Color, bg_color: Color) {
     let toif_info = display::toif_info(data).unwrap();
@@ -209,25 +207,24 @@ impl<'a> TextOverlay<'a> {
         }
     }
 
-    pub fn place(&mut self, baseline: Offset) {
+    pub fn place(&mut self, baseline: Point) {
         let text_width = self.font.text_width(self.text);
         let text_height = self.font.text_height();
 
-        let bl_left = baseline - Offset::x(text_width / 2);
-        let text_area_start = Point::new(0, -text_height) + bl_left;
-        let text_area_end = Point::new(text_width, 0) + bl_left;
+        let text_area_start = baseline + Offset::new( -(text_width / 2), -text_height);
+        let text_area_end = baseline + Offset::new(text_width / 2, 0);
         let area = Rect::new(text_area_start, text_area_end);
 
         self.area = area;
     }
 
-    pub fn get_pixel(&self, underlying: Option<Color>, x: i32, y: i32) -> Option<Color> {
+    pub fn get_pixel(&self, underlying: Option<Color>, p: Point) -> Option<Color> {
         let mut overlay_color = None;
 
-        if x >= self.area.x0 && x < self.area.x1 && y >= self.area.y0 && y < self.area.y1 {
+        if self.area.contains(p) {
             let mut tot_adv = 0;
-            let x_t = x - self.area.x0;
-            let y_t = y - self.area.y0;
+
+            let p_rel = Point::new(p.x - self.area.x0, p.y - self.area.y0);
 
             for c in self.text.chars() {
                 if let Some(g) = self.font.get_glyph(c) {
@@ -236,13 +233,14 @@ impl<'a> TextOverlay<'a> {
                     let b_x = g.bearing_x;
                     let b_y = g.bearing_y;
 
-                    if x_t >= (tot_adv + b_x)
-                        && x_t < (tot_adv + b_x + w)
-                        && y_t >= (h - b_y)
-                        && y_t < (b_y)
+                    let char_rect = Rect::new( Point::new(tot_adv + b_x, h - b_y),
+                    Point::new(tot_adv + b_x + w, b_y));
+
+                    if char_rect.contains(p_rel)
                     {
-                        //position is for this char
-                        let overlay_data = g.get_pixel_data(x_t - tot_adv - b_x, y_t - (h - b_y));
+                        let p_inner = p_rel - char_rect.top_left();
+
+                        let overlay_data = g.get_pixel_data(p_inner);
 
                         if overlay_data > 0 {
                             if let Some(u) = underlying {
@@ -417,9 +415,8 @@ pub fn rect_rounded2_partial(
                 || (!inverted && (is_past_start && is_before_end))
                 || (inverted && !(is_past_start && is_before_end))
             {
-                let y = p.y - r.y0;
-                let x = p.x - r.x0;
-                let c = rect_rounded2_get_pixel(x, y, r.width(), r.height(), colortable, false, 2);
+                let p_b = p - r.top_left();
+                let c = rect_rounded2_get_pixel(p_b, r.width(), r.height(), colortable, false, 2);
                 pixeldata(c);
             } else {
                 pixeldata(bg_color);
@@ -615,30 +612,29 @@ pub fn loader_rust(
 }
 
 pub fn rect_rounded2_get_pixel(
-    x: i32,
-    y: i32,
+    p: Offset,
     w: i32,
     h: i32,
     colortable: [Color; 16],
     fill: bool,
     line_width: i32,
 ) -> Color {
-    let border = (x >= 0 && x < line_width)
-        || ((x >= w - line_width) && x <= (w - 1))
-        || (y >= 0 && y < line_width)
-        || ((y >= h - line_width) && y <= (h - 1));
+    let border = (p.x >= 0 && p.x < line_width)
+        || ((p.x >= w - line_width) && p.x <= (w - 1))
+        || (p.y >= 0 && p.y < line_width)
+        || ((p.y >= h - line_width) && p.y <= (h - 1));
 
     let corner_lim = 2 * line_width;
     let corner_inner = line_width;
 
-    let corner_all = ((x > w - (corner_lim + 1)) || x < corner_lim)
-        && (y < corner_lim || y > h - (corner_lim + 1));
+    let corner_all = ((p.x > w - (corner_lim + 1)) || p.x < corner_lim)
+        && (p.y < corner_lim || p.y > h - (corner_lim + 1));
 
     let corner = corner_all
-        && (y >= corner_inner)
-        && (x >= corner_inner)
-        && (y <= h - (corner_inner + 1))
-        && (x <= w - (corner_inner + 1));
+        && (p.y >= corner_inner)
+        && (p.x >= corner_inner)
+        && (p.y <= h - (corner_inner + 1))
+        && (p.x <= w - (corner_inner + 1));
 
     let corner_out = corner_all && !corner;
 
@@ -663,34 +659,32 @@ pub fn bar_with_text_and_fill(
 
     set_window(clamped);
 
-    for y_c in clamped.y0..clamped.y1 {
-        for x_c in clamped.x0..clamped.x1 {
-            let y = y_c - r.y0;
-            let x = x_c - r.x0;
+    for p_clamped in clamped {
+        let r_offset = p_clamped - r.top_left();
 
-            let filled =
-                (x >= fill_from && fill_from >= 0 && (x <= fill_to || fill_to < fill_from))
-                    || (x < fill_to && fill_to >= 0);
+        let filled =
+            (r_offset.x >= fill_from && fill_from >= 0 && (r_offset.x <= fill_to || fill_to < fill_from))
+                || (r_offset.x < fill_to && fill_to >= 0);
 
-            let underlying_color =
-                rect_rounded2_get_pixel(x, y, r.width(), r.height(), colortable, filled, 1);
+        let underlying_color =
+            rect_rounded2_get_pixel(r_offset, r.width(), r.height(), colortable, filled, 1);
 
-            let mut overlay_color = None;
-            if let Some(o) = overlay {
-                overlay_color = o.get_pixel(None, x, y);
-            }
-
-            let mut final_color = underlying_color;
-
-            if let Some(overlay) = overlay_color {
-                if overlay == fg_color {
-                    final_color = underlying_color.negate();
-                }
-            }
-
-            pixeldata(final_color);
+        let mut overlay_color = None;
+        if let Some(o) = overlay {
+            overlay_color = o.get_pixel(None, p_clamped);
         }
+
+        let mut final_color = underlying_color;
+
+        if let Some(overlay) = overlay_color {
+            if overlay == fg_color {
+                final_color = underlying_color.negate();
+            }
+        }
+
+        pixeldata(final_color);
     }
+
     pixeldata_dirty();
 }
 
@@ -810,7 +804,6 @@ pub fn text_top_left(position: Point, text: &str, font: Font, fg_color: Color, b
     );
 }
 
-
 pub fn interpolate_colors(color0: Color, color1: Color, step: u16) -> Color {
     let cr: u16 = ((color0.r() as u16) * step + (color1.r() as u16) * (15 - step)) / 15;
     let cg: u16 = ((color0.g() as u16) * step + (color1.g() as u16) * (15 - step)) / 15;
@@ -872,14 +865,10 @@ impl Glyph {
 
         set_window(window);
 
-        for i in window.y0..window.y1 {
-            for j in window.x0..window.x1 {
-                let rx = j - pos_adj.x;
-                let ry = i - pos_adj.y;
-
-                let c = self.get_pixel_data(rx, ry);
-                pixeldata(colortable[c as usize]);
-            }
+        for p in window {
+            let r = p - pos_adj;
+            let c = self.get_pixel_data(r);
+            pixeldata(colortable[c as usize]);
         }
         self.adv
     }
@@ -904,8 +893,8 @@ impl Glyph {
         c_data >> 4
     }
 
-    pub fn get_pixel_data(&self, x: i32, y: i32) -> u8 {
-        let a = x + y * self.width;
+    pub fn get_pixel_data(&self, p: Offset) -> u8 {
+        let a = p.x + p.y * self.width;
 
         match constant::FONT_BPP {
             1 => self.unpack_bpp1(a),

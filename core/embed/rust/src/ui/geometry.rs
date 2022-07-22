@@ -345,7 +345,7 @@ impl Iterator for RectIntoIterator {
             self.x = self.rect.x0;
             self.y += 1;
         }
-        if self.y > self.rect.y1 {
+        if self.y >= self.rect.y1 {
             return None;
         }
         let result = Point::new(self.x, self.y);
