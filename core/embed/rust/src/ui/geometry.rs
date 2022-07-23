@@ -1,7 +1,4 @@
-use core::{
-    cmp::{max, min},
-    ops::{Add, Sub},
-};
+use core::ops::{Add, Sub};
 
 /// Relative offset in 2D space, used for representing translation and
 /// dimensions of objects. Absolute positions on the screen are represented by
@@ -300,16 +297,32 @@ impl Rect {
         self.split_left(self.width() - width)
     }
 
-    pub fn clamp(self, limit: Rect) -> Self {
-        Self {
-            x0: max(self.x0, limit.x0),
-            y0: max(self.y0, limit.y0),
-            x1: min(self.x1, limit.x1),
-            y1: min(self.y1, limit.y1),
+    const fn _max(a: i32, b: i32) -> i32 {
+        if a > b {
+            a
+        } else {
+            b
         }
     }
 
-    pub fn translate(&self, offset: Offset) -> Self {
+    const fn _min(a: i32, b: i32) -> i32 {
+        if a < b {
+            a
+        } else {
+            b
+        }
+    }
+
+    pub const fn clamp(self, limit: Rect) -> Self {
+        Self {
+            x0: Rect::_max(self.x0, limit.x0),
+            y0: Rect::_max(self.y0, limit.y0),
+            x1: Rect::_min(self.x1, limit.x1),
+            y1: Rect::_min(self.y1, limit.y1),
+        }
+    }
+
+    pub const fn translate(&self, offset: Offset) -> Self {
         Self {
             x0: self.x0 + offset.x,
             y0: self.y0 + offset.y,
