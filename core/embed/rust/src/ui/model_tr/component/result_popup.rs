@@ -139,11 +139,14 @@ impl Component for ResultPopup {
             anim_pos_y = bounds.y0 + 30;
         };
 
-        if self.headline.is_some() {
-            self.headline_baseline = Point::new(
-                self.area.center().x,
-                self.area.x0 + 54 + 16 - ((16 - FONT_BOLD.text_height()) / 2),
+        if let Some(h) = self.headline.as_mut() {
+            let p = Point::new(
+                self.area.x0,
+                self.area.y0 + 54,
             );
+            let o = Offset::new(bounds.width(), h.size().y);
+            let headline_area = Rect::new(p, p+o);
+            h.place(headline_area);
             text_start = bounds.y0 + 74;
             anim_pos_y = bounds.y0 + 26;
         }
