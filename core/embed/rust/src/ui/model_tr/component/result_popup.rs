@@ -96,14 +96,17 @@ impl ResultPopup {
     }
 
     pub fn reset(&mut self, ctx: &mut EventCtx) {
-        self.state = State::Initial;
+        self.state = State::Animating;
         self.text.request_complete_repaint(ctx);
 
         if let Some(b) = self.button.as_mut() {
             b.request_complete_repaint(ctx)
         }
 
-        self.result_anim.request_complete_repaint(ctx);
+        self.result_anim.mutate(ctx, |ctx, c| {
+            let now = Instant::now();
+            c.start_growing(ctx, now);
+        });
         ctx.request_paint();
     }
 }
@@ -178,15 +181,6 @@ impl Component for ResultPopup {
 
         if button_confirmed {
             return Some(ResultPopupMsg::Confirmed);
-        }
-
-        if let State::Initial = self.state {
-            self.state = State::Animating;
-
-            self.result_anim.mutate(ctx, |ctx, c| {
-                let now = Instant::now();
-                c.start_growing(ctx, now);
-            });
         }
 
         None
