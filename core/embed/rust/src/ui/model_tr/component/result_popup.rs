@@ -95,9 +95,13 @@ impl ResultPopup {
         self.autoclose = true;
     }
 
-    pub fn reset(&mut self, ctx: &mut EventCtx) {
+    pub fn start(&mut self, ctx: &mut EventCtx) {
         self.state = State::Animating;
         self.text.request_complete_repaint(ctx);
+
+        if let Some(h) = self.headline.as_mut() {
+            h.request_complete_repaint(ctx)
+        }
 
         if let Some(b) = self.button.as_mut() {
             b.request_complete_repaint(ctx)
