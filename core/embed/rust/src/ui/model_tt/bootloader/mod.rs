@@ -57,11 +57,11 @@ where
             let event = touch_eval();
             if let Some(e) = event {
                 let mut ctx = EventCtx::new();
-                let msg = self.frame.event(&mut ctx, Event::Touch(e));
+                let _msg = self.frame.event(&mut ctx, Event::Touch(e));
                 self.frame.paint();
             } else {
                 let mut ctx = EventCtx::new();
-                let msg = self
+                let _msg = self
                     .frame
                     .event(&mut ctx, Event::Timer(EventCtx::ANIM_FRAME_TIMER));
                 self.frame.paint();

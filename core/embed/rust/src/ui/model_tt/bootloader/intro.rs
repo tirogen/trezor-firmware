@@ -3,11 +3,10 @@ use crate::ui::{
     geometry::{LinearPlacement, Point, Rect},
     model_tt::{
         bootloader::{
-            theme::{button_bld_menu, button_bld_menu_item, TTBootloaderText, BLD_BG, MENU},
+            theme::{button_bld_menu, TTBootloaderText, MENU},
             title::Title,
             ReturnToC,
         },
-        component::ButtonMsg::Clicked,
         theme::FONT_MEDIUM,
     },
 };
