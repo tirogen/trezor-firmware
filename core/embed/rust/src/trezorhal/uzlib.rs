@@ -14,7 +14,6 @@ pub struct UzlibContext<'a> {
     uncomp: ffi::uzlib_uncomp,
     src_data: PhantomData<&'a [u8]>,
     window: Option<[u8; UZLIB_WINDOW_SIZE]>,
-    finished: bool,
 }
 
 impl<'a> UzlibContext<'a> {
@@ -25,7 +24,6 @@ impl<'a> UzlibContext<'a> {
             uncomp: uzlib_uncomp::default(),
             src_data: Default::default(),
             window,
-            finished: false,
         };
 
         unsafe {
@@ -49,18 +47,12 @@ impl<'a> UzlibContext<'a> {
 
             let res = ffi::uzlib_uncompress(&mut self.uncomp);
 
-            match res {
-                0 => Ok(()),
-                1 => {
-                    self.finished = true;
-                    Ok(())
-                },
-                _ => Err(()),
+            if res >= 0 {
+                // also covers 'DONE' result
+                Ok(())
+            } else {
+                Err(())
             }
         }
-    }
-
-    pub fn is_finished(&self) -> bool {
-        return self.finished;
     }
 }

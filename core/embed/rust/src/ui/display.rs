@@ -155,14 +155,20 @@ pub fn icon_rust(center: Point, data: &[u8], fg_color: Color, bg_color: Color) {
 
             if clamped.contains(p) {
                 if x % 2 == 0 {
-                    if let Ok(()) = ctx.uncompress(&mut dest) {}
+                    if let Ok(()) = ctx.uncompress(&mut dest) {
+                    } else {
+                        return;
+                    }
                     pixeldata(colortable[(dest[0] >> 4) as usize]);
                 } else {
                     pixeldata(colortable[(dest[0] & 0xF) as usize]);
                 }
             } else if x % 2 == 0 {
                 //continue unzipping but dont write to display
-                if let Ok(()) = ctx.uncompress(&mut dest) {}
+                if let Ok(()) = ctx.uncompress(&mut dest) {
+                } else {
+                    return;
+                }
             }
         }
     }
@@ -338,7 +344,10 @@ pub fn rect_rounded2_partial(
             icon_area_clamped = icon_area.clamp(constant::screen());
 
             let mut ctx = uzlib::UzlibContext::new(&i.0[12..], false);
-            if let Ok(()) = ctx.uncompress(&mut icon_data) {};
+            if let Ok(()) = ctx.uncompress(&mut icon_data) {
+            } else {
+                return;
+            }
             icon_colortable = get_color_table(i.1, bg_color);
             icon_width = toif_info.width.into();
             use_icon = true;
@@ -464,7 +473,10 @@ pub fn loader_rust(
                 Offset::new(icon_width, toif_info.height.into()),
             );
             let mut ctx = uzlib::UzlibContext::new(&i.0[12..], false);
-            if let Ok(()) = ctx.uncompress(&mut icon_data) {};
+            if let Ok(()) = ctx.uncompress(&mut icon_data) {
+            } else {
+                return;
+            }
             icon_area_clamped = icon_area.clamp(constant::screen());
             icon_colortable = get_color_table(i.1, bg_color);
             use_icon = true;
