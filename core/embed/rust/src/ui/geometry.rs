@@ -130,10 +130,7 @@ impl Sub<Point> for Point {
 
 impl Lerp for Point {
     fn lerp(a: Self, b: Self, t: f32) -> Self {
-        Point::new(
-            i32::lerp(a.x, b.x, t),
-            i32::lerp(a.y, b.y, t),
-        )
+        Point::new(i32::lerp(a.x, b.x, t), i32::lerp(a.y, b.y, t))
     }
 }
 

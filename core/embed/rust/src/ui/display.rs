@@ -248,7 +248,11 @@ impl<'a> TextOverlay<'a> {
                         if overlay_data > 0 {
                             if let Some(u) = underlying {
                                 overlay_color = Some(Color::lerp(
-                                    if u.luminance() > 128 {Color::from_u16(0)} else {Color::from_u16(0xffff)},
+                                    if u.luminance() > 128 {
+                                        Color::from_u16(0)
+                                    } else {
+                                        Color::from_u16(0xffff)
+                                    },
                                     u,
                                     overlay_data as f32 / 15_f32,
                                 ));
@@ -512,10 +516,9 @@ pub fn loader_rust(
             let p = Point::new(x_c, y_c);
             let mut icon_pixel = false;
 
-            let mut underlying_color= bg_color ;
+            let mut underlying_color = bg_color;
 
-            if use_icon && icon_area_clamped.contains(p)
-            {
+            if use_icon && icon_area_clamped.contains(p) {
                 let x = x_c - center.x;
                 let y = y_c - center.y;
                 if (x * x + y * y) <= IN_INNER_ANTI {
@@ -532,8 +535,7 @@ pub fn loader_rust(
                 }
             }
 
-            if clamped.contains(p) && !icon_pixel
-            {
+            if clamped.contains(p) && !icon_pixel {
                 let y_p = -(y_c - center.y);
                 let x_p = x_c - center.x;
 
@@ -553,7 +555,8 @@ pub fn loader_rust(
                     if d <= IN_INNER_ANTI {
                         underlying_color = bg_color;
                     } else if d <= INNER_MIN {
-                        let c_i = ((15 * (d - IN_INNER_ANTI)) / (INNER_MIN - IN_INNER_ANTI)) as usize;
+                        let c_i =
+                            ((15 * (d - IN_INNER_ANTI)) / (INNER_MIN - IN_INNER_ANTI)) as usize;
                         underlying_color = colortable[c_i];
                     } else if d <= INNER_MAX {
                         underlying_color = fg_color;
@@ -562,7 +565,8 @@ pub fn loader_rust(
                     } else if d <= OUTER_OUT_ANTI {
                         underlying_color = fg_color;
                     } else if d <= OUTER_MAX {
-                        let c_i = ((15 * (d - OUTER_OUT_ANTI)) / (OUTER_MAX - OUTER_OUT_ANTI)) as usize;
+                        let c_i =
+                            ((15 * (d - OUTER_OUT_ANTI)) / (OUTER_MAX - OUTER_OUT_ANTI)) as usize;
                         underlying_color = colortable[15 - c_i];
                     } else {
                         underlying_color = bg_color;
@@ -572,24 +576,26 @@ pub fn loader_rust(
                     if d <= IN_INNER_ANTI {
                         underlying_color = bg_color;
                     } else if d <= INNER_MIN {
-                        let c_i = ((15 * (d - IN_INNER_ANTI)) / (INNER_MIN - IN_INNER_ANTI)) as usize;
+                        let c_i =
+                            ((15 * (d - IN_INNER_ANTI)) / (INNER_MIN - IN_INNER_ANTI)) as usize;
                         underlying_color = colortable[c_i];
                     } else if d <= INNER_MAX {
                         underlying_color = fg_color;
                     } else if d <= INNER_OUTER_ANTI {
-                        let c_i = ((10 * (d - INNER_MAX)) / (INNER_OUTER_ANTI - INNER_MAX)) as usize;
+                        let c_i =
+                            ((10 * (d - INNER_MAX)) / (INNER_OUTER_ANTI - INNER_MAX)) as usize;
                         underlying_color = colortable[15 - c_i];
                     } else if d <= OUTER_OUT_ANTI {
                         underlying_color = colortable[5];
                     } else if d <= OUTER_MAX {
-                        let c_i = ((5 * (d - OUTER_OUT_ANTI)) / (OUTER_MAX - OUTER_OUT_ANTI)) as usize;
+                        let c_i =
+                            ((5 * (d - OUTER_OUT_ANTI)) / (OUTER_MAX - OUTER_OUT_ANTI)) as usize;
                         underlying_color = colortable[5 - c_i];
                     } else {
                         underlying_color = bg_color;
                     }
                 }
             }
-
 
             let mut final_color = underlying_color;
 
@@ -998,7 +1004,9 @@ impl Color {
     }
 
     pub const fn luminance(self) -> u32 {
-        return ((self.r() as u32 * 299) / 1000) + (self.g() as u32 * 587) / 1000 + (self.b() as u32 * 114) / 1000;
+        return ((self.r() as u32 * 299) / 1000)
+            + (self.g() as u32 * 587) / 1000
+            + (self.b() as u32 * 114) / 1000;
     }
 
     pub const fn r(self) -> u8 {

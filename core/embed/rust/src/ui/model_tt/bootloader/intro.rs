@@ -1,5 +1,6 @@
 use crate::ui::{
     component::{text::paragraphs::Paragraphs, Child, Component, Event, EventCtx, Pad},
+    display::Color,
     geometry::{LinearPlacement, Point, Rect},
     model_tt::{
         bootloader::{
@@ -10,14 +11,12 @@ use crate::ui::{
         theme::FONT_MEDIUM,
     },
 };
-use crate::ui::display::Color;
 
 use crate::ui::model_tt::{
-    component::Button,
+    bootloader::title::TitleMsg,
+    component::{Button, HoldToConfirm, HoldToConfirmMsg},
     constant::{HEIGHT, WIDTH},
 };
-use crate::ui::model_tt::bootloader::title::TitleMsg;
-use crate::ui::model_tt::component::{HoldToConfirm, HoldToConfirmMsg};
 
 #[repr(u32)]
 #[derive(Copy, Clone)]
@@ -47,7 +46,7 @@ impl Intro {
             .with_placement(LinearPlacement::vertical().align_at_start());
 
         let mut instance = Self {
-            bg: Pad::with_background(Color::rgb(0,0,0)),
+            bg: Pad::with_background(Color::rgb(0, 0, 0)),
             title: Child::new(Title::new(bld_version)),
             menu: Child::new(Button::with_icon(MENU).styled(button_bld_menu())),
             host: Child::new(HoldToConfirm::new(Title::new("aaa"))),
@@ -71,10 +70,8 @@ impl Component for Intro {
             Point::new(187, 15),
             Point::new(187 + 38, 15 + 38),
         ));
-        self.host.place(Rect::new(
-            Point::new(0, 0),
-            Point::new(240, 240),
-        ));
+        self.host
+            .place(Rect::new(Point::new(0, 0), Point::new(240, 240)));
         self.text
             .place(Rect::new(Point::new(15, 75), Point::new(225, 200)));
         bounds
@@ -87,9 +84,6 @@ impl Component for Intro {
     fn paint(&mut self) {
         self.bg.paint();
         self.host.paint();
-
-
-
     }
 
     fn bounds(&self, sink: &mut dyn FnMut(Rect)) {

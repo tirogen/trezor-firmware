@@ -20,18 +20,20 @@ pub mod progress;
 mod theme;
 mod title;
 
-use crate::ui::{
-    component::text::paragraphs::Paragraphs,
-    geometry::LinearPlacement,
-    model_tt::{bootloader::connect::Connect, theme::FONT_NORMAL},
+use crate::{
+    time::Duration,
+    trezorhal::time,
+    ui::{
+        component::text::paragraphs::Paragraphs,
+        geometry::LinearPlacement,
+        model_tt::{bootloader::connect::Connect, theme::FONT_NORMAL},
+    },
 };
 use confirm::Confirm;
 use fwinfo::FwInfo;
 use intro::Intro;
 use menu::Menu;
 use progress::Progress;
-use crate::time::Duration;
-use crate::trezorhal::time;
 
 pub trait ReturnToC {
     fn return_to_c(&self) -> u32;

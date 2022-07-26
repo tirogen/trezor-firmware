@@ -1,15 +1,14 @@
 use crate::{
     time::{Duration, Instant},
+    trezorhal::time::{clear_acc, get_ticks, init_ticks},
     ui::{
         animation::Animation,
         component::{Component, Event, EventCtx},
         display::{self, Color},
-        geometry::{Offset, Rect},
+        geometry::{Offset, Point, Rect},
         model_tt::constant,
     },
 };
-use crate::trezorhal::time::{clear_acc, get_ticks, init_ticks};
-use crate::ui::geometry::Point;
 
 use super::theme;
 
@@ -37,7 +36,6 @@ impl Loader {
     pub const SIZE: Offset = Offset::new(120, 120);
 
     pub fn new() -> Self {
-
         let overlay = display::TextOverlay::new(
             theme::BG,
             theme::FG,
@@ -201,9 +199,9 @@ impl Component for Loader {
                 None,
             );
 
-            //display::icon_rust(r.center(), theme::ICON_HS, style.loader_color, style.background_color);
+            //display::icon_rust(r.center(), theme::ICON_HS, style.loader_color,
+            // style.background_color);
             get_ticks();
-
         }
     }
 }
