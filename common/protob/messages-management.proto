@@ -422,6 +422,7 @@ message NextU2FCounter {
  * @next Failure
  */
 message DoPreauthorized {
+    optional bool warn_no_disconnect = 1;  // Show a "Do not disconnect your Trezor" warning while waiting for the preauthorized operation.
 }
 
 /**

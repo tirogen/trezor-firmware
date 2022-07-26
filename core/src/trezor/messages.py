@@ -2477,6 +2477,14 @@ if TYPE_CHECKING:
             return isinstance(msg, cls)
 
     class DoPreauthorized(protobuf.MessageType):
+        warn_no_disconnect: "bool | None"
+
+        def __init__(
+            self,
+            *,
+            warn_no_disconnect: "bool | None" = None,
+        ) -> None:
+            pass
 
         @classmethod
         def is_type_of(cls, msg: Any) -> TypeGuard["DoPreauthorized"]:
