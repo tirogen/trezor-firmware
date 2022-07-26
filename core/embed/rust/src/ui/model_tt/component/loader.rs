@@ -1,6 +1,7 @@
 use crate::{
     time::{Duration, Instant},
     trezorhal::time::{clear_acc, get_ticks, init_ticks},
+    trezorhal::uzlib::UzlibContext,
     ui::{
         animation::Animation,
         component::{Component, Event, EventCtx},
@@ -23,6 +24,8 @@ enum State {
     Shrinking(Animation<u16>),
 }
 
+const ICON_MAX_SIZE: usize = 64;
+
 pub struct Loader {
     offset_y: i32,
     state: State,
@@ -30,6 +33,7 @@ pub struct Loader {
     shrinking_duration: Duration,
     styles: LoaderStyleSheet,
     text: display::TextOverlay<'static>,
+    icon_data: [u8; ((ICON_MAX_SIZE * ICON_MAX_SIZE) / 2) as usize],
 }
 
 impl Loader {
@@ -45,14 +49,24 @@ impl Loader {
             theme::FONT_BOLD,
         );
 
-        Self {
+        let mut instance  = Self {
             offset_y: 0,
             state: State::Initial,
             growing_duration: Duration::from_millis(1000),
             shrinking_duration: Duration::from_millis(500),
             styles: theme::loader_default(),
             text: overlay,
+            icon_data: [0_u8; ((ICON_MAX_SIZE * ICON_MAX_SIZE) / 2) as usize],
+        };
+
+        if let Some(i) = instance.styles.active.icon {
+
+            let mut ctx = UzlibContext::new(&i.0[12..], false);
+            if let Ok(()) = ctx.uncompress(&mut instance.icon_data) {};
+
         }
+
+        instance
     }
 
     pub fn start_growing(&mut self, ctx: &mut EventCtx, now: Instant) {
@@ -195,6 +209,7 @@ impl Component for Loader {
                 style.loader_color,
                 style.background_color,
                 100 * progress as i32 / 1000,
+                &self.icon_data,
                 style.icon,
                 None,
             );

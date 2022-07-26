@@ -437,6 +437,7 @@ pub fn loader_rust(
     fg_color: Color,
     bg_color: Color,
     show_percent: i32,
+    icon_data: &[u8],
     icon: Option<(&[u8], Color)>,
     text: Option<TextOverlay>,
 ) {
@@ -464,7 +465,6 @@ pub fn loader_rust(
     let mut icon_area = Rect::zero();
     let mut icon_width = 0;
     let mut icon_area_clamped = Rect::zero();
-    let mut icon_data = [0_u8; ((ICON_MAX_SIZE * ICON_MAX_SIZE) / 2) as usize];
 
     if let Some(i) = icon {
         let toif_info = display::toif_info(i.0).unwrap();
@@ -476,11 +476,6 @@ pub fn loader_rust(
                 center,
                 Offset::new(icon_width, toif_info.height.into()),
             );
-            let mut ctx = uzlib::UzlibContext::new(&i.0[12..], false);
-            if let Ok(()) = ctx.uncompress(&mut icon_data) {
-            } else {
-                return;
-            }
             icon_area_clamped = icon_area.clamp(constant::screen());
             icon_colortable = get_color_table(i.1, bg_color);
             use_icon = true;
