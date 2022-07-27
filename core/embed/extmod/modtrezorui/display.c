@@ -27,6 +27,7 @@
 #include "display.h"
 
 #include "font_bitmap.h"
+#include STM32_HAL_H
 
 #if defined TREZOR_MODEL_T
 
@@ -266,9 +267,18 @@ static void uzlib_prepare(struct uzlib_uncomp *decomp, uint8_t *window,
   uzlib_uncompress_init(decomp, window, window ? UZLIB_WINDOW_SIZE : 0);
 }
 
+#define BUFFER_SIZE 1000
+
+__attribute__((section(".buf")))
+uint16_t decomp_out[BUFFER_SIZE] = {0};
+
+volatile uint16_t ensure_order = 0;
+
 void display_image(int x, int y, int w, int h, const void *data,
                    uint32_t datalen) {
-#if defined TREZOR_MODEL_T
+
+  ensure_order++;
+
   x += DISPLAY_OFFSET.x;
   y += DISPLAY_OFFSET.y;
   int x0 = 0, y0 = 0, x1 = 0, y1 = 0;
@@ -279,25 +289,62 @@ void display_image(int x, int y, int w, int h, const void *data,
   y0 -= y;
   y1 -= y;
 
+
+  __HAL_RCC_DMA2D_CLK_ENABLE();
+
   struct uzlib_uncomp decomp = {0};
   uint8_t decomp_window[UZLIB_WINDOW_SIZE] = {0};
-  uint8_t decomp_out[2] = {0};
+  //256 byte at the time
   uzlib_prepare(&decomp, decomp_window, data, datalen, decomp_out,
                 sizeof(decomp_out));
 
+  uint16_t iter_num = (w*h) / BUFFER_SIZE;
+  uint16_t rest = (w*h) % BUFFER_SIZE;
+
+  if (rest != 0) {
+    iter_num++;
+  }
+
+  DMA2D_HandleTypeDef handle;
+  handle.Instance = (DMA2D_TypeDef*)DMA2D_BASE;
+  handle.Init.Mode = DMA2D_M2M;
+  handle.Init.ColorMode = DMA2D_OUTPUT_RGB565;
+  handle.Init.OutputOffset = 0;
+
+  handle.LayerCfg[1].InputColorMode = DMA2D_INPUT_RGB565;
+  handle.LayerCfg[1].InputOffset = 0;
+  handle.LayerCfg[1].AlphaMode = 0;
+  handle.LayerCfg[1].InputAlpha = 0;
+
+
+  HAL_DMA2D_Init(&handle);
+  HAL_DMA2D_ConfigLayer(&handle, 1);
+
+
   PIXELDATA_DIRTY();
-  for (uint32_t pos = 0; pos < w * h; pos++) {
+  for (uint32_t pos = 0; pos < iter_num; pos++) {
     int st = uzlib_uncompress(&decomp);
-    if (st == TINF_DONE) break;  // all OK
     if (st < 0) break;           // error
-    const int px = pos % w;
-    const int py = pos / w;
-    if (px >= x0 && px <= x1 && py >= y0 && py <= y1) {
-      PIXELDATA((decomp_out[0] << 8) | decomp_out[1]);
+
+    uint16_t height = BUFFER_SIZE;
+
+    if ((rest != 0) && (iter_num-1) == pos) {
+      height = rest;
     }
+
+    HAL_DMA2D_Start(&handle, (uint32_t)decomp_out,     ((uint32_t)DISPLAY_MEMORY_BASE |
+                                              (1 << DISPLAY_MEMORY_PIN)), 1, height);
+
+    while(HAL_DMA2D_PollForTransfer(&handle, 10) != HAL_OK);
+
+//    const int px = pos % w;
+//    const int py = pos / w;
+//    if (px >= x0 && px <= x1 && py >= y0 && py <= y1) {
+//      PIXELDATA(decomp_out[0]);
+//    }
     decomp.dest = (uint8_t *)&decomp_out;
   }
-#endif
+
 }
 
 #define AVATAR_BORDER_SIZE 4
@@ -365,6 +412,61 @@ void display_avatar(int x, int y, const void *data, uint32_t datalen,
 #endif
 }
 
+#define ICON_BUFFER_SIZE 1000
+
+__attribute__((section(".buf")))
+uint8_t icon_decomp_out[ICON_BUFFER_SIZE] = {0};
+
+
+uint32_t rgb565_to_rgb888(uint16_t color) {
+  uint32_t res =  0;
+  res |=  ((((((uint32_t)color & 0xF800) >> 11) * 259) + 33 ) >> 6) << 8;
+  res |=  ((((((uint32_t)color & 0x07E0) >> 5) * 259) + 33 ) >> 6) << 0;
+  res |=  ((((((uint32_t)color & 0x001F) >> 0) * 527) + 23 ) >> 6) << 16;
+  res |= 0x00000000;
+  return res;
+}
+
+
+//void display_icon(int x, int y, int w, int h, const void *data,
+//                  uint32_t datalen, uint16_t fgcolor, uint16_t bgcolor) {
+//  x += DISPLAY_OFFSET.x;
+//  y += DISPLAY_OFFSET.y;
+//  x &= ~1;  // cannot draw at odd coordinate
+//  int x0 = 0, y0 = 0, x1 = 0, y1 = 0;
+//  clamp_coords(x, y, w, h, &x0, &y0, &x1, &y1);
+//  display_set_window(x0, y0, x1, y1);
+//  x0 -= x;
+//  x1 -= x;
+//  y0 -= y;
+//  y1 -= y;
+//
+//  uint16_t colortable[16] = {0};
+//  set_color_table(colortable, fgcolor, bgcolor);
+//
+//  struct uzlib_uncomp decomp = {0};
+//  uint8_t decomp_window[UZLIB_WINDOW_SIZE] = {0};
+//  uint8_t decomp_out_x = 0;
+//  uzlib_prepare(&decomp, decomp_window, data, datalen, &decomp_out_x,
+//                sizeof(decomp_out_x));
+//
+//  for (uint32_t pos = 0; pos < w * h / 2; pos++) {
+//    int st = uzlib_uncompress(&decomp);
+//    if (st == TINF_DONE) break;  // all OK
+//    if (st < 0) break;           // error
+//    const int px = (pos * 2) % w;
+//    const int py = (pos * 2) / w;
+//    if (px >= x0 && px <= x1 && py >= y0 && py <= y1) {
+//      PIXELDATA((decomp_out_x >> 4) == 15 ? fgcolor : bgcolor);
+//      PIXELDATA((decomp_out_x & 0x0F) == 15 ? fgcolor : bgcolor);
+//    }
+//    decomp.dest = (uint8_t *)&decomp_out_x;
+//  }
+//  PIXELDATA_DIRTY();
+//}
+
+
+
 void display_icon(int x, int y, int w, int h, const void *data,
                   uint32_t datalen, uint16_t fgcolor, uint16_t bgcolor) {
   x += DISPLAY_OFFSET.x;
@@ -378,26 +480,127 @@ void display_icon(int x, int y, int w, int h, const void *data,
   y0 -= y;
   y1 -= y;
 
+  __HAL_RCC_DMA2D_CLK_ENABLE();
+
   uint16_t colortable[16] = {0};
   set_color_table(colortable, fgcolor, bgcolor);
 
   struct uzlib_uncomp decomp = {0};
   uint8_t decomp_window[UZLIB_WINDOW_SIZE] = {0};
-  uint8_t decomp_out = 0;
-  uzlib_prepare(&decomp, decomp_window, data, datalen, &decomp_out,
-                sizeof(decomp_out));
+  uzlib_prepare(&decomp, decomp_window, data, datalen, &icon_decomp_out,
+                sizeof(icon_decomp_out));
 
-  for (uint32_t pos = 0; pos < w * h / 2; pos++) {
+  uint16_t iter_num = (w*h) / (ICON_BUFFER_SIZE*2);
+
+ uint16_t rest = (w*h) % (ICON_BUFFER_SIZE*2);
+  if (rest != 0) {
+    iter_num++;
+  }
+
+  DMA2D_HandleTypeDef handle;
+  handle.Instance = (DMA2D_TypeDef*)DMA2D_BASE;
+  handle.Init.Mode = DMA2D_M2M_PFC;
+  handle.Init.ColorMode = DMA2D_OUTPUT_RGB565;
+  handle.Init.OutputOffset = 0;
+
+  handle.LayerCfg[1].InputColorMode = DMA2D_INPUT_L4;
+  handle.LayerCfg[1].InputOffset = 0;
+  handle.LayerCfg[1].AlphaMode = 0;
+  handle.LayerCfg[1].InputAlpha =0;
+
+//  handle.LayerCfg[0].InputColorMode = DMA2D_INPUT_A4;
+//  handle.LayerCfg[0].InputOffset = 0;
+//  handle.LayerCfg[0].AlphaMode = 0;
+//  handle.LayerCfg[0].InputAlpha = rgb565_to_rgb888(bgcolor);
+//
+
+//  uint32_t fill = 0x0000FF00//red;
+//  handle.Instance->FGCLUT[0] = 0x00FF0000//blue;
+//  handle.Instance->FGCLUT[1] = fill;
+//  handle.Instance->FGCLUT[2] = fill;
+//  handle.Instance->FGCLUT[3] = fill;
+//  handle.Instance->FGCLUT[4] = fill;
+//  handle.Instance->FGCLUT[5] = fill;
+//  handle.Instance->FGCLUT[6] = fill;
+//  handle.Instance->FGCLUT[7] = fill;
+//  handle.Instance->FGCLUT[8] = fill;
+//  handle.Instance->FGCLUT[9] = fill;
+//  handle.Instance->FGCLUT[10] = fill;
+//  handle.Instance->FGCLUT[11] = fill;
+//  handle.Instance->FGCLUT[12] = fill;
+//  handle.Instance->FGCLUT[13] = fill;
+//  handle.Instance->FGCLUT[14] = fill;
+//  handle.Instance->FGCLUT[15] = 0x000000FF//green;
+
+  handle.Instance->FGCLUT[0] = rgb565_to_rgb888(colortable[0]);
+  handle.Instance->FGCLUT[1] = rgb565_to_rgb888(colortable[1]);
+  handle.Instance->FGCLUT[2] = rgb565_to_rgb888(colortable[2]);
+  handle.Instance->FGCLUT[3] = rgb565_to_rgb888(colortable[3]);
+  handle.Instance->FGCLUT[4] = rgb565_to_rgb888(colortable[4]);
+  handle.Instance->FGCLUT[5] = rgb565_to_rgb888(colortable[5]);
+  handle.Instance->FGCLUT[6] = rgb565_to_rgb888(colortable[6]);
+  handle.Instance->FGCLUT[7] = rgb565_to_rgb888(colortable[7]);
+  handle.Instance->FGCLUT[8] = rgb565_to_rgb888(colortable[8]);
+  handle.Instance->FGCLUT[9] = rgb565_to_rgb888(colortable[9]);
+  handle.Instance->FGCLUT[10] = rgb565_to_rgb888(colortable[10]);
+  handle.Instance->FGCLUT[11] = rgb565_to_rgb888(colortable[11]);
+  handle.Instance->FGCLUT[12] = rgb565_to_rgb888(colortable[12]);
+  handle.Instance->FGCLUT[13] = rgb565_to_rgb888(colortable[13]);
+  handle.Instance->FGCLUT[14] = rgb565_to_rgb888(colortable[14]);
+  handle.Instance->FGCLUT[15] = rgb565_to_rgb888(colortable[15]);
+
+
+  DMA2D_CLUTCfgTypeDef clut;
+  clut.CLUTColorMode = DMA2D_CCM_RGB888;
+  clut.Size = 0xf;
+  clut.pCLUT = 0;//;loading directly
+
+  HAL_DMA2D_Init(&handle);
+  HAL_DMA2D_ConfigLayer(&handle, 1);
+  HAL_DMA2D_ConfigCLUT(&handle, clut, 1);
+  //HAL_DMA2D_ConfigLayer(&handle, 0);
+
+
+
+  //handle.Instance->FGCOLR = rgb565_to_rgb888(fgcolor);
+  //handle.Instance->BGCOLR = rgb565_to_rgb888(bgcolor);
+
+
+
+  HAL_DMA2D_Init(&handle);
+
+
+
+  for (uint32_t pos = 0; pos < iter_num; pos++) {
     int st = uzlib_uncompress(&decomp);
-    if (st == TINF_DONE) break;  // all OK
+  //  if (st == TINF_DONE) break;  // all OK
     if (st < 0) break;           // error
-    const int px = (pos * 2) % w;
-    const int py = (pos * 2) / w;
-    if (px >= x0 && px <= x1 && py >= y0 && py <= y1) {
-      PIXELDATA(colortable[decomp_out >> 4]);
-      PIXELDATA(colortable[decomp_out & 0x0F]);
+
+    uint16_t height = ICON_BUFFER_SIZE/2;
+
+    if ((rest != 0) && (iter_num-1) == pos) {
+      height = rest/4;
     }
-    decomp.dest = (uint8_t *)&decomp_out;
+
+    HAL_DMA2D_Start(&handle,
+                    (uint32_t)icon_decomp_out,
+                    ((uint32_t)DISPLAY_MEMORY_BASE | (1 << DISPLAY_MEMORY_PIN)),
+                    2,
+                    height*2);
+
+    while(HAL_DMA2D_PollForTransfer(&handle, 10) != HAL_OK);
+
+
+
+//    const int px = (pos * 2) % w;
+//    const int py = (pos * 2) / w;
+//    if (px >= x0 && px <= x1 && py >= y0 && py <= y1) {
+//      //PIXELDATA((decomp_out >> 4) != 0 ? fgcolor : bgcolor);
+//      PIXELDATA(colortable[decomp_out >> 4]);
+//      //PIXELDATA((decomp_out & 0x0F) != 0 ? fgcolor : bgcolor);
+//      PIXELDATA(colortable[decomp_out & 0x0F]);
+//    }
+    decomp.dest = (uint8_t *)&icon_decomp_out;
   }
   PIXELDATA_DIRTY();
 }

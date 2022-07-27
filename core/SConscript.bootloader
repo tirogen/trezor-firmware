@@ -54,7 +54,6 @@ CPPPATH_MOD += [
 ]
 CPPDEFINES_MOD += [
     'TREZOR_FONT_NORMAL_ENABLE',
-    'TREZOR_FONT_BOLD_ENABLE',
 ]
 SOURCE_MOD += [
     'embed/extmod/modtrezorui/display.c',
@@ -71,7 +70,6 @@ SOURCE_MOD += [
 ]
 if UI2:
     CPPDEFINES_MOD += [
-        'TREZOR_FONT_MEDIUM_ENABLE',
         'TREZOR_UI2',
     ]
     SOURCE_MOD += [
@@ -84,6 +82,7 @@ SOURCE_STMHAL = [
     'vendor/micropython/lib/stm32lib/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal.c',
     'vendor/micropython/lib/stm32lib/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_cortex.c',
     'vendor/micropython/lib/stm32lib/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma.c',
+    'vendor/micropython/lib/stm32lib/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma2d.c',
     'vendor/micropython/lib/stm32lib/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash.c',
     'vendor/micropython/lib/stm32lib/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash_ex.c',
     'vendor/micropython/lib/stm32lib/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_gpio.c',

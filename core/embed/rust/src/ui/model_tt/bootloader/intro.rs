@@ -1,22 +1,16 @@
-use crate::ui::{
-    component::{text::paragraphs::Paragraphs, Child, Component, Event, EventCtx, Pad},
-    display::Color,
-    geometry::{LinearPlacement, Point, Rect},
-    model_tt::{
-        bootloader::{
-            theme::{button_bld_menu, TTBootloaderText, MENU},
-            title::Title,
-            ReturnToC,
-        },
-        theme::FONT_MEDIUM,
+use crate::ui::{component::{text::paragraphs::Paragraphs, Child, Component, Event, EventCtx, Pad}, display, display::Color, geometry::{LinearPlacement, Point, Rect}, model_tt::{
+    bootloader::{
+        theme::{button_bld_menu, TTBootloaderText, MENU, IMAGE_BG, ICON_BG},
+        title::Title,
+        ReturnToC,
     },
-};
+    theme::FONT_MEDIUM,
+}};
+use crate::ui::constant::screen;
+use crate::trezorhal::time::{clear_acc, get_ticks, init_ticks};
 
-use crate::ui::model_tt::{
-    bootloader::title::TitleMsg,
-    component::{Button, HoldToConfirm, HoldToConfirmMsg},
-    constant::{HEIGHT, WIDTH},
-};
+
+use crate::ui::model_tt::{bootloader::title::TitleMsg, component::{Button, HoldToConfirm, HoldToConfirmMsg}, constant::{HEIGHT, WIDTH}, theme};
 
 #[repr(u32)]
 #[derive(Copy, Clone)]
@@ -82,8 +76,13 @@ impl Component for Intro {
     }
 
     fn paint(&mut self) {
-        self.bg.paint();
-        self.host.paint();
+
+        init_ticks();
+        display::icon(screen().center(), ICON_BG, theme::GREEN, theme::BLUE);
+        //display::image(screen().center(), IMAGE_BG);
+
+        get_ticks();
+        clear_acc();
     }
 
     fn bounds(&self, sink: &mut dyn FnMut(Rect)) {

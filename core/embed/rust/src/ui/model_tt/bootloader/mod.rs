@@ -53,7 +53,7 @@ where
     pub fn process(&mut self) -> u32 {
         self.frame.place(constant::screen());
         self.frame.paint();
-        display::fadein();
+
 
         loop {
             let event = touch_eval();
@@ -176,7 +176,7 @@ extern "C" fn screen_intro(
     };
     let version = unsafe { CStr::from_ptr(version).to_str().unwrap() };
     let bld_version = unsafe { CStr::from_ptr(bld_version).to_str().unwrap() };
-
+    display::fadein();
     let mut layout = BootloaderLayout::new(Intro::new(bld_version, vendor, version));
     return layout.process();
 }
