@@ -78,8 +78,8 @@ impl Component for Intro {
     fn paint(&mut self) {
 
         init_ticks();
-        display::icon(screen().center(), ICON_BG, theme::GREEN, theme::BLUE);
-        //display::image(screen().center(), IMAGE_BG);
+        //display::icon(screen().center(), ICON_BG, theme::GREEN, theme::BLUE);
+        display::image(screen().center(), IMAGE_BG);
 
         get_ticks();
         clear_acc();
