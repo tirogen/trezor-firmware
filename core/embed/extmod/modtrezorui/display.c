@@ -624,16 +624,6 @@ void display_icon(int x, int y, int w, int h, const void *data,
     while(HAL_DMA2D_PollForTransfer(&handle, 10) != HAL_OK);
     if (st < 0) break;           // error
 
-
-
-//    const int px = (pos * 2) % w;
-//    const int py = (pos * 2) / w;
-//    if (px >= x0 && px <= x1 && py >= y0 && py <= y1) {
-//      //PIXELDATA((decomp_out >> 4) != 0 ? fgcolor : bgcolor);
-//      PIXELDATA(colortable[decomp_out >> 4]);
-//      //PIXELDATA((decomp_out & 0x0F) != 0 ? fgcolor : bgcolor);
-//      PIXELDATA(colortable[decomp_out & 0x0F]);
-//    }
   }
   PIXELDATA_DIRTY();
 }
