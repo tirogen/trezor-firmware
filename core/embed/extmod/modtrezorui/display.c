@@ -267,7 +267,69 @@ static void uzlib_prepare(struct uzlib_uncomp *decomp, uint8_t *window,
   uzlib_uncompress_init(decomp, window, window ? UZLIB_WINDOW_SIZE : 0);
 }
 
-#define BUFFER_SIZE 1000
+
+__attribute__((optimize("-O0")))
+static void display_text_render_buffer(const char *text, int textlen,
+                                       int font,
+                                       uint8_t * buffer, int buffer_len,
+                                       int text_width, int text_height, int line_width) {
+  // determine text length if not provided
+  if (textlen < 0) {
+    textlen = strlen(text);
+  }
+
+  int x = 0;
+
+  memzero(buffer, buffer_len);
+
+  // render glyphs
+  for (int c_idx = 0; c_idx < textlen; c_idx++) {
+    const uint8_t *g = display_get_glyph(font, (uint8_t)text[c_idx]);
+    if (!g) continue;
+    const uint8_t w = g[0];      // width
+    const uint8_t h = g[1];      // height
+    const uint8_t adv = g[2];    // advance
+    const uint8_t bearX = g[3];  // bearingX
+    const uint8_t bearY = g[4];  // bearingY
+    if (w && h) {
+      for (int j = 0; j < h; j++) {
+        for (int i = 0; i < w; i++) {
+          const int a = i + j * w;
+#if TREZOR_FONT_BPP == 1
+          const uint8_t c = ((g[5 + a / 8] >> (7 - (a % 8) * 1)) & 0x01) * 15;
+#elif TREZOR_FONT_BPP == 2
+          const uint8_t c = ((g[5 + a / 4] >> (6 - (a % 4) * 2)) & 0x03) * 5;
+#elif TREZOR_FONT_BPP == 4
+          const uint8_t c = (g[5 + a / 2] >> (4 - (a % 2) * 4)) & 0x0F;
+#elif TREZOR_FONT_BPP == 8
+          const uint8_t c = g[5 + a / 1] >> 4;
+#else
+#error Unsupported TREZOR_FONT_BPP value
+#endif
+
+          int x_pos = i+x+bearX;
+          int y_pos = j+h-bearY;
+
+          int buffer_pos = x_pos + y_pos*line_width;
+
+          if (buffer_pos < buffer_len) {
+            int b = buffer_pos / 2;
+            if (buffer_pos % 2){
+              buffer[b] |= c << 4;
+            }else {
+              buffer[b] |= (c);
+            }
+          } else{
+            //error, remove after debugging
+            return;
+          }
+        }
+      }
+    }
+    x += adv;
+  }
+}
+
 
 
 //void display_image(int x, int y, int w, int h, const void *data,
@@ -304,11 +366,67 @@ static void uzlib_prepare(struct uzlib_uncomp *decomp, uint8_t *window,
 //#endif
 //}
 
-__attribute__((section(".buf")))
-uint16_t decomp_out[BUFFER_SIZE] = {0};
-__attribute__((section(".buf")))
-uint16_t decomp_out2[BUFFER_SIZE] = {0};
+uint32_t rgb565_to_rgb888(uint16_t color) {
+//  uint32_t res =  0;
+//  res |=  ((((((uint32_t)color & 0xF800) >> 11) * 259) + 33 ) >> 6) << 8;
+//  res |=  ((((((uint32_t)color & 0x07E0) >> 5) * 259) + 33 ) >> 6) << 0;
+//  res |=  ((((((uint32_t)color & 0x001F) >> 0) * 527) + 23 ) >> 6) << 16;
+//  res |= 0x00000000;
 
+  uint32_t res =  0;
+  res |=  (((uint32_t)color & 0xF800) >> 11) << 8;
+  res |=  (((uint32_t)color & 0x07E0) >> 5)  << 0;
+  res |=  (((uint32_t)color & 0x001F) >> 0)  << 16;
+  res |= 0x00000000;
+
+
+  return res;
+}
+
+void initialize_clut(DMA2D_HandleTypeDef * handle, uint16_t fg, uint16_t bg) {
+
+  uint16_t colortable[16] = {0};
+  set_color_table(colortable, fg, bg);
+
+  handle->Instance->FGCLUT[0] = rgb565_to_rgb888(colortable[0]);
+  handle->Instance->FGCLUT[1] = rgb565_to_rgb888(colortable[1]);
+  handle->Instance->FGCLUT[2] = rgb565_to_rgb888(colortable[2]);
+  handle->Instance->FGCLUT[3] = rgb565_to_rgb888(colortable[3]);
+  handle->Instance->FGCLUT[4] = rgb565_to_rgb888(colortable[4]);
+  handle->Instance->FGCLUT[5] = rgb565_to_rgb888(colortable[5]);
+  handle->Instance->FGCLUT[6] = rgb565_to_rgb888(colortable[6]);
+  handle->Instance->FGCLUT[7] = rgb565_to_rgb888(colortable[7]);
+  handle->Instance->FGCLUT[8] = rgb565_to_rgb888(colortable[8]);
+  handle->Instance->FGCLUT[9] = rgb565_to_rgb888(colortable[9]);
+  handle->Instance->FGCLUT[10] = rgb565_to_rgb888(colortable[10]);
+  handle->Instance->FGCLUT[11] = rgb565_to_rgb888(colortable[11]);
+  handle->Instance->FGCLUT[12] = rgb565_to_rgb888(colortable[12]);
+  handle->Instance->FGCLUT[13] = rgb565_to_rgb888(colortable[13]);
+  handle->Instance->FGCLUT[14] = rgb565_to_rgb888(colortable[14]);
+  handle->Instance->FGCLUT[15] = rgb565_to_rgb888(colortable[15]);
+
+  DMA2D_CLUTCfgTypeDef clut;
+  clut.CLUTColorMode = DMA2D_CCM_ARGB8888;
+  clut.Size = 0xf;
+  clut.pCLUT = 0;//;loading directly
+
+  HAL_DMA2D_ConfigCLUT(handle, clut, 1);
+
+}
+
+
+#define BUFFER_PIXELS 144*18
+
+__attribute__((section(".buf")))
+uint16_t decomp_out[BUFFER_PIXELS] = {0};
+__attribute__((section(".buf")))
+uint16_t decomp_out2[BUFFER_PIXELS] = {0};
+
+#define TEXT_BUF_LEN  (240*18 / 2)
+__attribute__((section(".buf")))
+uint32_t text_buffer[TEXT_BUF_LEN / 4];
+
+__attribute__((optimize("-O0")))
 void display_image(int x, int y, int w, int h, const void *data,
                    uint32_t datalen) {
 
@@ -331,53 +449,103 @@ void display_image(int x, int y, int w, int h, const void *data,
   uzlib_prepare(&decomp, decomp_window, data, datalen, decomp_out,
                 sizeof(decomp_out));
 
-  uint16_t iter_num = (w*h) / BUFFER_SIZE;
-  uint16_t rest = (w*h) % BUFFER_SIZE;
+  int iter_num = (w*h) / BUFFER_PIXELS;
+  int rest = (w*h) % BUFFER_PIXELS;
 
+//  rest = 0;
   if (rest != 0) {
     iter_num++;
   }
 
+  char str[8] = "GBCDEFG";
+
+  int text_height = display_text_height(FONT_NORMAL);
+  int text_width = display_text_width(str, -1, FONT_NORMAL);
+
+
+  display_text_render_buffer(str,
+                             -1,
+                             FONT_NORMAL,
+                             (uint8_t*)text_buffer,
+                             sizeof(text_buffer),
+                             text_width,
+                             text_height,
+                             w);
+
+
   DMA2D_HandleTypeDef handle;
   handle.Instance = (DMA2D_TypeDef*)DMA2D_BASE;
-  handle.Init.Mode = DMA2D_M2M;
+  handle.Init.Mode = DMA2D_M2M_BLEND;
   handle.Init.ColorMode = DMA2D_OUTPUT_RGB565;
   handle.Init.OutputOffset = 0;
 
-  handle.LayerCfg[1].InputColorMode = DMA2D_INPUT_RGB565;
+  handle.LayerCfg[1].InputColorMode = DMA2D_INPUT_A4;
   handle.LayerCfg[1].InputOffset = 0;
   handle.LayerCfg[1].AlphaMode = 0;
-  handle.LayerCfg[1].InputAlpha = 0;
+  handle.LayerCfg[1].InputAlpha = 0x00FFFFFF;//rgb565_to_rgb888(0xffff) | 0xFF000000;
+
+  handle.LayerCfg[0].InputColorMode = DMA2D_INPUT_RGB565;
+  handle.LayerCfg[0].InputOffset = 0;
+  handle.LayerCfg[0].AlphaMode = DMA2D_REPLACE_ALPHA;
+  handle.LayerCfg[0].InputAlpha = 0x04;
 
 
   HAL_DMA2D_Init(&handle);
   HAL_DMA2D_ConfigLayer(&handle, 1);
+  HAL_DMA2D_ConfigLayer(&handle, 0);
+  initialize_clut(&handle, 0xFFFF, 0);
 
   int st = uzlib_uncompress(&decomp);
   if (st < 0) return;           // error
 
-  uint8_t * next_buf = (uint8_t*)decomp_out;
 
-  PIXELDATA_DIRTY();
-  for (uint32_t pos = 0; pos < iter_num; pos++) {
+//  handle.Instance->BGCOLR = 0;
+//  handle.Instance->FGCOLR = 0xFFFFFF; //rgb565_to_rgb888(0x001F);
 
-    uint16_t height = BUFFER_SIZE;
+//  HAL_DMA2D_Start(&handle,
+//                          (uint32_t)text_buffer,
+//                          ((uint32_t)DISPLAY_MEMORY_BASE | (1 << DISPLAY_MEMORY_PIN)),
+//                          2,
+//                          w*18/2);
 
-    if ((rest != 0) && (iter_num-1) == pos) {
-      height = rest;
-    }
+  HAL_DMA2D_BlendingStart(&handle,
+                          (uint32_t)text_buffer,
+                  (uint32_t)decomp_out,
+                  ((uint32_t)DISPLAY_MEMORY_BASE | (1 << DISPLAY_MEMORY_PIN)),
+                  2,
+                  w*18/2);
 
-    HAL_DMA2D_Start(&handle, (uint32_t)next_buf,     ((uint32_t)DISPLAY_MEMORY_BASE |
-                                                      (1 << DISPLAY_MEMORY_PIN)), 1, height);
+  while(HAL_DMA2D_PollForTransfer(&handle, 10) != HAL_OK);
 
-    next_buf = (pos % 2 == 1) ? (uint8_t*)decomp_out : (uint8_t*)decomp_out2;
-    decomp.dest = (uint8_t *)next_buf;
-    decomp.dest_limit = next_buf + sizeof(decomp_out2);
-    int st = uzlib_uncompress(&decomp);
-    while(HAL_DMA2D_PollForTransfer(&handle, 10) != HAL_OK);
-    if (st < 0) break;           // error
 
-  }
+//  int st = uzlib_uncompress(&decomp);
+//  if (st < 0) return;           // error
+//
+//  uint8_t * next_buf = (uint8_t*)decomp_out;
+//
+//  PIXELDATA_DIRTY();
+//  for (uint32_t pos = 0; pos < iter_num; pos++) {
+//
+//    uint16_t height = BUFFER_PIXELS;
+//
+//    if ((rest != 0) && (iter_num-1) == pos) {
+//      height = rest;
+//    }
+//
+//    HAL_DMA2D_Start(&handle,
+//                    (uint32_t)next_buf,
+//                    ((uint32_t)DISPLAY_MEMORY_BASE | (1 << DISPLAY_MEMORY_PIN)),
+//                    1,
+//                    height);
+//
+//    next_buf = (pos % 2 == 1) ? (uint8_t*)decomp_out : (uint8_t*)decomp_out2;
+//    decomp.dest = (uint8_t *)next_buf;
+//    decomp.dest_limit = next_buf + sizeof(decomp_out2);
+//    int st = uzlib_uncompress(&decomp);
+//    while(HAL_DMA2D_PollForTransfer(&handle, 10) != HAL_OK);
+//    if (st < 0) break;           // error
+//
+//  }
 
 }
 
@@ -454,39 +622,6 @@ __attribute__((section(".buf")))
 uint32_t icon_decomp_out2[ICON_BUFFER_SIZE/4] = {0};
 
 
-uint32_t rgb565_to_rgb888(uint16_t color) {
-//  uint32_t res =  0;
-//  res |=  ((((((uint32_t)color & 0xF800) >> 11) * 259) + 33 ) >> 6) << 8;
-//  res |=  ((((((uint32_t)color & 0x07E0) >> 5) * 259) + 33 ) >> 6) << 0;
-//  res |=  ((((((uint32_t)color & 0x001F) >> 0) * 527) + 23 ) >> 6) << 16;
-//  res |= 0x00000000;
-
-  uint32_t res =  0;
-  res |=  (((uint32_t)color & 0xF800) >> 11) << 8;
-  res |=  (((uint32_t)color & 0x07E0) >> 5)  << 0;
-  res |=  (((uint32_t)color & 0x001F) >> 0)  << 16;
-  res |= 0x00000000;
-
-
-  return res;
-}
-
-void write_clut(uint8_t * base, uint8_t index, uint32_t color) {
-  uint8_t * red = base + (3 * index) + 0;
-  uint8_t * green = base + (3 * index) + 1;
-  uint8_t * blue = base + (3 * index) + 2;
-
-  red[0] = 0;//(uint8_t)((color & 0xFF0000) >> 16);
-  green[0] = 0;//(uint8_t)((color & 0x00FF00) >> 8);
-  blue[0] =0;//(uint8_t)((color & 0x0000FF) >> 0);
-
-}
-
-uint16_t swap_bytes(uint16_t b) {
-  //return ((b & 0xFF00) >> 8) | ((b & 0xFF) << 8);
-  return b;
-}
-
 
 //void display_icon(int x, int y, int w, int h, const void *data,
 //                  uint32_t datalen, uint16_t fgcolor, uint16_t bgcolor) {
@@ -542,8 +677,6 @@ void display_icon(int x, int y, int w, int h, const void *data,
 
   __HAL_RCC_DMA2D_CLK_ENABLE();
 
-  uint16_t colortable[16] = {0};
-  set_color_table(colortable, fgcolor, bgcolor);
 
   struct uzlib_uncomp decomp = {0};
   uint8_t decomp_window[UZLIB_WINDOW_SIZE] = {0};
@@ -568,32 +701,12 @@ void display_icon(int x, int y, int w, int h, const void *data,
   handle.LayerCfg[1].AlphaMode = 0;
   handle.LayerCfg[1].InputAlpha = 0;
 
-  handle.Instance->FGCLUT[0] = rgb565_to_rgb888(colortable[0]);
-  handle.Instance->FGCLUT[1] = rgb565_to_rgb888(colortable[1]);
-  handle.Instance->FGCLUT[2] = rgb565_to_rgb888(colortable[2]);
-  handle.Instance->FGCLUT[3] = rgb565_to_rgb888(colortable[3]);
-  handle.Instance->FGCLUT[4] = rgb565_to_rgb888(colortable[4]);
-  handle.Instance->FGCLUT[5] = rgb565_to_rgb888(colortable[5]);
-  handle.Instance->FGCLUT[6] = rgb565_to_rgb888(colortable[6]);
-  handle.Instance->FGCLUT[7] = rgb565_to_rgb888(colortable[7]);
-  handle.Instance->FGCLUT[8] = rgb565_to_rgb888(colortable[8]);
-  handle.Instance->FGCLUT[9] = rgb565_to_rgb888(colortable[9]);
-  handle.Instance->FGCLUT[10] = rgb565_to_rgb888(colortable[10]);
-  handle.Instance->FGCLUT[11] = rgb565_to_rgb888(colortable[11]);
-  handle.Instance->FGCLUT[12] = rgb565_to_rgb888(colortable[12]);
-  handle.Instance->FGCLUT[13] = rgb565_to_rgb888(colortable[13]);
-  handle.Instance->FGCLUT[14] = rgb565_to_rgb888(colortable[14]);
-  handle.Instance->FGCLUT[15] = rgb565_to_rgb888(colortable[15]);
 
-  DMA2D_CLUTCfgTypeDef clut;
-  clut.CLUTColorMode = DMA2D_CCM_ARGB8888;
-  clut.Size = 0xf;
-  clut.pCLUT = 0;//;loading directly
+  initialize_clut(&handle, fgcolor, bgcolor);
+
 
   HAL_DMA2D_Init(&handle);
   HAL_DMA2D_ConfigLayer(&handle, 1);
-  HAL_DMA2D_ConfigCLUT(&handle, clut, 1);
-
 
   HAL_DMA2D_Init(&handle);
 
@@ -948,6 +1061,7 @@ const uint8_t *display_get_glyph(int font, uint8_t c) {
   return 0;
 }
 
+
 static void display_text_render(int x, int y, const char *text, int textlen,
                                 int font, uint16_t fgcolor, uint16_t bgcolor) {
   // determine text length if not provided
@@ -1076,6 +1190,7 @@ int display_text_split(const char *text, int textlen, int font,
   return textlen;
 }
 
+__attribute__((optimize("-O0")))
 int display_text_height(int font) {
   switch (font) {
 #ifdef TREZOR_FONT_NORMAL_ENABLE
