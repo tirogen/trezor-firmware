@@ -268,11 +268,14 @@ static void uzlib_prepare(struct uzlib_uncomp *decomp, uint8_t *window,
 }
 
 
-__attribute__((optimize("-O0")))
-static void display_text_render_buffer(const char *text, int textlen,
+void display_text_render_buffer(const char *text, int textlen,
                                        int font,
-                                       uint8_t * buffer, int buffer_len,
-                                       int text_width, int text_height, int line_width) {
+                                       uint8_t * buffer,
+                                       int buffer_len,
+                                       int text_width,
+                                       int text_height,
+                                       int text_offset,
+                                       int line_width) {
   // determine text length if not provided
   if (textlen < 0) {
     textlen = strlen(text);
@@ -307,10 +310,14 @@ static void display_text_render_buffer(const char *text, int textlen,
 #error Unsupported TREZOR_FONT_BPP value
 #endif
 
-          int x_pos = i+x+bearX;
+          int x_pos = text_offset+i+x+bearX;
           int y_pos = j+h-bearY;
 
-          int buffer_pos = x_pos + y_pos*line_width;
+          if (x_pos >= line_width){
+            continue;
+          }
+
+          int buffer_pos =  x_pos + y_pos*line_width;
 
           if (buffer_pos < buffer_len) {
             int b = buffer_pos / 2;
@@ -414,8 +421,8 @@ void initialize_clut(DMA2D_HandleTypeDef * handle, uint16_t fg, uint16_t bg) {
 
 }
 
-
-#define BUFFER_PIXELS 144*18
+#define LINES_PER_CYCLE 1
+#define BUFFER_PIXELS (240*LINES_PER_CYCLE)
 
 __attribute__((section(".buf")))
 uint16_t decomp_out[BUFFER_PIXELS] = {0};
@@ -425,8 +432,11 @@ uint16_t decomp_out2[BUFFER_PIXELS] = {0};
 #define TEXT_BUF_LEN  (240*18 / 2)
 __attribute__((section(".buf")))
 uint32_t text_buffer[TEXT_BUF_LEN / 4];
+__attribute__((section(".buf")))
+uint32_t empty_buffer[240/8];
 
-__attribute__((optimize("-O0")))
+int text_start_line = 0;
+
 void display_image(int x, int y, int w, int h, const void *data,
                    uint32_t datalen) {
 
@@ -445,19 +455,19 @@ void display_image(int x, int y, int w, int h, const void *data,
 
   struct uzlib_uncomp decomp = {0};
   uint8_t decomp_window[UZLIB_WINDOW_SIZE] = {0};
-  //256 byte at the time
-  uzlib_prepare(&decomp, decomp_window, data, datalen, decomp_out,
-                sizeof(decomp_out));
 
-  int iter_num = (w*h) / BUFFER_PIXELS;
-  int rest = (w*h) % BUFFER_PIXELS;
+  uzlib_prepare(&decomp, decomp_window, data, datalen, decomp_out,
+                w*2*LINES_PER_CYCLE);
+
+  int iter_num = (w*h) / (w*LINES_PER_CYCLE);
+  int rest = (w*h) % (w*LINES_PER_CYCLE);
 
 //  rest = 0;
   if (rest != 0) {
     iter_num++;
   }
 
-  char str[8] = "GBCDEFG";
+  char str[10] = "MY TREZOR";
 
   int text_height = display_text_height(FONT_NORMAL);
   int text_width = display_text_width(str, -1, FONT_NORMAL);
@@ -470,6 +480,7 @@ void display_image(int x, int y, int w, int h, const void *data,
                              sizeof(text_buffer),
                              text_width,
                              text_height,
+                             text_start_line,
                              w);
 
 
@@ -482,7 +493,7 @@ void display_image(int x, int y, int w, int h, const void *data,
   handle.LayerCfg[1].InputColorMode = DMA2D_INPUT_A4;
   handle.LayerCfg[1].InputOffset = 0;
   handle.LayerCfg[1].AlphaMode = 0;
-  handle.LayerCfg[1].InputAlpha = 0x00FFFFFF;//rgb565_to_rgb888(0xffff) | 0xFF000000;
+  handle.LayerCfg[1].InputAlpha = 0xFFFFFFFF;
 
   handle.LayerCfg[0].InputColorMode = DMA2D_INPUT_RGB565;
   handle.LayerCfg[0].InputOffset = 0;
@@ -493,60 +504,61 @@ void display_image(int x, int y, int w, int h, const void *data,
   HAL_DMA2D_Init(&handle);
   HAL_DMA2D_ConfigLayer(&handle, 1);
   HAL_DMA2D_ConfigLayer(&handle, 0);
-  initialize_clut(&handle, 0xFFFF, 0);
 
   int st = uzlib_uncompress(&decomp);
   if (st < 0) return;           // error
 
 
-//  handle.Instance->BGCOLR = 0;
-//  handle.Instance->FGCOLR = 0xFFFFFF; //rgb565_to_rgb888(0x001F);
-
-//  HAL_DMA2D_Start(&handle,
+//  HAL_DMA2D_BlendingStart(&handle,
 //                          (uint32_t)text_buffer,
-//                          ((uint32_t)DISPLAY_MEMORY_BASE | (1 << DISPLAY_MEMORY_PIN)),
-//                          2,
-//                          w*18/2);
-
-  HAL_DMA2D_BlendingStart(&handle,
-                          (uint32_t)text_buffer,
-                  (uint32_t)decomp_out,
-                  ((uint32_t)DISPLAY_MEMORY_BASE | (1 << DISPLAY_MEMORY_PIN)),
-                  2,
-                  w*18/2);
-
-  while(HAL_DMA2D_PollForTransfer(&handle, 10) != HAL_OK);
+//                  (uint32_t)decomp_out,
+//                  ((uint32_t)DISPLAY_MEMORY_BASE | (1 << DISPLAY_MEMORY_PIN)),
+//                  2,
+//                  w*LINES_PER_CYCLE/2);
+//
+//  while(HAL_DMA2D_PollForTransfer(&handle, 10) != HAL_OK);
 
 
-//  int st = uzlib_uncompress(&decomp);
-//  if (st < 0) return;           // error
-//
-//  uint8_t * next_buf = (uint8_t*)decomp_out;
-//
-//  PIXELDATA_DIRTY();
-//  for (uint32_t pos = 0; pos < iter_num; pos++) {
-//
-//    uint16_t height = BUFFER_PIXELS;
-//
-//    if ((rest != 0) && (iter_num-1) == pos) {
-//      height = rest;
-//    }
-//
-//    HAL_DMA2D_Start(&handle,
-//                    (uint32_t)next_buf,
-//                    ((uint32_t)DISPLAY_MEMORY_BASE | (1 << DISPLAY_MEMORY_PIN)),
-//                    1,
-//                    height);
-//
-//    next_buf = (pos % 2 == 1) ? (uint8_t*)decomp_out : (uint8_t*)decomp_out2;
-//    decomp.dest = (uint8_t *)next_buf;
-//    decomp.dest_limit = next_buf + sizeof(decomp_out2);
-//    int st = uzlib_uncompress(&decomp);
-//    while(HAL_DMA2D_PollForTransfer(&handle, 10) != HAL_OK);
-//    if (st < 0) break;           // error
-//
-//  }
 
+  uint8_t * next_buf = (uint8_t*)decomp_out;
+
+  PIXELDATA_DIRTY();
+  for (uint32_t pos = 0; pos < iter_num; pos++) {
+
+    uint16_t height = w*LINES_PER_CYCLE;
+
+    if ((rest != 0) && (iter_num-1) == pos) {
+      height = rest;
+    }
+
+    uint8_t * text_line = (uint8_t*)empty_buffer;
+
+    if (pos >= text_start_line && pos < (text_start_line + text_height))
+    {
+      text_line = (uint8_t*)(text_buffer)+(((pos-text_start_line)%(18))*(w/2));
+    }
+
+
+    HAL_DMA2D_BlendingStart(&handle,
+                            (uint32_t)text_line,
+                            (uint32_t)next_buf,
+                            ((uint32_t)DISPLAY_MEMORY_BASE | (1 << DISPLAY_MEMORY_PIN)),
+                            2,
+                            height/2);
+
+    next_buf = (pos % 2 == 1) ? (uint8_t*)decomp_out : (uint8_t*)decomp_out2;
+    decomp.dest = (uint8_t *)next_buf;
+    decomp.dest_limit = next_buf + w*2*LINES_PER_CYCLE;
+    st = uzlib_uncompress(&decomp);
+    while(HAL_DMA2D_PollForTransfer(&handle, 10) != HAL_OK);
+    if (st < 0) break;           // error
+
+  }
+
+  //text_start_line++;
+  if (text_start_line >= h){
+    text_start_line = 0;
+  }
 }
 
 #define AVATAR_BORDER_SIZE 4

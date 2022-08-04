@@ -8,6 +8,8 @@ use crate::ui::{component::{text::paragraphs::Paragraphs, Child, Component, Even
 }};
 use crate::ui::constant::screen;
 use crate::trezorhal::time::{clear_acc, get_ticks, init_ticks};
+use crate::ui::geometry::Offset;
+use crate::ui::model_tt::theme::FONT_NORMAL;
 
 
 use crate::ui::model_tt::{bootloader::title::TitleMsg, component::{Button, HoldToConfirm, HoldToConfirmMsg}, constant::{HEIGHT, WIDTH}, theme};
@@ -83,6 +85,8 @@ impl Component for Intro {
 
         get_ticks();
         clear_acc();
+
+        display::text(screen().top_left() + Offset::new(48, 10+18), "MY TREZOR", FONT_NORMAL, Color::rgb(0xff, 0xff, 0xff), Color::rgb(0,0,0),)
     }
 
     fn bounds(&self, sink: &mut dyn FnMut(Rect)) {
