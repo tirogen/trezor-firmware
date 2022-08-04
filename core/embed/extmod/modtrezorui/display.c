@@ -310,8 +310,8 @@ void display_text_render_buffer(const char *text, int textlen,
 #error Unsupported TREZOR_FONT_BPP value
 #endif
 
-          int x_pos = text_offset+i+x+bearX;
-          int y_pos = j+h-bearY;
+          int x_pos = text_offset + i + x + bearX;
+          int y_pos = j + (text_height - bearY - 1);
 
           if (x_pos >= line_width){
             continue;
