@@ -424,10 +424,6 @@ __attribute__((section(".buf")))
 uint16_t decomp_out[BUFFER_PIXELS] = {0};
 __attribute__((section(".buf")))
 uint16_t decomp_out2[BUFFER_PIXELS] = {0};
-__attribute__((section(".buf")))
-uint16_t output_buffer[BUFFER_PIXELS] = {0};
-__attribute__((section(".buf")))
-uint8_t output_buffer2[BUFFER_PIXELS*2] = {0};
 
 #define TEXT_BUF_LEN  (240*20 / 2)
 __attribute__((section(".buf")))
@@ -459,10 +455,6 @@ void display_image(int x, int y, int w, int h, const void *data,
   y0 -= y;
   y1 -= y;
 
-
-
-
-
   __HAL_RCC_DMA2D_CLK_ENABLE();
 
   struct uzlib_uncomp decomp = {0};
@@ -474,7 +466,6 @@ void display_image(int x, int y, int w, int h, const void *data,
   int iter_num = (w*h) / (w*LINES_PER_CYCLE);
   int rest = (w*h) % (w*LINES_PER_CYCLE);
 
-//  rest = 0;
   if (rest != 0) {
     iter_num++;
   }
@@ -496,7 +487,6 @@ void display_image(int x, int y, int w, int h, const void *data,
                              text_start_line,
                              w);
 
-
   DMA2D_HandleTypeDef handle;
   handle.Instance = (DMA2D_TypeDef*)DMA2D_BASE;
   handle.Init.Mode = DMA2D_M2M_BLEND;
@@ -513,46 +503,12 @@ void display_image(int x, int y, int w, int h, const void *data,
   handle.LayerCfg[0].AlphaMode = 0;
   handle.LayerCfg[0].InputAlpha = 0;
 
-
   HAL_DMA2D_Init(&handle);
   HAL_DMA2D_ConfigLayer(&handle, 1);
   HAL_DMA2D_ConfigLayer(&handle, 0);
 
-
-//  __HAL_RCC_DMA2_CLK_ENABLE();
-//  DMA_HandleTypeDef DMA_InitStructure = {0};
-//  DMA_InitStructure.Instance = DMA2_Stream2;
-//  DMA_InitStructure.State = HAL_DMA_STATE_RESET;
-//  DMA_InitStructure.Init.Channel = DMA_CHANNEL_0;
-//  DMA_InitStructure.Init.Direction = DMA_MEMORY_TO_MEMORY;
-//  DMA_InitStructure.Init.FIFOMode = DMA_FIFOMODE_ENABLE;
-//  DMA_InitStructure.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_1QUARTERFULL;
-//  DMA_InitStructure.Init.MemBurst = DMA_MBURST_SINGLE;
-//  DMA_InitStructure.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
-//  DMA_InitStructure.Init.MemInc = DMA_MINC_ENABLE;
-//  DMA_InitStructure.Init.Mode = DMA_NORMAL;
-//  DMA_InitStructure.Init.PeriphBurst = DMA_PBURST_SINGLE;
-//  DMA_InitStructure.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
-//  DMA_InitStructure.Init.PeriphInc = DMA_PINC_DISABLE;
-//  DMA_InitStructure.Init.Priority = DMA_PRIORITY_HIGH;
-//  HAL_DMA_Init(&DMA_InitStructure);
-
-
-
   int st = uzlib_uncompress(&decomp);
   if (st < 0) return;           // error
-
-
-//  HAL_DMA2D_BlendingStart(&handle,
-//                          (uint32_t)text_buffer,
-//                  (uint32_t)decomp_out,
-//                  ((uint32_t)DISPLAY_MEMORY_BASE | (1 << DISPLAY_MEMORY_PIN)),
-//                  2,
-//                  w*LINES_PER_CYCLE/2);
-//
-//  while(HAL_DMA2D_PollForTransfer(&handle, 10) != HAL_OK);
-
-
 
   uint8_t * next_buf = (uint8_t*)decomp_out;
 
@@ -579,7 +535,6 @@ void display_image(int x, int y, int w, int h, const void *data,
                             (uint32_t)text_line,
                             (uint32_t)next_buf,
                             ((uint32_t)DISPLAY_MEMORY_BASE | (1 << DISPLAY_MEMORY_PIN)),
-                            //(uint32_t)output_buffer,
                             2,
                             height/2);
 
@@ -589,22 +544,6 @@ void display_image(int x, int y, int w, int h, const void *data,
     st = uzlib_uncompress(&decomp);
     while(HAL_DMA2D_PollForTransfer(&handle, 10) != HAL_OK);
     if (st < 0) break;           // error
-
-
-//    volatile uint8_t * addr = ((__IO uint8_t *)((uint32_t)(DISPLAY_MEMORY_BASE | (1 << DISPLAY_MEMORY_PIN))));
-
-//    for (int i = 0; i < (height); i++) {
-//      PIXELDATA(output_buffer[i]);
-//    }
-
-//    DMA2_Stream2->PAR = (uint32_t)output_buffer;
-//    DMA2_Stream2->M0AR = (uint32_t)output_buffer2;
-//    DMA2_Stream2->NDTR = height*2;
-//    DMA2_Stream2->CR |= DMA_SxCR_EN;
-//
-//    // wait for previous command to finish
-//    while (DMA2_Stream2->CR & DMA_SxCR_EN)
-//      ;
 
   }
 
