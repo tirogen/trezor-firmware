@@ -274,6 +274,7 @@ void display_text_render_buffer(const char *text, int textlen,
                                        int buffer_len,
                                        int text_width,
                                        int text_height,
+                                       int text_baseline,
                                        int text_offset,
                                        int line_width) {
   // determine text length if not provided
@@ -310,8 +311,11 @@ void display_text_render_buffer(const char *text, int textlen,
 #error Unsupported TREZOR_FONT_BPP value
 #endif
 
-          int x_pos = text_offset + i + x + bearX;
-          int y_pos = j + (text_height - bearY - 1);
+          int x_pos = text_offset+i+x+bearX;
+          int y_pos = j + text_height-bearY-text_baseline;
+
+          if (y_pos < 0) continue;
+
 
           if (x_pos >= line_width){
             continue;
@@ -319,7 +323,7 @@ void display_text_render_buffer(const char *text, int textlen,
 
           int buffer_pos =  x_pos + y_pos*line_width;
 
-          if (buffer_pos < buffer_len) {
+          if (buffer_pos < (buffer_len*2)) {
             int b = buffer_pos / 2;
             if (buffer_pos % 2){
               buffer[b] |= c << 4;
@@ -328,7 +332,7 @@ void display_text_render_buffer(const char *text, int textlen,
             }
           } else{
             //error, remove after debugging
-            return;
+            //return;
           }
         }
       }
@@ -428,14 +432,27 @@ __attribute__((section(".buf")))
 uint16_t decomp_out[BUFFER_PIXELS] = {0};
 __attribute__((section(".buf")))
 uint16_t decomp_out2[BUFFER_PIXELS] = {0};
+__attribute__((section(".buf")))
+uint16_t output_buffer[BUFFER_PIXELS] = {0};
+__attribute__((section(".buf")))
+uint8_t output_buffer2[BUFFER_PIXELS*2] = {0};
 
-#define TEXT_BUF_LEN  (240*18 / 2)
+#define TEXT_BUF_LEN  (240*20 / 2)
 __attribute__((section(".buf")))
 uint32_t text_buffer[TEXT_BUF_LEN / 4];
 __attribute__((section(".buf")))
 uint32_t empty_buffer[240/8];
 
 int text_start_line = 0;
+
+
+void swap_bytes_in_buffer(uint8_t * buffer, int len) {
+  for (int i = 0; i < len; i+=2) {
+    uint8_t b0 = buffer[i];
+    buffer[i] = buffer[i+1];
+    buffer[i+1] = b0;
+  }
+}
 
 void display_image(int x, int y, int w, int h, const void *data,
                    uint32_t datalen) {
@@ -449,6 +466,9 @@ void display_image(int x, int y, int w, int h, const void *data,
   x1 -= x;
   y0 -= y;
   y1 -= y;
+
+
+
 
 
   __HAL_RCC_DMA2D_CLK_ENABLE();
@@ -480,6 +500,7 @@ void display_image(int x, int y, int w, int h, const void *data,
                              sizeof(text_buffer),
                              text_width,
                              text_height,
+                             4,
                              text_start_line,
                              w);
 
@@ -497,13 +518,34 @@ void display_image(int x, int y, int w, int h, const void *data,
 
   handle.LayerCfg[0].InputColorMode = DMA2D_INPUT_RGB565;
   handle.LayerCfg[0].InputOffset = 0;
-  handle.LayerCfg[0].AlphaMode = DMA2D_REPLACE_ALPHA;
-  handle.LayerCfg[0].InputAlpha = 0x04;
+  handle.LayerCfg[0].AlphaMode = 0;
+  handle.LayerCfg[0].InputAlpha = 0;
 
 
   HAL_DMA2D_Init(&handle);
   HAL_DMA2D_ConfigLayer(&handle, 1);
   HAL_DMA2D_ConfigLayer(&handle, 0);
+
+
+//  __HAL_RCC_DMA2_CLK_ENABLE();
+//  DMA_HandleTypeDef DMA_InitStructure = {0};
+//  DMA_InitStructure.Instance = DMA2_Stream2;
+//  DMA_InitStructure.State = HAL_DMA_STATE_RESET;
+//  DMA_InitStructure.Init.Channel = DMA_CHANNEL_0;
+//  DMA_InitStructure.Init.Direction = DMA_MEMORY_TO_MEMORY;
+//  DMA_InitStructure.Init.FIFOMode = DMA_FIFOMODE_ENABLE;
+//  DMA_InitStructure.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_1QUARTERFULL;
+//  DMA_InitStructure.Init.MemBurst = DMA_MBURST_SINGLE;
+//  DMA_InitStructure.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
+//  DMA_InitStructure.Init.MemInc = DMA_MINC_ENABLE;
+//  DMA_InitStructure.Init.Mode = DMA_NORMAL;
+//  DMA_InitStructure.Init.PeriphBurst = DMA_PBURST_SINGLE;
+//  DMA_InitStructure.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
+//  DMA_InitStructure.Init.PeriphInc = DMA_PINC_DISABLE;
+//  DMA_InitStructure.Init.Priority = DMA_PRIORITY_HIGH;
+//  HAL_DMA_Init(&DMA_InitStructure);
+
+
 
   int st = uzlib_uncompress(&decomp);
   if (st < 0) return;           // error
@@ -535,14 +577,17 @@ void display_image(int x, int y, int w, int h, const void *data,
 
     if (pos >= text_start_line && pos < (text_start_line + text_height))
     {
-      text_line = (uint8_t*)(text_buffer)+(((pos-text_start_line)%(18))*(w/2));
+      text_line = (uint8_t*)(text_buffer)+(((pos-text_start_line)%(text_height))*(w/2));
     }
+
+    swap_bytes_in_buffer(next_buf, height*2);
 
 
     HAL_DMA2D_BlendingStart(&handle,
                             (uint32_t)text_line,
                             (uint32_t)next_buf,
                             ((uint32_t)DISPLAY_MEMORY_BASE | (1 << DISPLAY_MEMORY_PIN)),
+                            //(uint32_t)output_buffer,
                             2,
                             height/2);
 
@@ -553,12 +598,29 @@ void display_image(int x, int y, int w, int h, const void *data,
     while(HAL_DMA2D_PollForTransfer(&handle, 10) != HAL_OK);
     if (st < 0) break;           // error
 
+
+//    volatile uint8_t * addr = ((__IO uint8_t *)((uint32_t)(DISPLAY_MEMORY_BASE | (1 << DISPLAY_MEMORY_PIN))));
+
+//    for (int i = 0; i < (height); i++) {
+//      PIXELDATA(output_buffer[i]);
+//    }
+
+//    DMA2_Stream2->PAR = (uint32_t)output_buffer;
+//    DMA2_Stream2->M0AR = (uint32_t)output_buffer2;
+//    DMA2_Stream2->NDTR = height*2;
+//    DMA2_Stream2->CR |= DMA_SxCR_EN;
+//
+//    // wait for previous command to finish
+//    while (DMA2_Stream2->CR & DMA_SxCR_EN)
+//      ;
+
   }
 
-  //text_start_line++;
+  text_start_line++;
   if (text_start_line >= h){
     text_start_line = 0;
   }
+
 }
 
 #define AVATAR_BORDER_SIZE 4
@@ -748,6 +810,7 @@ void display_icon(int x, int y, int w, int h, const void *data,
     int st = uzlib_uncompress(&decomp);
     while(HAL_DMA2D_PollForTransfer(&handle, 10) != HAL_OK);
     if (st < 0) break;           // error
+
 
   }
   PIXELDATA_DIRTY();
@@ -1354,3 +1417,7 @@ void display_fadeout(void) {
 }
 
 void display_pixeldata_dirty(void) { PIXELDATA_DIRTY(); }
+
+void display_set_bootloader(void) {
+  display_set_little_endian();
+}

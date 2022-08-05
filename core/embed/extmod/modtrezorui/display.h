@@ -148,6 +148,8 @@ void display_pixeldata_dirty();
 
 const uint8_t *display_get_glyph(int font, uint8_t c);
 
+void display_set_bootloader(void);
+
 #if !(defined EMULATOR) && (defined TREZOR_MODEL_T)
 extern volatile uint8_t *const DISPLAY_CMD_ADDRESS;
 extern volatile uint8_t *const DISPLAY_DATA_ADDRESS;

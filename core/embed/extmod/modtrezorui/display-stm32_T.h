@@ -39,8 +39,8 @@ __IO uint8_t *const DISPLAY_DATA_ADDRESS =
 #define CMD(X) (*DISPLAY_CMD_ADDRESS = (X))
 #define DATA(X) (*DISPLAY_DATA_ADDRESS = (X))
 #define PIXELDATA(X) \
-  DATA((X) >> 8);    \
-  DATA((X)&0xFF)
+  DATA((X)&0xFF);\
+  DATA((X) >> 8)
 
 // noop on TT as we don't need to push data to display
 #define PIXELDATA_DIRTY()
@@ -600,6 +600,12 @@ void display_refresh(void) {
     while (GPIO_PIN_SET == HAL_GPIO_ReadPin(GPIOD, GPIO_PIN_12)) {
     }
   }
+}
+
+void display_set_little_endian(void){
+  CMD(0xB0);
+  DATA(0x00);
+  DATA(0xF8);
 }
 
 const char *display_save(const char *prefix) { return NULL; }

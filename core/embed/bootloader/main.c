@@ -248,6 +248,7 @@ int main(void) {
   random_delays_init();
   // display_init_seq();
 #if defined TREZOR_MODEL_T
+  display_set_bootloader();
   touch_init();
   touch_power_on();
 #endif
