@@ -378,19 +378,11 @@ void display_text_render_buffer(const char *text, int textlen,
 //}
 
 uint32_t rgb565_to_rgb888(uint16_t color) {
-//  uint32_t res =  0;
-//  res |=  ((((((uint32_t)color & 0xF800) >> 11) * 259) + 33 ) >> 6) << 8;
-//  res |=  ((((((uint32_t)color & 0x07E0) >> 5) * 259) + 33 ) >> 6) << 0;
-//  res |=  ((((((uint32_t)color & 0x001F) >> 0) * 527) + 23 ) >> 6) << 16;
-//  res |= 0x00000000;
-
   uint32_t res =  0;
-  res |=  (((uint32_t)color & 0xF800) >> 11) << 8;
-  res |=  (((uint32_t)color & 0x07E0) >> 5)  << 0;
-  res |=  (((uint32_t)color & 0x001F) >> 0)  << 16;
+  res |=  ((((((uint32_t)color & 0xF800) >> 11) * 259) + 33 ) >> 6) << 8;
+  res |=  ((((((uint32_t)color & 0x07E0) >> 5) * 259) + 33 ) >> 6) << 0;
+  res |=  ((((((uint32_t)color & 0x001F) >> 0) * 527) + 23 ) >> 6) << 16;
   res |= 0x00000000;
-
-
   return res;
 }
 
