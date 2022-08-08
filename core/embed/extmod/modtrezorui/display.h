@@ -153,11 +153,12 @@ const uint8_t *display_get_glyph(int font, uint8_t c);
 void display_set_bootloader(void);
 
 
-void initialize_clut(DMA2D_HandleTypeDef * handle, uint16_t fg, uint16_t bg);
+void initialize_clut(DMA2D_HandleTypeDef * handle, uint16_t fg, uint16_t bg, uint16_t layer);
 uint8_t * display_get_line_buffer_1(void);
 uint8_t * display_get_line_buffer_2(void);
 uint8_t * display_get_line_buffer_4bpp_1(void);
 uint8_t * display_get_line_buffer_4bpp_2(void);
+uint8_t * display_get_line_buffer_4bpp_3(void);
 
 #if !(defined EMULATOR) && (defined TREZOR_MODEL_T)
 extern volatile uint8_t *const DISPLAY_CMD_ADDRESS;

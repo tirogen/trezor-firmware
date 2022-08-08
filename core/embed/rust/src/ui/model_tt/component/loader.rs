@@ -59,7 +59,7 @@ impl Loader {
             icon_data: [0_u8; ((ICON_MAX_SIZE * ICON_MAX_SIZE) / 2) as usize],
         };
 
-        if let Some(i) = instance.styles.active.icon {
+        if let Some(i) = instance.styles.normal.icon {
 
             let mut ctx = UzlibContext::new(&i.0[12..], false);
             if let Ok(()) = ctx.uncompress(&mut instance.icon_data) {};

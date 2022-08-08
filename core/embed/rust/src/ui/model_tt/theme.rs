@@ -289,12 +289,12 @@ pub fn button_clear() -> ButtonStyleSheet {
 pub fn loader_default() -> LoaderStyleSheet {
     LoaderStyleSheet {
         normal: &LoaderStyle {
-            icon: Some((ICON_RECEIVE_SMALL, FG)),
+            icon: Some((ICON_RECEIVE, FG)),
             loader_color: FG,
             background_color: BG,
         },
         active: &LoaderStyle {
-            icon: Some((ICON_RECEIVE_SMALL, FG)),
+            icon: Some((ICON_RECEIVE, FG)),
             loader_color: GREEN,
             background_color: BG,
         },

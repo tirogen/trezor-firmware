@@ -320,6 +320,7 @@ fn generate_trezorhal_bindings() {
         .allowlist_var("DMA2D_INPUT_A4")
         .allowlist_var("DMA2D_INPUT_L4")
         .allowlist_var("DMA2D_INPUT_RGB565")
+        .allowlist_var("DMA2D_REPLACE_ALPHA")
         .allowlist_function("HAL_DMA2D_Init")
         .allowlist_function("HAL_DMA2D_ConfigLayer")
         .allowlist_function("HAL_DMA2D_BlendingStart")
@@ -329,6 +330,7 @@ fn generate_trezorhal_bindings() {
         .allowlist_function("display_get_line_buffer_2")
         .allowlist_function("display_get_line_buffer_4bpp_1")
         .allowlist_function("display_get_line_buffer_4bpp_2")
+        .allowlist_function("display_get_line_buffer_4bpp_3")
     ;
 
 

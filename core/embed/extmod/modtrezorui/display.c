@@ -385,34 +385,41 @@ uint32_t rgb565_to_rgb888(uint16_t color) {
   return res;
 }
 
-void initialize_clut(DMA2D_HandleTypeDef * handle, uint16_t fg, uint16_t bg) {
+void initialize_clut(DMA2D_HandleTypeDef * handle, uint16_t fg, uint16_t bg, uint16_t layer) {
 
   uint16_t colortable[16] = {0};
   set_color_table(colortable, fg, bg);
 
-  handle->Instance->FGCLUT[0] = rgb565_to_rgb888(colortable[0]);
-  handle->Instance->FGCLUT[1] = rgb565_to_rgb888(colortable[1]);
-  handle->Instance->FGCLUT[2] = rgb565_to_rgb888(colortable[2]);
-  handle->Instance->FGCLUT[3] = rgb565_to_rgb888(colortable[3]);
-  handle->Instance->FGCLUT[4] = rgb565_to_rgb888(colortable[4]);
-  handle->Instance->FGCLUT[5] = rgb565_to_rgb888(colortable[5]);
-  handle->Instance->FGCLUT[6] = rgb565_to_rgb888(colortable[6]);
-  handle->Instance->FGCLUT[7] = rgb565_to_rgb888(colortable[7]);
-  handle->Instance->FGCLUT[8] = rgb565_to_rgb888(colortable[8]);
-  handle->Instance->FGCLUT[9] = rgb565_to_rgb888(colortable[9]);
-  handle->Instance->FGCLUT[10] = rgb565_to_rgb888(colortable[10]);
-  handle->Instance->FGCLUT[11] = rgb565_to_rgb888(colortable[11]);
-  handle->Instance->FGCLUT[12] = rgb565_to_rgb888(colortable[12]);
-  handle->Instance->FGCLUT[13] = rgb565_to_rgb888(colortable[13]);
-  handle->Instance->FGCLUT[14] = rgb565_to_rgb888(colortable[14]);
-  handle->Instance->FGCLUT[15] = rgb565_to_rgb888(colortable[15]);
+  volatile uint32_t * table = NULL;
+  if (layer == 0){
+    table = handle->Instance->BGCLUT;
+  }else {
+    table = handle->Instance->FGCLUT;
+  }
+
+  table[0] = rgb565_to_rgb888(colortable[0]);
+  table[1] = rgb565_to_rgb888(colortable[1]);
+  table[2] = rgb565_to_rgb888(colortable[2]);
+  table[3] = rgb565_to_rgb888(colortable[3]);
+  table[4] = rgb565_to_rgb888(colortable[4]);
+  table[5] = rgb565_to_rgb888(colortable[5]);
+  table[6] = rgb565_to_rgb888(colortable[6]);
+  table[7] = rgb565_to_rgb888(colortable[7]);
+  table[8] = rgb565_to_rgb888(colortable[8]);
+  table[9] = rgb565_to_rgb888(colortable[9]);
+  table[10] = rgb565_to_rgb888(colortable[10]);
+  table[11] = rgb565_to_rgb888(colortable[11]);
+  table[12] = rgb565_to_rgb888(colortable[12]);
+  table[13] = rgb565_to_rgb888(colortable[13]);
+  table[14] = rgb565_to_rgb888(colortable[14]);
+  table[15] = rgb565_to_rgb888(colortable[15]);
 
   DMA2D_CLUTCfgTypeDef clut;
   clut.CLUTColorMode = DMA2D_CCM_ARGB8888;
   clut.Size = 0xf;
   clut.pCLUT = 0;//;loading directly
 
-  HAL_DMA2D_ConfigCLUT(handle, clut, 1);
+  HAL_DMA2D_ConfigCLUT(handle, clut, layer);
 
 }
 
@@ -423,12 +430,12 @@ __attribute__((section(".buf")))
 uint16_t decomp_out[BUFFER_PIXELS] = {0};
 __attribute__((section(".buf")))
 uint16_t decomp_out2[BUFFER_PIXELS] = {0};
-
 __attribute__((section(".buf")))
 uint32_t line_buffer_4bpp_1[240/8];
-
 __attribute__((section(".buf")))
 uint32_t line_buffer_4bpp_2[240/8];
+__attribute__((section(".buf")))
+uint32_t line_buffer_4bpp_3[240/8];
 
 uint8_t * display_get_line_buffer_1(void) {
   return (uint8_t*)decomp_out;
@@ -441,7 +448,9 @@ uint8_t * display_get_line_buffer_4bpp_1(void){
 }
 uint8_t * display_get_line_buffer_4bpp_2(void){
   return (uint8_t*)line_buffer_4bpp_2;
-
+}
+uint8_t * display_get_line_buffer_4bpp_3(void){
+  return (uint8_t*)line_buffer_4bpp_3;
 }
 
 #define TEXT_BUF_LEN  (240*20 / 2)
@@ -724,7 +733,7 @@ void display_icon(int x, int y, int w, int h, const void *data,
   handle.LayerCfg[1].InputAlpha = 0;
 
 
-  initialize_clut(&handle, fgcolor, bgcolor);
+  initialize_clut(&handle, fgcolor, bgcolor, 1);
 
 
   HAL_DMA2D_Init(&handle);

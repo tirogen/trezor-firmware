@@ -459,13 +459,12 @@ pub fn loader_rust(
     set_window(clamped);
 
     let center = r.center();
-    let colortable = get_color_table(fg_color, bg_color);
-    let mut icon_colortable = colortable.clone();
 
     let mut use_icon = false;
     let mut icon_area = Rect::zero();
     let mut icon_width = 0;
     let mut icon_area_clamped = Rect::zero();
+    let mut icon_offset = 0;
 
     if let Some(i) = icon {
         let toif_info = display::toif_info(i.0).unwrap();
@@ -478,7 +477,7 @@ pub fn loader_rust(
                 Offset::new(icon_width, toif_info.height.into()),
             );
             icon_area_clamped = icon_area.clamp(constant::screen());
-            icon_colortable = get_color_table(i.1, bg_color);
+            icon_offset = (icon_area_clamped.x0 - r.x0)/2;
             use_icon = true;
         }
     }
@@ -510,34 +509,55 @@ pub fn loader_rust(
     let mut b1 = dma2d::get_buffer_1();
     let mut b2= dma2d::get_buffer_2();
     let mut ib1 = dma2d::get_buffer_4bpp_1();
+    let mut ib2 = dma2d::get_buffer_4bpp_2();
+    let mut empty_line = dma2d::get_buffer_4bpp_3();
 
     let mut handle = dma2d_init();
+    dma2d::dma2d_init_clut(&mut handle, fg_color.into(), bg_color.into(), 0);
 
     for y_c in r.y0..r.y1 {
+
+        let mut icon_buffer = &mut *empty_line;
+        let icon_buffer_used;
+        let loader_buffer;
+
+        if y_c % 2 == 0{
+            icon_buffer_used = &mut *ib1;
+            loader_buffer = &mut *b1;
+        }else {
+            icon_buffer_used = &mut *ib2;
+            loader_buffer = &mut *b2;
+        }
+
+        if use_icon && y_c >= icon_area_clamped.y0 && y_c < icon_area_clamped.y1 {
+            //let x = x_c - center.x;
+            let y = y_c - center.y;
+            //if (x * x + y * y) <= IN_INNER_ANTI {
+                let y_i = y_c - icon_area.y0;
+
+                icon_buffer_used[icon_offset as usize..(icon_offset + icon_width/2) as usize].copy_from_slice(&icon_data[(y_i * (icon_width/2)) as usize..((y_i + 1) * (icon_width/2))as usize]);
+                icon_buffer = icon_buffer_used;
+
+            //const MAX_DATA_LENGTH: usize = 64000;
+                // let data = icon_data[(((x_i & 0xFE) + (y_i * icon_width)) / 2) as usize];
+                // if (x_i & 0x01) == 0 {
+                //     underlying_color = icon_colortable[(data >> 4) as usize];
+                // } else {
+                //     underlying_color = icon_colortable[(data & 0xF) as usize];
+                // // }
+                // icon_pixel = true;
+          //  }
+        }
+
+
         for x_c in r.x0..r.x1 {
             let p = Point::new(x_c, y_c);
-            let mut icon_pixel = false;
 
             let mut pix_c_idx : u8 = 0;
 
-            // if use_icon && icon_area_clamped.contains(p) {
-            //     let x = x_c - center.x;
-            //     let y = y_c - center.y;
-            //     if (x * x + y * y) <= IN_INNER_ANTI {
-            //         let x_i = x_c - icon_area.x0;
-            //         let y_i = y_c - icon_area.y0;
-            //
-            //         let data = icon_data[(((x_i & 0xFE) + (y_i * icon_width)) / 2) as usize];
-            //         if (x_i & 0x01) == 0 {
-            //             underlying_color = icon_colortable[(data >> 4) as usize];
-            //         } else {
-            //             underlying_color = icon_colortable[(data & 0xF) as usize];
-            //         }
-            //         icon_pixel = true;
-            //     }
-            // }
 
-            if clamped.contains(p) && !icon_pixel {
+
+            if clamped.contains(p) {
                 let y_p = -(y_c - center.y);
                 let x_p = x_c - center.x;
 
@@ -599,19 +619,13 @@ pub fn loader_rust(
                 }
             }
 
-            if y_c % 2 == 0 {
-                if x_c % 2 == 0 {
-                    b1[(x_c / 2) as usize] = pix_c_idx;
-                } else {
-                    b1[x_c / 2] |= pix_c_idx << 4;
-                }
-            }else {
-                if x_c % 2 == 0 {
-                    b2[x_c / 2] = pix_c_idx;
-                } else {
-                    b2[x_c / 2] |= pix_c_idx << 4;
-                }
+            let x = x_c - r.x0;
+            if x % 2 == 0 {
+                loader_buffer[(x / 2) as usize] = pix_c_idx;
+            } else {
+                loader_buffer[(x / 2) as usize] |= pix_c_idx << 4;
             }
+
 
             // let mut final_color = underlying_color;
             //
@@ -625,13 +639,12 @@ pub fn loader_rust(
             // pixeldata(final_color);
         }
 
-        if y_c % 2 == 0 {
-            dma2d::dma2d_start(&mut handle, ib1, b1, r.width());
-        }else {
-
-        }
+        dma2d::dma2d_wait_for_transfer(&mut handle);
+        dma2d::dma2d_start(&mut handle, icon_buffer, loader_buffer, r.width());
 
     }
+
+    dma2d::dma2d_wait_for_transfer(&mut handle);
 
     // pixeldata_dirty();
 }
