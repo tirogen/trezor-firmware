@@ -78,15 +78,15 @@ impl Component for Intro {
     }
 
     fn paint(&mut self) {
-
-        init_ticks();
-        //display::icon(screen().center(), ICON_BG, theme::GREEN, theme::BLUE);
-        display::image(screen().center(), IMAGE_BG);
-
-        get_ticks();
-        clear_acc();
-
-        display::text(screen().top_left() + Offset::new(48, 10+18), "MY TREZOR", FONT_NORMAL, Color::rgb(0xff, 0xff, 0xff), Color::rgb(0,0,0),)
+        self.host.paint();
+        // init_ticks();
+        // //display::icon(screen().center(), ICON_BG, theme::GREEN, theme::BLUE);
+        // display::image(screen().center(), IMAGE_BG);
+        //
+        // get_ticks();
+        // clear_acc();
+        //
+        // display::text(screen().top_left() + Offset::new(48, 10+18), "MY TREZOR", FONT_NORMAL, Color::rgb(0xff, 0xff, 0xff), Color::rgb(0,0,0),)
     }
 
     fn bounds(&self, sink: &mut dyn FnMut(Rect)) {

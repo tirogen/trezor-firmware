@@ -280,6 +280,10 @@ fn generate_trezorhal_bindings() {
         .allowlist_function("display_pixeldata_dirty")
         .allowlist_function("display_set_window")
         .allowlist_function("display_get_glyph")
+        .allowlist_function("display_get_line_buffer_1")
+        .allowlist_function("display_get_line_buffer_2")
+        .allowlist_function("display_get_line_buffer_4bpp_1")
+        .allowlist_function("display_get_line_buffer_4bpp_2")
         .allowlist_var("DISPLAY_CMD_ADDRESS")
         .allowlist_var("DISPLAY_DATA_ADDRESS")
         // io
@@ -306,7 +310,28 @@ fn generate_trezorhal_bindings() {
         .allowlist_function("hal_ticks_ms")
         .allowlist_function("init_ticks")
         .allowlist_function("get_ticks")
-        .allowlist_function("clear_acc");
+        .allowlist_function("clear_acc")
+
+        // STM HAL
+
+        .allowlist_var("DMA2D_BASE")
+        .allowlist_var("DMA2D_M2M_BLEND")
+        .allowlist_var("DMA2D_OUTPUT_RGB565")
+        .allowlist_var("DMA2D_INPUT_A4")
+        .allowlist_var("DMA2D_INPUT_L4")
+        .allowlist_var("DMA2D_INPUT_RGB565")
+        .allowlist_function("HAL_DMA2D_Init")
+        .allowlist_function("HAL_DMA2D_ConfigLayer")
+        .allowlist_function("HAL_DMA2D_BlendingStart")
+        .allowlist_function("HAL_DMA2D_PollForTransfer")
+        .allowlist_function("initialize_clut")
+        .allowlist_function("display_get_line_buffer_1")
+        .allowlist_function("display_get_line_buffer_2")
+        .allowlist_function("display_get_line_buffer_4bpp_1")
+        .allowlist_function("display_get_line_buffer_4bpp_2")
+    ;
+
+
 
     // Write the bindings to a file in the OUR_DIR.
     bindings

@@ -2,10 +2,11 @@ use super::constant;
 use crate::{
     error::Error,
     time::Duration,
-    trezorhal::{display, display::get_offset, qr, time, uzlib},
+    trezorhal::{display, display::get_offset, qr, time, uzlib, dma2d},
     ui::lerp::Lerp,
 };
 use core::slice;
+use crate::trezorhal::dma2d::dma2d_init;
 
 use super::geometry::{Offset, Point, Rect};
 
@@ -506,29 +507,35 @@ pub fn loader_rust(
 
     let n_start = Point::new(-start_vector.y, start_vector.x);
 
+    let mut b1 = dma2d::get_buffer_1();
+    let mut b2= dma2d::get_buffer_2();
+    let mut ib1 = dma2d::get_buffer_4bpp_1();
+
+    let mut handle = dma2d_init();
+
     for y_c in r.y0..r.y1 {
         for x_c in r.x0..r.x1 {
             let p = Point::new(x_c, y_c);
             let mut icon_pixel = false;
 
-            let mut underlying_color = bg_color;
+            let mut pix_c_idx : u8 = 0;
 
-            if use_icon && icon_area_clamped.contains(p) {
-                let x = x_c - center.x;
-                let y = y_c - center.y;
-                if (x * x + y * y) <= IN_INNER_ANTI {
-                    let x_i = x_c - icon_area.x0;
-                    let y_i = y_c - icon_area.y0;
-
-                    let data = icon_data[(((x_i & 0xFE) + (y_i * icon_width)) / 2) as usize];
-                    if (x_i & 0x01) == 0 {
-                        underlying_color = icon_colortable[(data >> 4) as usize];
-                    } else {
-                        underlying_color = icon_colortable[(data & 0xF) as usize];
-                    }
-                    icon_pixel = true;
-                }
-            }
+            // if use_icon && icon_area_clamped.contains(p) {
+            //     let x = x_c - center.x;
+            //     let y = y_c - center.y;
+            //     if (x * x + y * y) <= IN_INNER_ANTI {
+            //         let x_i = x_c - icon_area.x0;
+            //         let y_i = y_c - icon_area.y0;
+            //
+            //         let data = icon_data[(((x_i & 0xFE) + (y_i * icon_width)) / 2) as usize];
+            //         if (x_i & 0x01) == 0 {
+            //             underlying_color = icon_colortable[(data >> 4) as usize];
+            //         } else {
+            //             underlying_color = icon_colortable[(data & 0xF) as usize];
+            //         }
+            //         icon_pixel = true;
+            //     }
+            // }
 
             if clamped.contains(p) && !icon_pixel {
                 let y_p = -(y_c - center.y);
@@ -548,64 +555,85 @@ pub fn loader_rust(
                 {
                     //active part
                     if d <= IN_INNER_ANTI {
-                        underlying_color = bg_color;
+                        pix_c_idx = 0;
                     } else if d <= INNER_MIN {
                         let c_i =
-                            ((15 * (d - IN_INNER_ANTI)) / (INNER_MIN - IN_INNER_ANTI)) as usize;
-                        underlying_color = colortable[c_i];
+                            ((15 * (d - IN_INNER_ANTI)) / (INNER_MIN - IN_INNER_ANTI)) as u8;
+                        pix_c_idx = c_i;
                     } else if d <= INNER_MAX {
-                        underlying_color = fg_color;
+                        pix_c_idx = 15;
                     } else if d <= INNER_OUTER_ANTI {
-                        underlying_color = fg_color;
+                        pix_c_idx = 15;
                     } else if d <= OUTER_OUT_ANTI {
-                        underlying_color = fg_color;
+                        pix_c_idx = 15;
                     } else if d <= OUTER_MAX {
                         let c_i =
-                            ((15 * (d - OUTER_OUT_ANTI)) / (OUTER_MAX - OUTER_OUT_ANTI)) as usize;
-                        underlying_color = colortable[15 - c_i];
+                            ((15 * (d - OUTER_OUT_ANTI)) / (OUTER_MAX - OUTER_OUT_ANTI)) as u8;
+                        pix_c_idx = 15 - c_i;
                     } else {
-                        underlying_color = bg_color;
+                        pix_c_idx = 0;
                     }
                 } else {
                     //inactive part
                     if d <= IN_INNER_ANTI {
-                        underlying_color = bg_color;
+                        pix_c_idx = 0;
                     } else if d <= INNER_MIN {
                         let c_i =
-                            ((15 * (d - IN_INNER_ANTI)) / (INNER_MIN - IN_INNER_ANTI)) as usize;
-                        underlying_color = colortable[c_i];
+                            ((15 * (d - IN_INNER_ANTI)) / (INNER_MIN - IN_INNER_ANTI)) as u8;
+                        pix_c_idx = c_i;
                     } else if d <= INNER_MAX {
-                        underlying_color = fg_color;
+                        pix_c_idx = 15;
                     } else if d <= INNER_OUTER_ANTI {
                         let c_i =
-                            ((10 * (d - INNER_MAX)) / (INNER_OUTER_ANTI - INNER_MAX)) as usize;
-                        underlying_color = colortable[15 - c_i];
+                            ((10 * (d - INNER_MAX)) / (INNER_OUTER_ANTI - INNER_MAX)) as u8;
+                        pix_c_idx = 15 - c_i;
                     } else if d <= OUTER_OUT_ANTI {
-                        underlying_color = colortable[5];
+                        pix_c_idx = 5;
                     } else if d <= OUTER_MAX {
                         let c_i =
-                            ((5 * (d - OUTER_OUT_ANTI)) / (OUTER_MAX - OUTER_OUT_ANTI)) as usize;
-                        underlying_color = colortable[5 - c_i];
+                            ((5 * (d - OUTER_OUT_ANTI)) / (OUTER_MAX - OUTER_OUT_ANTI)) as u8;
+                        pix_c_idx = 5 - c_i;
                     } else {
-                        underlying_color = bg_color;
+                        pix_c_idx = 0;
                     }
                 }
             }
 
-            let mut final_color = underlying_color;
-
-            if let Some(text_overlay) = text {
-                let overlay_color = text_overlay.get_pixel(Some(underlying_color), p);
-                if let Some(o) = overlay_color {
-                    final_color = o;
+            if y_c % 2 == 0 {
+                if x_c % 2 == 0 {
+                    b1[(x_c / 2) as usize] = pix_c_idx;
+                } else {
+                    b1[x_c / 2] |= pix_c_idx << 4;
+                }
+            }else {
+                if x_c % 2 == 0 {
+                    b2[x_c / 2] = pix_c_idx;
+                } else {
+                    b2[x_c / 2] |= pix_c_idx << 4;
                 }
             }
 
-            pixeldata(final_color);
+            // let mut final_color = underlying_color;
+            //
+            // if let Some(text_overlay) = text {
+            //     let overlay_color = text_overlay.get_pixel(Some(underlying_color), p);
+            //     if let Some(o) = overlay_color {
+            //         final_color = o;
+            //     }
+            // }
+
+            // pixeldata(final_color);
         }
+
+        if y_c % 2 == 0 {
+            dma2d::dma2d_start(&mut handle, ib1, b1, r.width());
+        }else {
+
+        }
+
     }
 
-    pixeldata_dirty();
+    // pixeldata_dirty();
 }
 
 pub fn rect_rounded2_get_pixel(

@@ -27,7 +27,6 @@
 #include "display.h"
 
 #include "font_bitmap.h"
-#include STM32_HAL_H
 
 #if defined TREZOR_MODEL_T
 
@@ -425,11 +424,29 @@ uint16_t decomp_out[BUFFER_PIXELS] = {0};
 __attribute__((section(".buf")))
 uint16_t decomp_out2[BUFFER_PIXELS] = {0};
 
+__attribute__((section(".buf")))
+uint32_t line_buffer_4bpp_1[240/8];
+
+__attribute__((section(".buf")))
+uint32_t line_buffer_4bpp_2[240/8];
+
+uint8_t * display_get_line_buffer_1(void) {
+  return (uint8_t*)decomp_out;
+}
+uint8_t * display_get_line_buffer_2(void) {
+  return (uint8_t*)decomp_out2;
+}
+uint8_t * display_get_line_buffer_4bpp_1(void){
+  return (uint8_t*)line_buffer_4bpp_1;
+}
+uint8_t * display_get_line_buffer_4bpp_2(void){
+  return (uint8_t*)line_buffer_4bpp_2;
+
+}
+
 #define TEXT_BUF_LEN  (240*20 / 2)
 __attribute__((section(".buf")))
 uint32_t text_buffer[TEXT_BUF_LEN / 4];
-__attribute__((section(".buf")))
-uint32_t empty_buffer[240/8];
 
 int text_start_line = 0;
 
@@ -521,7 +538,7 @@ void display_image(int x, int y, int w, int h, const void *data,
       height = rest;
     }
 
-    uint8_t * text_line = (uint8_t*)empty_buffer;
+    uint8_t * text_line = (uint8_t*)display_get_line_buffer_4bpp_2;
 
     if (pos >= text_start_line && pos < (text_start_line + text_height))
     {

@@ -129,8 +129,8 @@ pub fn loader(
 #[cfg(all(feature = "model_tt", target_arch = "arm"))]
 pub fn pixeldata(c: u16) {
     unsafe {
-        ffi::DISPLAY_DATA_ADDRESS.write_volatile((c >> 8) as u8);
         ffi::DISPLAY_DATA_ADDRESS.write_volatile((c & 0xff) as u8);
+        ffi::DISPLAY_DATA_ADDRESS.write_volatile((c >> 8) as u8);
     }
 }
 
