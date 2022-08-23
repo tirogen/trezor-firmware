@@ -72,7 +72,7 @@ extern "C" fn new_confirm_action(n_args: usize, args: *const Obj, kwargs: *mut M
         let obj = LayoutObj::new(Frame::new(
             title,
             ButtonPage::new(
-                FormattedText::new::<theme::T1DefaultText>(format)
+                FormattedText::new(theme::TEXT, format)
                     .with("action", action.unwrap_or_default())
                     .with("description", description.unwrap_or_default()),
                 theme::BG,
@@ -93,12 +93,9 @@ extern "C" fn new_confirm_text(n_args: usize, args: *const Obj, kwargs: *mut Map
         let obj = LayoutObj::new(Frame::new(
             title,
             ButtonPage::new(
-                Paragraphs::new()
-                    .add::<theme::T1DefaultText>(
-                        theme::FONT_NORMAL,
-                        description.unwrap_or_default(),
-                    )
-                    .add::<theme::T1DefaultText>(theme::FONT_BOLD, data),
+                Paragraphs::new(theme::TEXT)
+                    .add(theme::FONT_NORMAL, description.unwrap_or_default())
+                    .add(theme::FONT_BOLD, data),
                 theme::BG,
             ),
         ))?;
@@ -178,7 +175,8 @@ mod tests {
     #[test]
     fn trace_example_layout() {
         let mut layout = Dialog::new(
-            FormattedText::new::<theme::T1DefaultText>(
+            FormattedText::new(
+                theme::TEXT,
                 "Testing text layout, with some text, and some more text. And {param}",
             )
             .with("param", "parameters!"),
@@ -208,7 +206,8 @@ arameters! > left:<Button text:Left > right:<Button text:Right > >"#
         let mut layout = Frame::new(
             "Please confirm",
             Dialog::new(
-                FormattedText::new::<theme::T1DefaultText>(
+                FormattedText::new(
+                    theme::TEXT,
                     "Testing text layout, with some text, and some more text. And {param}",
                 )
                 .with("param", "parameters!"),

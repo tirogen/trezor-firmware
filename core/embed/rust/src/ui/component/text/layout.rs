@@ -37,6 +37,16 @@ pub struct TextLayout {
     /// negative.
     pub padding_bottom: i32,
 
+    /// Specifies which line-breaking strategy to use.
+    pub line_breaking: LineBreaking,
+    /// Specifies what to do at the end of the page.
+    pub page_breaking: PageBreaking,
+    /// Fonts and colors.
+    pub theme: TextTheme,
+}
+
+#[derive(Copy, Clone)]
+pub struct TextTheme {
     /// Background color.
     pub background_color: Color,
     /// Text color. Can be overridden by `Op::Color`.
@@ -44,15 +54,11 @@ pub struct TextLayout {
     /// Text font ID. Can be overridden by `Op::Font`.
     pub text_font: Font,
 
-    /// Specifies which line-breaking strategy to use.
-    pub line_breaking: LineBreaking,
     /// Font used for drawing the word-breaking hyphen.
     pub hyphen_font: Font,
     /// Foreground color used for drawing the hyphen.
     pub hyphen_color: Color,
 
-    /// Specifies what to do at the end of the page.
-    pub page_breaking: PageBreaking,
     /// Font used for drawing the ellipsis.
     pub ellipsis_font: Font,
     /// Foreground color used for drawing the ellipsis.
@@ -68,41 +74,17 @@ pub struct TextLayout {
     pub mono_font: Font,
 }
 
-pub trait DefaultTextTheme {
-    const BACKGROUND_COLOR: Color;
-    const TEXT_FONT: Font;
-    const TEXT_COLOR: Color;
-    const HYPHEN_FONT: Font;
-    const HYPHEN_COLOR: Color;
-    const ELLIPSIS_FONT: Font;
-    const ELLIPSIS_COLOR: Color;
-    const NORMAL_FONT: Font;
-    const MEDIUM_FONT: Font;
-    const BOLD_FONT: Font;
-    const MONO_FONT: Font;
-}
-
 impl TextLayout {
     /// Create a new text layout, with empty size and default text parameters
     /// filled from `T`.
-    pub fn new<T: DefaultTextTheme>() -> Self {
+    pub fn new(theme: TextTheme) -> Self {
         Self {
             bounds: Rect::zero(),
             padding_top: 0,
             padding_bottom: 0,
-            background_color: T::BACKGROUND_COLOR,
-            text_color: T::TEXT_COLOR,
-            text_font: T::TEXT_FONT,
             line_breaking: LineBreaking::BreakAtWhitespace,
-            hyphen_font: T::HYPHEN_FONT,
-            hyphen_color: T::HYPHEN_COLOR,
             page_breaking: PageBreaking::CutAndInsertEllipsis,
-            ellipsis_font: T::ELLIPSIS_FONT,
-            ellipsis_color: T::ELLIPSIS_COLOR,
-            normal_font: T::NORMAL_FONT,
-            medium_font: T::MEDIUM_FONT,
-            bold_font: T::BOLD_FONT,
-            mono_font: T::MONO_FONT,
+            theme,
         }
     }
 
@@ -112,7 +94,7 @@ impl TextLayout {
     }
 
     pub fn initial_cursor(&self) -> Point {
-        self.bounds.top_left() + Offset::y(self.text_font.text_height() + self.padding_top)
+        self.bounds.top_left() + Offset::y(self.theme.text_font.text_height() + self.padding_top)
     }
 
     pub fn fit_text(&self, text: &str) -> LayoutFit {
@@ -135,10 +117,10 @@ impl TextLayout {
         for op in ops {
             match op {
                 Op::Color(color) => {
-                    self.text_color = color;
+                    self.theme.text_color = color;
                 }
                 Op::Font(font) => {
-                    self.text_font = font;
+                    self.theme.text_font = font;
                 }
                 Op::Text(text) => match self.layout_text(text, cursor, sink) {
                     LayoutFit::Fitting {
@@ -189,8 +171,8 @@ impl TextLayout {
             let span = Span::fit_horizontally(
                 remaining_text,
                 self.bounds.x1 - cursor.x,
-                self.text_font,
-                self.hyphen_font,
+                self.theme.text_font,
+                self.theme.hyphen_font,
                 self.line_breaking,
             );
 
@@ -253,7 +235,7 @@ impl TextLayout {
 
     fn layout_height(&self, init_cursor: Point, end_cursor: Point) -> i32 {
         self.padding_top
-            + self.text_font.text_height()
+            + self.theme.text_font.text_height()
             + (end_cursor.y - init_cursor.y)
             + self.padding_bottom
     }
@@ -295,9 +277,9 @@ impl LayoutSink for TextRenderer {
         display::text(
             cursor,
             text,
-            layout.text_font,
-            layout.text_color,
-            layout.background_color,
+            layout.theme.text_font,
+            layout.theme.text_color,
+            layout.theme.background_color,
         );
     }
 
@@ -305,9 +287,9 @@ impl LayoutSink for TextRenderer {
         display::text(
             cursor,
             "-",
-            layout.hyphen_font,
-            layout.hyphen_color,
-            layout.background_color,
+            layout.theme.hyphen_font,
+            layout.theme.hyphen_color,
+            layout.theme.background_color,
         );
     }
 
@@ -315,9 +297,9 @@ impl LayoutSink for TextRenderer {
         display::text(
             cursor,
             "...",
-            layout.ellipsis_font,
-            layout.ellipsis_color,
-            layout.background_color,
+            layout.theme.ellipsis_font,
+            layout.theme.ellipsis_color,
+            layout.theme.background_color,
         );
     }
 }

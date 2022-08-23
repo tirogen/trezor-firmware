@@ -203,15 +203,15 @@ extern "C" fn new_confirm_action(n_args: usize, args: *const Obj, kwargs: *mut M
         let paragraphs = {
             let action = action.unwrap_or_default();
             let description = description.unwrap_or_default();
-            let mut paragraphs = Paragraphs::new();
+            let mut paragraphs = Paragraphs::new(theme::TEXT);
             if !reverse {
                 paragraphs = paragraphs
-                    .add::<theme::TTDefaultText>(theme::FONT_BOLD, action)
-                    .add::<theme::TTDefaultText>(theme::FONT_NORMAL, description);
+                    .add(theme::FONT_BOLD, action)
+                    .add(theme::FONT_NORMAL, description);
             } else {
                 paragraphs = paragraphs
-                    .add::<theme::TTDefaultText>(theme::FONT_NORMAL, description)
-                    .add::<theme::TTDefaultText>(theme::FONT_BOLD, action);
+                    .add(theme::FONT_NORMAL, description)
+                    .add(theme::FONT_BOLD, action);
             }
             paragraphs
         };
@@ -245,10 +245,10 @@ extern "C" fn new_confirm_blob(n_args: usize, args: *const Obj, kwargs: *mut Map
         let _ask_pagination: bool = kwargs.get_or(Qstr::MP_QSTR_ask_pagination, false)?;
         let hold: bool = kwargs.get_or(Qstr::MP_QSTR_hold, false)?;
 
-        let paragraphs = Paragraphs::new()
-            .add::<theme::TTDefaultText>(theme::FONT_NORMAL, description)
-            .add::<theme::TTDefaultText>(theme::FONT_BOLD, extra)
-            .add::<theme::TTDefaultText>(theme::FONT_MONO, data);
+        let paragraphs = Paragraphs::new(theme::TEXT)
+            .add(theme::FONT_NORMAL, description)
+            .add(theme::FONT_BOLD, extra)
+            .add(theme::FONT_MONO, data);
 
         let obj = if hold {
             LayoutObj::new(
@@ -301,9 +301,9 @@ extern "C" fn new_confirm_output(n_args: usize, args: *const Obj, kwargs: *mut M
         let value: StrBuffer = kwargs.get(Qstr::MP_QSTR_value)?.try_into()?;
         let verb = "NEXT";
 
-        let paragraphs = Paragraphs::new()
-            .add::<theme::TTDefaultText>(theme::FONT_NORMAL, description)
-            .add::<theme::TTDefaultText>(theme::FONT_MONO, value);
+        let paragraphs = Paragraphs::new(theme::TEXT)
+            .add(theme::FONT_NORMAL, description)
+            .add(theme::FONT_MONO, value);
 
         let buttons = Button::cancel_confirm(
             Button::with_icon(theme::ICON_CANCEL),
@@ -325,9 +325,9 @@ extern "C" fn new_confirm_total(n_args: usize, args: *const Obj, kwargs: *mut Ma
         let description: StrBuffer = kwargs.get(Qstr::MP_QSTR_description)?.try_into()?;
         let value: StrBuffer = kwargs.get(Qstr::MP_QSTR_value)?.try_into()?;
 
-        let paragraphs = Paragraphs::new()
-            .add::<theme::TTDefaultText>(theme::FONT_NORMAL, description)
-            .add::<theme::TTDefaultText>(theme::FONT_MONO, value);
+        let paragraphs = Paragraphs::new(theme::TEXT)
+            .add(theme::FONT_NORMAL, description)
+            .add(theme::FONT_MONO, value);
 
         let obj = LayoutObj::new(
             Frame::new(title, SwipeHoldPage::new(paragraphs, theme::BG)).into_child(),
@@ -342,11 +342,11 @@ extern "C" fn new_confirm_joint_total(n_args: usize, args: *const Obj, kwargs: *
         let spending_amount: StrBuffer = kwargs.get(Qstr::MP_QSTR_spending_amount)?.try_into()?;
         let total_amount: StrBuffer = kwargs.get(Qstr::MP_QSTR_total_amount)?.try_into()?;
 
-        let paragraphs = Paragraphs::new()
-            .add::<theme::TTDefaultText>(theme::FONT_NORMAL, "You are contributing:".into())
-            .add::<theme::TTDefaultText>(theme::FONT_MONO, spending_amount)
-            .add::<theme::TTDefaultText>(theme::FONT_NORMAL, "To the total amount:".into())
-            .add::<theme::TTDefaultText>(theme::FONT_MONO, total_amount);
+        let paragraphs = Paragraphs::new(theme::TEXT)
+            .add(theme::FONT_NORMAL, "You are contributing:".into())
+            .add(theme::FONT_MONO, spending_amount)
+            .add(theme::FONT_NORMAL, "To the total amount:".into())
+            .add(theme::FONT_MONO, total_amount);
 
         let obj = LayoutObj::new(
             Frame::new(
@@ -373,14 +373,14 @@ extern "C" fn new_confirm_modify_output(n_args: usize, args: *const Obj, kwargs:
             "Increase amount by:"
         };
 
-        let paragraphs = Paragraphs::new()
-            .add::<theme::TTDefaultText>(theme::FONT_NORMAL, "Address:".into())
-            .add::<theme::TTDefaultText>(theme::FONT_MONO, address)
+        let paragraphs = Paragraphs::new(theme::TEXT)
+            .add(theme::FONT_NORMAL, "Address:".into())
+            .add(theme::FONT_MONO, address)
             // FIXME pagebreak
-            .add::<theme::TTDefaultText>(theme::FONT_NORMAL, description.into())
-            .add::<theme::TTDefaultText>(theme::FONT_MONO, amount_change)
-            .add::<theme::TTDefaultText>(theme::FONT_NORMAL, "New amount:".into())
-            .add::<theme::TTDefaultText>(theme::FONT_MONO, amount_new);
+            .add(theme::FONT_NORMAL, description.into())
+            .add(theme::FONT_MONO, amount_change)
+            .add(theme::FONT_NORMAL, "New amount:".into())
+            .add(theme::FONT_MONO, amount_new);
 
         let buttons = Button::cancel_confirm(
             Button::with_icon(theme::ICON_CANCEL),
@@ -412,11 +412,11 @@ extern "C" fn new_confirm_modify_fee(n_args: usize, args: *const Obj, kwargs: *m
             _ => ("Your fee did not change.", StrBuffer::empty()),
         };
 
-        let paragraphs = Paragraphs::new()
-            .add::<theme::TTDefaultText>(theme::FONT_NORMAL, description.into())
-            .add::<theme::TTDefaultText>(theme::FONT_MONO, change)
-            .add::<theme::TTDefaultText>(theme::FONT_NORMAL, "\nTransaction fee:".into())
-            .add::<theme::TTDefaultText>(theme::FONT_MONO, total_fee_new);
+        let paragraphs = Paragraphs::new(theme::TEXT)
+            .add(theme::FONT_NORMAL, description.into())
+            .add(theme::FONT_MONO, change)
+            .add(theme::FONT_NORMAL, "\nTransaction fee:".into())
+            .add(theme::FONT_MONO, total_fee_new);
 
         let buttons = Button::cancel_confirm(
             Button::with_icon(theme::ICON_CANCEL),
@@ -481,14 +481,13 @@ extern "C" fn new_confirm_payment_request(
         let description: StrBuffer = kwargs.get(Qstr::MP_QSTR_description)?.try_into()?;
         let memos: Obj = kwargs.get(Qstr::MP_QSTR_memos)?;
 
-        let mut paragraphs =
-            Paragraphs::new().add::<theme::TTDefaultText>(theme::FONT_NORMAL, description);
+        let mut paragraphs = Paragraphs::new(theme::TEXT).add(theme::FONT_NORMAL, description);
 
         let mut iter_buf = IterBuf::new();
         let iter = Iter::try_from_obj_with_buf(memos, &mut iter_buf)?;
         for memo in iter {
             let text: StrBuffer = memo.try_into()?;
-            paragraphs = paragraphs.add::<theme::TTDefaultText>(theme::FONT_NORMAL, text);
+            paragraphs = paragraphs.add(theme::FONT_NORMAL, text);
         }
 
         let buttons = Button::cancel_info_confirm("CONFIRM", "DETAILS");
@@ -511,13 +510,13 @@ extern "C" fn new_confirm_coinjoin(n_args: usize, args: *const Obj, kwargs: *mut
         let max_rounds: StrBuffer = kwargs.get(Qstr::MP_QSTR_max_rounds)?.try_into()?;
         let max_feerate: StrBuffer = kwargs.get(Qstr::MP_QSTR_max_feerate)?.try_into()?;
 
-        let paragraphs = Paragraphs::new()
-            .add::<theme::TTDefaultText>(theme::FONT_NORMAL, "Coin name:".into())
-            .add::<theme::TTDefaultText>(theme::FONT_BOLD, coin_name)
-            .add::<theme::TTDefaultText>(theme::FONT_NORMAL, "Maximum rounds:".into())
-            .add::<theme::TTDefaultText>(theme::FONT_BOLD, max_rounds)
-            .add::<theme::TTDefaultText>(theme::FONT_NORMAL, "Maximum mining fee:".into())
-            .add::<theme::TTDefaultText>(theme::FONT_BOLD, max_feerate);
+        let paragraphs = Paragraphs::new(theme::TEXT)
+            .add(theme::FONT_NORMAL, "Coin name:".into())
+            .add(theme::FONT_BOLD, coin_name)
+            .add(theme::FONT_NORMAL, "Maximum rounds:".into())
+            .add(theme::FONT_BOLD, max_rounds)
+            .add(theme::FONT_NORMAL, "Maximum mining fee:".into())
+            .add(theme::FONT_BOLD, max_feerate);
 
         let obj = LayoutObj::new(
             Frame::new(
@@ -761,7 +760,8 @@ mod tests {
         let buttons =
             Button::cancel_confirm(Button::with_text("Left"), Button::with_text("Right"), 1);
         let mut layout = Dialog::new(
-            FormattedText::new::<theme::TTDefaultText>(
+            FormattedText::new(
+                theme::TEXT,
                 "Testing text layout, with some text, and some more text. And {param}",
             )
             .with("param", "parameters!"),

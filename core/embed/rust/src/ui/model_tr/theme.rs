@@ -1,5 +1,5 @@
 use crate::ui::{
-    component::text::layout::DefaultTextTheme,
+    component::text::layout::TextTheme,
     display::{Color, Font},
     model_tr::component::{LoaderStyle, LoaderStyleSheet},
 };
@@ -62,19 +62,16 @@ pub fn loader_default() -> LoaderStyleSheet {
     }
 }
 
-pub struct TRDefaultText;
-
-impl DefaultTextTheme for TRDefaultText {
-    const BACKGROUND_COLOR: Color = BG;
-    const TEXT_FONT: Font = FONT_NORMAL;
-    const TEXT_COLOR: Color = FG;
-    const HYPHEN_FONT: Font = FONT_NORMAL;
-    const HYPHEN_COLOR: Color = FG;
-    const ELLIPSIS_FONT: Font = FONT_NORMAL;
-    const ELLIPSIS_COLOR: Color = FG;
-
-    const NORMAL_FONT: Font = FONT_NORMAL;
-    const MEDIUM_FONT: Font = FONT_MEDIUM;
-    const BOLD_FONT: Font = FONT_BOLD;
-    const MONO_FONT: Font = FONT_MONO;
-}
+pub const TEXT: TextTheme = TextTheme {
+    background_color: BG,
+    text_font: FONT_NORMAL,
+    text_color: FG,
+    hyphen_font: FONT_NORMAL,
+    hyphen_color: FG,
+    ellipsis_font: FONT_NORMAL,
+    ellipsis_color: FG,
+    normal_font: FONT_NORMAL,
+    medium_font: FONT_MEDIUM,
+    bold_font: FONT_BOLD,
+    mono_font: FONT_MONO,
+};

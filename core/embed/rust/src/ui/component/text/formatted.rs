@@ -12,8 +12,7 @@ use crate::ui::{
 };
 
 use super::layout::{
-    DefaultTextTheme, LayoutFit, LayoutSink, LineBreaking, Op, PageBreaking, TextLayout,
-    TextRenderer,
+    LayoutFit, LayoutSink, LineBreaking, Op, PageBreaking, TextLayout, TextRenderer, TextTheme,
 };
 
 pub const MAX_ARGUMENTS: usize = 6;
@@ -26,10 +25,10 @@ pub struct FormattedText<F, T> {
 }
 
 impl<F, T> FormattedText<F, T> {
-    pub fn new<D: DefaultTextTheme>(format: F) -> Self {
+    pub fn new(theme: TextTheme, format: F) -> Self {
         Self {
             format,
-            layout: TextLayout::new::<D>(),
+            layout: TextLayout::new(theme),
             args: LinearMap::new(),
             char_offset: 0,
         }
@@ -49,12 +48,12 @@ impl<F, T> FormattedText<F, T> {
     }
 
     pub fn with_text_font(mut self, text_font: Font) -> Self {
-        self.layout.text_font = text_font;
+        self.layout.theme.text_font = text_font;
         self
     }
 
     pub fn with_text_color(mut self, text_color: Color) -> Self {
-        self.layout.text_color = text_color;
+        self.layout.theme.text_color = text_color;
         self
     }
 
@@ -91,10 +90,10 @@ where
         let mut ops = Op::skip_n_text_bytes(
             Tokenizer::new(self.format.as_ref()).flat_map(|arg| match arg {
                 Token::Literal(literal) => Some(Op::Text(literal)),
-                Token::Argument("mono") => Some(Op::Font(self.layout.mono_font)),
-                Token::Argument("bold") => Some(Op::Font(self.layout.bold_font)),
-                Token::Argument("normal") => Some(Op::Font(self.layout.normal_font)),
-                Token::Argument("medium") => Some(Op::Font(self.layout.medium_font)),
+                Token::Argument("mono") => Some(Op::Font(self.layout.theme.mono_font)),
+                Token::Argument("bold") => Some(Op::Font(self.layout.theme.bold_font)),
+                Token::Argument("normal") => Some(Op::Font(self.layout.theme.normal_font)),
+                Token::Argument("medium") => Some(Op::Font(self.layout.theme.medium_font)),
                 Token::Argument(argument) => self
                     .args
                     .get(argument)
