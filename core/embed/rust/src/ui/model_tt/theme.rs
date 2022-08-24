@@ -1,5 +1,8 @@
 use crate::ui::{
-    component::{label::LabelStyle, text::layout::TextTheme},
+    component::{
+        label::LabelStyle,
+        text::{formatted::FormattedFonts, TextStyle},
+    },
     display::{Color, Font},
     geometry::Insets,
 };
@@ -298,18 +301,16 @@ pub fn loader_default() -> LoaderStyleSheet {
     }
 }
 
-pub const TEXT: TextTheme = TextTheme {
-    background_color: BG,
-    text_font: FONT_NORMAL,
-    text_color: FG,
-    hyphen_font: FONT_BOLD,
-    hyphen_color: GREY_LIGHT,
-    ellipsis_font: FONT_BOLD,
-    ellipsis_color: GREY_LIGHT,
-    normal_font: FONT_NORMAL,
-    medium_font: FONT_MEDIUM,
-    bold_font: FONT_BOLD,
-    mono_font: FONT_MONO,
+pub const TEXT_NORMAL: TextStyle = TextStyle::new(FONT_NORMAL, FG, BG, GREY_LIGHT, GREY_LIGHT);
+pub const TEXT_MEDIUM: TextStyle = TextStyle::new(FONT_MEDIUM, FG, BG, GREY_LIGHT, GREY_LIGHT);
+pub const TEXT_BOLD: TextStyle = TextStyle::new(FONT_BOLD, FG, BG, GREY_LIGHT, GREY_LIGHT);
+pub const TEXT_MONO: TextStyle = TextStyle::new(FONT_MONO, FG, BG, GREY_LIGHT, GREY_LIGHT);
+
+pub const FORMATTED: FormattedFonts = FormattedFonts {
+    normal: FONT_NORMAL,
+    medium: FONT_MEDIUM,
+    bold: FONT_BOLD,
+    mono: FONT_MONO,
 };
 
 pub const CONTENT_BORDER: i32 = 5;

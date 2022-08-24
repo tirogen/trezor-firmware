@@ -2,11 +2,10 @@ use heapless::Vec;
 
 use crate::ui::{
     component::{Component, Event, EventCtx, Never, Paginate},
-    display::Font,
     geometry::{Dimensions, Insets, LinearPlacement, Rect},
 };
 
-use super::layout::{LayoutFit, TextLayout, TextTheme};
+use super::layout::{LayoutFit, TextLayout, TextStyle};
 
 pub const MAX_PARAGRAPHS: usize = 6;
 /// Maximum space between paragraphs. Actual result may be smaller (even 0) if
@@ -23,7 +22,6 @@ pub struct Paragraphs<T> {
     area: Rect,
     list: Vec<Paragraph<T>, MAX_PARAGRAPHS>,
     placement: LinearPlacement,
-    theme: TextTheme,
     offset: PageOffset,
     visible: usize,
 }
@@ -32,14 +30,13 @@ impl<T> Paragraphs<T>
 where
     T: AsRef<str>,
 {
-    pub fn new(theme: TextTheme) -> Self {
+    pub fn new() -> Self {
         Self {
             area: Rect::zero(),
             list: Vec::new(),
             placement: LinearPlacement::vertical()
                 .align_at_center()
                 .with_spacing(DEFAULT_SPACING),
-            theme,
             offset: PageOffset::default(),
             visible: 0,
         }
@@ -55,7 +52,7 @@ where
         self
     }
 
-    pub fn add(mut self, text_font: Font, content: T) -> Self {
+    pub fn add(mut self, style: TextStyle, content: T) -> Self {
         if content.as_ref().is_empty() {
             return self;
         }
@@ -64,10 +61,7 @@ where
             TextLayout {
                 padding_top: PARAGRAPH_TOP_SPACE,
                 padding_bottom: PARAGRAPH_BOTTOM_SPACE,
-                ..TextLayout::new(TextTheme {
-                    text_font,
-                    ..self.theme
-                })
+                ..TextLayout::new(style)
             },
         );
         if self.list.push(paragraph).is_err() {

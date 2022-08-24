@@ -1,5 +1,5 @@
 use crate::ui::{
-    component::text::layout::TextTheme,
+    component::text::{formatted::FormattedFonts, TextStyle},
     display::{Color, Font},
 };
 
@@ -48,16 +48,14 @@ pub fn button_cancel() -> ButtonStyleSheet {
     }
 }
 
-pub const TEXT: TextTheme = TextTheme {
-    background_color: BG,
-    text_font: FONT_NORMAL,
-    text_color: FG,
-    hyphen_font: FONT_NORMAL,
-    hyphen_color: FG,
-    ellipsis_font: FONT_NORMAL,
-    ellipsis_color: FG,
-    normal_font: FONT_NORMAL,
-    medium_font: FONT_MEDIUM,
-    bold_font: FONT_BOLD,
-    mono_font: FONT_MONO,
+pub const TEXT_NORMAL: TextStyle = TextStyle::new(FONT_NORMAL, FG, BG, FG, FG);
+pub const TEXT_MEDIUM: TextStyle = TextStyle::new(FONT_MEDIUM, FG, BG, FG, FG);
+pub const TEXT_BOLD: TextStyle = TextStyle::new(FONT_BOLD, FG, BG, FG, FG);
+pub const TEXT_MONO: TextStyle = TextStyle::new(FONT_MONO, FG, BG, FG, FG);
+
+pub const FORMATTED: FormattedFonts = FormattedFonts {
+    normal: FONT_NORMAL,
+    medium: FONT_MEDIUM,
+    bold: FONT_BOLD,
+    mono: FONT_MONO,
 };

@@ -37,54 +37,59 @@ pub struct TextLayout {
     /// negative.
     pub padding_bottom: i32,
 
+    /// Fonts, colors, line/page breaking behavior.
+    pub style: TextStyle,
+}
+
+#[derive(Copy, Clone)]
+pub struct TextStyle {
+    /// Text font ID. Can be overridden by `Op::Font`.
+    pub text_font: Font,
+    /// Text color. Can be overridden by `Op::Color`.
+    pub text_color: Color,
+    /// Background color.
+    pub background_color: Color,
+
+    /// Foreground color used for drawing the hyphen.
+    pub hyphen_color: Color,
+    /// Foreground color used for drawing the ellipsis.
+    pub ellipsis_color: Color,
+
     /// Specifies which line-breaking strategy to use.
     pub line_breaking: LineBreaking,
     /// Specifies what to do at the end of the page.
     pub page_breaking: PageBreaking,
-    /// Fonts and colors.
-    pub theme: TextTheme,
 }
 
-#[derive(Copy, Clone)]
-pub struct TextTheme {
-    /// Background color.
-    pub background_color: Color,
-    /// Text color. Can be overridden by `Op::Color`.
-    pub text_color: Color,
-    /// Text font ID. Can be overridden by `Op::Font`.
-    pub text_font: Font,
-
-    /// Font used for drawing the word-breaking hyphen.
-    pub hyphen_font: Font,
-    /// Foreground color used for drawing the hyphen.
-    pub hyphen_color: Color,
-
-    /// Font used for drawing the ellipsis.
-    pub ellipsis_font: Font,
-    /// Foreground color used for drawing the ellipsis.
-    pub ellipsis_color: Color,
-
-    /// Font used to format `{normal}`.
-    pub normal_font: Font,
-    /// Font used to format `{medium}`.
-    pub medium_font: Font,
-    /// Font used to format `{bold}`.
-    pub bold_font: Font,
-    /// Font used to format `{mono}`.
-    pub mono_font: Font,
+impl TextStyle {
+    pub const fn new(
+        text_font: Font,
+        text_color: Color,
+        background_color: Color,
+        hyphen_color: Color,
+        ellipsis_color: Color,
+    ) -> Self {
+        TextStyle {
+            text_font,
+            text_color,
+            background_color,
+            hyphen_color,
+            ellipsis_color,
+            line_breaking: LineBreaking::BreakAtWhitespace,
+            page_breaking: PageBreaking::CutAndInsertEllipsis,
+        }
+    }
 }
 
 impl TextLayout {
     /// Create a new text layout, with empty size and default text parameters
     /// filled from `T`.
-    pub fn new(theme: TextTheme) -> Self {
+    pub fn new(style: TextStyle) -> Self {
         Self {
             bounds: Rect::zero(),
             padding_top: 0,
             padding_bottom: 0,
-            line_breaking: LineBreaking::BreakAtWhitespace,
-            page_breaking: PageBreaking::CutAndInsertEllipsis,
-            theme,
+            style,
         }
     }
 
@@ -94,7 +99,7 @@ impl TextLayout {
     }
 
     pub fn initial_cursor(&self) -> Point {
-        self.bounds.top_left() + Offset::y(self.theme.text_font.text_height() + self.padding_top)
+        self.bounds.top_left() + Offset::y(self.style.text_font.text_height() + self.padding_top)
     }
 
     pub fn fit_text(&self, text: &str) -> LayoutFit {
@@ -117,10 +122,10 @@ impl TextLayout {
         for op in ops {
             match op {
                 Op::Color(color) => {
-                    self.theme.text_color = color;
+                    self.style.text_color = color;
                 }
                 Op::Font(font) => {
-                    self.theme.text_font = font;
+                    self.style.text_font = font;
                 }
                 Op::Text(text) => match self.layout_text(text, cursor, sink) {
                     LayoutFit::Fitting {
@@ -171,9 +176,8 @@ impl TextLayout {
             let span = Span::fit_horizontally(
                 remaining_text,
                 self.bounds.x1 - cursor.x,
-                self.theme.text_font,
-                self.theme.hyphen_font,
-                self.line_breaking,
+                self.style.text_font,
+                self.style.line_breaking,
             );
 
             // Report the span at the cursor position.
@@ -198,7 +202,7 @@ impl TextLayout {
                         // Append ellipsis to indicate more content is available, but only if we
                         // haven't already appended a hyphen.
                         let should_append_ellipsis =
-                            matches!(self.page_breaking, PageBreaking::CutAndInsertEllipsis)
+                            matches!(self.style.page_breaking, PageBreaking::CutAndInsertEllipsis)
                                 && !span.insert_hyphen_before_line_break;
                         if should_append_ellipsis {
                             sink.ellipsis(*cursor, self);
@@ -235,7 +239,7 @@ impl TextLayout {
 
     fn layout_height(&self, init_cursor: Point, end_cursor: Point) -> i32 {
         self.padding_top
-            + self.theme.text_font.text_height()
+            + self.style.text_font.text_height()
             + (end_cursor.y - init_cursor.y)
             + self.padding_bottom
     }
@@ -277,9 +281,9 @@ impl LayoutSink for TextRenderer {
         display::text(
             cursor,
             text,
-            layout.theme.text_font,
-            layout.theme.text_color,
-            layout.theme.background_color,
+            layout.style.text_font,
+            layout.style.text_color,
+            layout.style.background_color,
         );
     }
 
@@ -287,9 +291,9 @@ impl LayoutSink for TextRenderer {
         display::text(
             cursor,
             "-",
-            layout.theme.hyphen_font,
-            layout.theme.hyphen_color,
-            layout.theme.background_color,
+            layout.style.text_font,
+            layout.style.hyphen_color,
+            layout.style.background_color,
         );
     }
 
@@ -297,9 +301,9 @@ impl LayoutSink for TextRenderer {
         display::text(
             cursor,
             "...",
-            layout.theme.ellipsis_font,
-            layout.theme.ellipsis_color,
-            layout.theme.background_color,
+            layout.style.text_font,
+            layout.style.ellipsis_color,
+            layout.style.background_color,
         );
     }
 }
@@ -383,7 +387,6 @@ impl Span {
         text: &str,
         max_width: i32,
         text_font: impl GlyphMetrics,
-        hyphen_font: impl GlyphMetrics,
         breaking: LineBreaking,
     ) -> Self {
         const ASCII_LF: char = '\n';
@@ -395,7 +398,7 @@ impl Span {
             ch == ASCII_SPACE || ch == ASCII_LF || ch == ASCII_CR
         }
 
-        let hyphen_width = hyphen_font.char_width(ASCII_HYPHEN);
+        let hyphen_width = text_font.char_width(ASCII_HYPHEN);
 
         // The span we return in case the line has to break. We mutate it in the
         // possible break points, and its initial value is returned in case no text
@@ -544,7 +547,6 @@ mod tests {
             let span = Span::fit_horizontally(
                 remaining_text,
                 max_width,
-                FIXED_FONT,
                 FIXED_FONT,
                 LineBreaking::BreakAtWhitespace,
             );

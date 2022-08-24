@@ -9,7 +9,7 @@ use crate::{
         geometry::{Alignment, Insets, LinearPlacement, Point, Rect},
         model_tr::{
             component::{Button, ButtonMsg, ButtonPos, ResultAnim, ResultAnimMsg},
-            theme::{self, FONT_BOLD, FONT_MEDIUM},
+            theme::{self, FONT_BOLD},
         },
     },
 };
@@ -43,8 +43,8 @@ impl ResultPopup {
         headline: Option<&'static str>,
         button_text: Option<&'static str>,
     ) -> Self {
-        let p1 = Paragraphs::new(theme::TEXT)
-            .add(FONT_MEDIUM, text)
+        let p1 = Paragraphs::new()
+            .add(theme::TEXT_MEDIUM, text)
             .with_placement(LinearPlacement::vertical().align_at_center());
 
         let button = button_text.map(|t| {
