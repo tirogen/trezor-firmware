@@ -7,18 +7,16 @@ use heapless::LinearMap;
 
 use crate::ui::{
     component::{Component, Event, EventCtx, Never},
-    display::{Color, Font},
+    display::Font,
     geometry::Rect,
 };
 
-use super::layout::{
-    LayoutFit, LayoutSink, LineBreaking, Op, PageBreaking, TextLayout, TextRenderer, TextStyle,
-};
+use super::layout::{LayoutFit, LayoutSink, Op, TextLayout, TextRenderer, TextStyle};
 
 pub const MAX_ARGUMENTS: usize = 6;
 
-pub struct FormattedText<F, T> {
-    layout: TextLayout,
+pub struct FormattedText<'a, F, T> {
+    layout: TextLayout<'a>,
     fonts: FormattedFonts,
     format: F,
     args: LinearMap<&'static str, T, MAX_ARGUMENTS>,
@@ -36,8 +34,8 @@ pub struct FormattedFonts {
     pub mono: Font,
 }
 
-impl<F, T> FormattedText<F, T> {
-    pub fn new(style: TextStyle, fonts: FormattedFonts, format: F) -> Self {
+impl<'a, F, T> FormattedText<'a, F, T> {
+    pub fn new(style: &'static TextStyle, fonts: FormattedFonts, format: F) -> Self {
         Self {
             format,
             fonts,
@@ -60,26 +58,6 @@ impl<F, T> FormattedText<F, T> {
         self
     }
 
-    pub fn with_text_font(mut self, text_font: Font) -> Self {
-        self.layout.style.text_font = text_font;
-        self
-    }
-
-    pub fn with_text_color(mut self, text_color: Color) -> Self {
-        self.layout.style.text_color = text_color;
-        self
-    }
-
-    pub fn with_line_breaking(mut self, line_breaking: LineBreaking) -> Self {
-        self.layout.style.line_breaking = line_breaking;
-        self
-    }
-
-    pub fn with_page_breaking(mut self, page_breaking: PageBreaking) -> Self {
-        self.layout.style.page_breaking = page_breaking;
-        self
-    }
-
     pub fn set_char_offset(&mut self, char_offset: usize) {
         self.char_offset = char_offset;
     }
@@ -88,12 +66,12 @@ impl<F, T> FormattedText<F, T> {
         self.char_offset
     }
 
-    pub fn layout_mut(&mut self) -> &mut TextLayout {
+    pub fn layout_mut(&mut self) -> &'a mut TextLayout {
         &mut self.layout
     }
 }
 
-impl<F, T> FormattedText<F, T>
+impl<'a, F, T> FormattedText<'a, F, T>
 where
     F: AsRef<str>,
     T: AsRef<str>,
@@ -118,7 +96,7 @@ where
     }
 }
 
-impl<F, T> Component for FormattedText<F, T>
+impl<'a, F, T> Component for FormattedText<'a, F, T>
 where
     F: AsRef<str>,
     T: AsRef<str>,
@@ -149,7 +127,7 @@ pub mod trace {
 
     use super::*;
 
-    pub struct TraceText<'a, F, T>(pub &'a FormattedText<F, T>);
+    pub struct TraceText<'a, F, T>(pub &'a FormattedText<'a, F, T>);
 
     impl<'a, F, T> crate::trace::Trace for TraceText<'a, F, T>
     where
@@ -163,7 +141,7 @@ pub mod trace {
 }
 
 #[cfg(feature = "ui_debug")]
-impl<F, T> crate::trace::Trace for FormattedText<F, T>
+impl<'a, F, T> crate::trace::Trace for FormattedText<'a, F, T>
 where
     F: AsRef<str>,
     T: AsRef<str>,

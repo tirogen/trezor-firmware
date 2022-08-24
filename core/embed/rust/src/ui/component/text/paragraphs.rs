@@ -18,15 +18,15 @@ pub const PARAGRAPH_TOP_SPACE: i32 = -1;
 /// Offset of paragraph bounding box bottom relative to bottom of its text.
 pub const PARAGRAPH_BOTTOM_SPACE: i32 = 5;
 
-pub struct Paragraphs<T> {
+pub struct Paragraphs<'a, T> {
     area: Rect,
-    list: Vec<Paragraph<T>, MAX_PARAGRAPHS>,
+    list: Vec<Paragraph<'a, T>, MAX_PARAGRAPHS>,
     placement: LinearPlacement,
     offset: PageOffset,
     visible: usize,
 }
 
-impl<T> Paragraphs<T>
+impl<'a, T> Paragraphs<'a, T>
 where
     T: AsRef<str>,
 {
@@ -52,7 +52,7 @@ where
         self
     }
 
-    pub fn add(mut self, style: TextStyle, content: T) -> Self {
+    pub fn add(mut self, style: &'static TextStyle, content: T) -> Self {
         if content.as_ref().is_empty() {
             return self;
         }
@@ -102,7 +102,7 @@ where
         );
     }
 
-    fn break_pages(&self) -> PageBreakIterator<T> {
+    fn break_pages(&'a self) -> PageBreakIterator<'a, T> {
         PageBreakIterator {
             paragraphs: self,
             current: None,
@@ -110,7 +110,7 @@ where
     }
 }
 
-impl<T> Component for Paragraphs<T>
+impl<'a, T> Component for Paragraphs<'a, T>
 where
     T: AsRef<str>,
 {
@@ -142,7 +142,7 @@ where
     }
 }
 
-impl<T> Paginate for Paragraphs<T>
+impl<'a, T> Paginate for Paragraphs<'a, T>
 where
     T: AsRef<str>,
 {
@@ -171,7 +171,7 @@ pub mod trace {
 
     use super::*;
 
-    impl<T> crate::trace::Trace for Paragraphs<T>
+    impl<'a, T> crate::trace::Trace for Paragraphs<'a, T>
     where
         T: AsRef<str>,
     {
@@ -192,16 +192,16 @@ pub mod trace {
     }
 }
 
-pub struct Paragraph<T> {
+pub struct Paragraph<'a, T> {
     content: T,
-    layout: TextLayout,
+    layout: TextLayout<'a>,
 }
 
-impl<T> Paragraph<T>
+impl<'a, T> Paragraph<'a, T>
 where
     T: AsRef<str>,
 {
-    pub fn new(content: T, layout: TextLayout) -> Self {
+    pub fn new(content: T, layout: TextLayout<'a>) -> Self {
         Self { content, layout }
     }
 
@@ -210,7 +210,7 @@ where
     }
 }
 
-impl<T> Dimensions for Paragraph<T>
+impl<'a, T> Dimensions for Paragraph<'a, T>
 where
     T: AsRef<str>,
 {
@@ -234,7 +234,7 @@ struct PageOffset {
 
 struct PageBreakIterator<'a, T> {
     /// Reference to paragraph vector.
-    paragraphs: &'a Paragraphs<T>,
+    paragraphs: &'a Paragraphs<'a, T>,
 
     /// Current offset, or `None` before first `next()` call.
     current: Option<PageOffset>,

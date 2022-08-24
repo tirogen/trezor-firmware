@@ -18,13 +18,13 @@ pub enum ResultPopupMsg {
     Confirmed,
 }
 
-pub struct ResultPopup {
+pub struct ResultPopup<'a> {
     area: Rect,
     pad: Pad,
     result_anim: Child<ResultAnim>,
     headline_baseline: Point,
     headline: Option<Label<&'static str>>,
-    text: Child<Paragraphs<&'static str>>,
+    text: Child<Paragraphs<'a, &'static str>>,
     button: Option<Child<Button<&'static str>>>,
     autoclose: bool,
 }
@@ -36,7 +36,7 @@ const ANIM_POS: i32 = 32;
 const ANIM_POS_ADJ_HEADLINE: i32 = 10;
 const ANIM_POS_ADJ_BUTTON: i32 = 6;
 
-impl ResultPopup {
+impl<'a> ResultPopup<'a> {
     pub fn new(
         icon: &'static [u8],
         text: &'static str,
@@ -93,7 +93,7 @@ impl ResultPopup {
     }
 }
 
-impl Component for ResultPopup {
+impl<'a> Component for ResultPopup<'a> {
     type Msg = ResultPopupMsg;
 
     fn place(&mut self, bounds: Rect) -> Rect {
@@ -162,7 +162,7 @@ impl Component for ResultPopup {
 }
 
 #[cfg(feature = "ui_debug")]
-impl crate::trace::Trace for ResultPopup {
+impl<'a> crate::trace::Trace for ResultPopup<'a> {
     fn trace(&self, d: &mut dyn crate::trace::Tracer) {
         d.open("ResultPopup");
         self.text.trace(d);

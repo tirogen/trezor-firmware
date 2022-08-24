@@ -18,7 +18,7 @@ pub trait Paginate {
     fn change_page(&mut self, active_page: usize);
 }
 
-impl<F, T> Paginate for FormattedText<F, T>
+impl<'a, F, T> Paginate for FormattedText<'a, F, T>
 where
     F: AsRef<str>,
     T: AsRef<str>,

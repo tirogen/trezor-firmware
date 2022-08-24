@@ -26,7 +26,7 @@ pub enum PageBreaking {
 
 /// Visual instructions for laying out a formatted block of text.
 #[derive(Copy, Clone)]
-pub struct TextLayout {
+pub struct TextLayout<'a> {
     /// Bounding box restricting the layout dimensions.
     pub bounds: Rect,
 
@@ -38,7 +38,7 @@ pub struct TextLayout {
     pub padding_bottom: i32,
 
     /// Fonts, colors, line/page breaking behavior.
-    pub style: TextStyle,
+    pub style: &'a TextStyle,
 }
 
 #[derive(Copy, Clone)]
@@ -81,10 +81,10 @@ impl TextStyle {
     }
 }
 
-impl TextLayout {
+impl<'a> TextLayout<'a> {
     /// Create a new text layout, with empty size and default text parameters
     /// filled from `T`.
-    pub fn new(style: TextStyle) -> Self {
+    pub fn new(style: &'static TextStyle) -> Self {
         Self {
             bounds: Rect::zero(),
             padding_top: 0,
@@ -110,40 +110,48 @@ impl TextLayout {
         self.layout_text(text, &mut self.initial_cursor(), &mut TextRenderer);
     }
 
+    /// NOTE: Returned `LayoutFit` will be wrong in case fonts of different heights are used.
     pub fn layout_ops<'o>(
-        mut self,
+        &self,
         ops: &mut dyn Iterator<Item = Op<'o>>,
         cursor: &mut Point,
         sink: &mut dyn LayoutSink,
     ) -> LayoutFit {
         let init_cursor = *cursor;
         let mut total_processed_chars = 0;
+        let mut style = *self.style;
 
         for op in ops {
             match op {
                 Op::Color(color) => {
-                    self.style.text_color = color;
+                    style.text_color = color;
                 }
                 Op::Font(font) => {
-                    self.style.text_font = font;
+                    style.text_font = font;
                 }
-                Op::Text(text) => match self.layout_text(text, cursor, sink) {
-                    LayoutFit::Fitting {
-                        processed_chars, ..
-                    } => {
-                        total_processed_chars += processed_chars;
-                    }
-                    LayoutFit::OutOfBounds {
-                        processed_chars, ..
-                    } => {
-                        total_processed_chars += processed_chars;
+                Op::Text(text) => {
+                    let styled = TextLayout {
+                        style: &style,
+                        ..*self
+                    };
+                    match styled.layout_text(text, cursor, sink) {
+                        LayoutFit::Fitting {
+                            processed_chars, ..
+                        } => {
+                            total_processed_chars += processed_chars;
+                        }
+                        LayoutFit::OutOfBounds {
+                            processed_chars, ..
+                        } => {
+                            total_processed_chars += processed_chars;
 
-                        return LayoutFit::OutOfBounds {
-                            processed_chars: total_processed_chars,
-                            height: self.layout_height(init_cursor, *cursor),
-                        };
-                    }
-                },
+                            return LayoutFit::OutOfBounds {
+                                processed_chars: total_processed_chars,
+                                height: styled.layout_height(init_cursor, *cursor),
+                            };
+                        }
+                    };
+                }
             }
         }
 
