@@ -39,6 +39,7 @@ use crate::{
                 upy_jpeg_test, ConfirmBlob, PropsList,
             },
         },
+        model::pin::{remove_keepalive_callback, set_keepalive_callback},
     },
 };
 
@@ -1676,6 +1677,16 @@ pub static mp_module_trezorui2: Module = obj_module! {
     /// ) -> CANCELLED:
     ///     """Homescreen used for indicating coinjoin in progress."""
     Qstr::MP_QSTR_show_busyscreen => obj_fn_kw!(0, new_show_busyscreen).as_obj(),
+
+    /// def set_keepalive_callback(
+    ///     callback: KeepaliveCallback,
+    /// ) -> None:
+    ///    """Sets keepalive callback. """
+    Qstr::MP_QSTR_set_keepalive_callback => obj_fn_1!(set_keepalive_callback).as_obj(),
+
+    /// def remove_keepalive_callback() -> None:
+    ///    """Removes keepalive callback. """
+    Qstr::MP_QSTR_remove_keepalive_callback => obj_fn_0!(remove_keepalive_callback).as_obj(),
 };
 
 #[cfg(test)]

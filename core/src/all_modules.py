@@ -133,8 +133,6 @@ trezor.loop
 import trezor.loop
 trezor.messages
 import trezor.messages
-trezor.pin
-import trezor.pin
 trezor.protobuf
 import trezor.protobuf
 trezor.res

@@ -1190,3 +1190,11 @@ def monero_live_refresh_progress() -> ProgressLayout:
 
 def monero_transaction_progress_inner() -> ProgressLayout:
     return RustProgress("SIGNING TRANSACTION", description="")
+
+
+def set_keepalive_callback(callback):
+    trezorui2.set_keepalive_callback(callback)
+
+
+def remove_keepalive_callback():
+    trezorui2.remove_keepalive_callback()
