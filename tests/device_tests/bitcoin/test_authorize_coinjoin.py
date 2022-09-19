@@ -200,7 +200,7 @@ def test_sign_tx(client: Client):
             prev_txes=TX_CACHE_TESTNET,
             payment_reqs=[payment_req],
             preauthorized=True,
-            no_serialize=True,
+            serialize=False,
         )
 
     assert serialized_tx == b""
@@ -333,7 +333,7 @@ def test_sign_tx_large(client: Client):
             prev_txes=TX_CACHE_TESTNET,
             payment_reqs=[payment_req],
             preauthorized=True,
-            no_serialize=True,
+            serialize=False,
         )
     delay = time.time() - start
     assert delay <= max_expected_delay

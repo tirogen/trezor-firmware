@@ -594,7 +594,7 @@ if TYPE_CHECKING:
         branch_id: "int | None"
         amount_unit: "AmountUnit"
         decred_staking_ticket: "bool"
-        no_serialize: "bool"
+        serialize: "bool"
 
         def __init__(
             self,
@@ -610,7 +610,7 @@ if TYPE_CHECKING:
             branch_id: "int | None" = None,
             amount_unit: "AmountUnit | None" = None,
             decred_staking_ticket: "bool | None" = None,
-            no_serialize: "bool | None" = None,
+            serialize: "bool | None" = None,
         ) -> None:
             pass
 

@@ -1,1 +1,1 @@
-Add no_serialize option to SignTx.
+Add serialize option to SignTx.

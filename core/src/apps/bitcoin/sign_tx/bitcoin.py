@@ -126,7 +126,7 @@ class Bitcoin:
         # transaction and signature serialization
         _SERIALIZED_TX_BUFFER[:] = bytes()
         self.serialized_tx = _SERIALIZED_TX_BUFFER
-        self.serialize = not tx.no_serialize
+        self.serialize = tx.serialize
         self.tx_req = TxRequest()
         self.tx_req.details = TxRequestDetailsType()
         self.tx_req.serialized = TxRequestSerializedType()
