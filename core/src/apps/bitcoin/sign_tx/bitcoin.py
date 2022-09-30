@@ -117,6 +117,9 @@ class Bitcoin:
         # set of indices of inputs which are external
         self.external: set[int] = set()
 
+        # set of indices of inputs which are presigned
+        self.presigned: set[int] = set()
+
         # indicates whether all internal inputs are Taproot
         self.taproot_only = True
 
@@ -172,6 +175,8 @@ class Bitcoin:
 
             if input_is_external(txi):
                 self.external.add(i)
+                if txi.witness or txi.script_sig:
+                    self.presigned.add(i)
                 writers.write_tx_input_check(h_external_inputs_check, txi)
                 await self.process_external_input(txi, script_pubkey)
             else:
@@ -226,7 +231,7 @@ class Bitcoin:
                         progress.advance()
                         txi = await helpers.request_tx_input(self.tx_req, i, self.coin)
                         writers.write_tx_input_check(h_check, txi)
-                        if txi.witness or txi.script_sig:
+                        if i in self.presigned:
                             # txi.script_pubkey checked in sanitize_tx_input
                             assert txi.script_pubkey is not None
                             await self.verify_presigned_external_input(
@@ -255,7 +260,7 @@ class Bitcoin:
                 if script_pubkey != self.input_derive_script(txi):
                     raise wire.DataError("Input does not match scriptPubKey")
 
-                if i in self.external and (txi.witness or txi.script_sig):
+                if i in self.presigned:
                     await self.verify_presigned_external_input(i, txi, script_pubkey)
 
         # check that the inputs were the same as those streamed for approval
