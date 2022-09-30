@@ -146,6 +146,11 @@ class Bitcoin:
         # those in Step 1.
         self.h_external_inputs: bytes | None = None
 
+        # The digests of the presigned external inputs streamed for approval in Step 1. These are used
+        # to ensure that the inputs streamed for verification in Step 3 are the same as
+        # those in Step 1.
+        self.h_presigned_inputs: bytes | None = None
+
         # The index of the payment request being processed.
         self.payment_req_index: int | None = None
 
@@ -157,6 +162,7 @@ class Bitcoin:
 
     async def step1_process_inputs(self) -> None:
         h_external_inputs_check = HashWriter(sha256())
+        h_presigned_inputs_check = HashWriter(sha256())
 
         for i in range(self.tx_info.tx.inputs_count):
             # STAGE_REQUEST_1_INPUT in legacy
@@ -177,6 +183,7 @@ class Bitcoin:
                 self.external.add(i)
                 if txi.witness or txi.script_sig:
                     self.presigned.add(i)
+                    writers.write_tx_input_check(h_presigned_inputs_check, txi)
                 writers.write_tx_input_check(h_external_inputs_check, txi)
                 await self.process_external_input(txi, script_pubkey)
             else:
@@ -187,6 +194,7 @@ class Bitcoin:
 
         self.tx_info.h_inputs_check = self.tx_info.get_tx_check_digest()
         self.h_external_inputs = h_external_inputs_check.get_digest()
+        self.h_presigned_inputs = h_presigned_inputs_check.get_digest()
 
         # Finalize original inputs.
         for orig in self.orig_txs:
