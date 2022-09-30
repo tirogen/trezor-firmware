@@ -233,13 +233,14 @@ class Bitcoin:
             # We can trust the amounts and scriptPubKeys, because if an invalid value is provided
             # then all issued signatures will be invalid.
             if self.has_presigned:
-                expected_digest = self.h_external_inputs
+                expected_digest = self.h_presigned_inputs
                 for i in range(self.tx_info.tx.inputs_count):
                     if i in self.external:
                         progress.advance()
-                        txi = await helpers.request_tx_input(self.tx_req, i, self.coin)
-                        writers.write_tx_input_check(h_check, txi)
                         if i in self.presigned:
+                            txi = await helpers.request_tx_input(self.tx_req, i, self.coin)
+                            writers.write_tx_input_check(h_check, txi)
+
                             # txi.script_pubkey checked in sanitize_tx_input
                             assert txi.script_pubkey is not None
                             await self.verify_presigned_external_input(
