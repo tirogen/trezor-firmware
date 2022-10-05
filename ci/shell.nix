@@ -71,6 +71,7 @@ stdenvNoCC.mkDerivation ({
     SDL2
     SDL2_image
     bash
+    bloaty  # for binsize
     check
     curl  # for connect tests
     editorconfig-checker
