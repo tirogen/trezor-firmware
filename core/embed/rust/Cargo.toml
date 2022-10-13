@@ -20,7 +20,7 @@ buttons = []
 touch = []
 clippy = []
 debug = ["ui_debug"]
-test = ["cc", "glob", "micropython", "protobuf", "ui", "ui_debug"]
+test = ["cc", "glob", "micropython", "protobuf", "ui", "ui_debug", "dma2d"]
 
 [lib]
 crate-type = ["staticlib"]

@@ -1,7 +1,8 @@
 use crate::{
     error::Error,
     micropython::{
-        buffer::{hexlify_bytes, StrBuffer},
+        buffer::{get_buffer, hexlify_bytes, StrBuffer},
+        ffi::{mp_obj_new_int, mp_obj_new_tuple},
         gc::Gc,
         iter::{Iter, IterBuf},
         list::List,
@@ -13,10 +14,11 @@ use crate::{
             paragraphs::{Paragraph, ParagraphSource, ParagraphStrType},
             TextStyle,
         },
+        display::tjpgd::{jpeg_info, jpeg_test},
         util::set_animation_disabled,
     },
 };
-use cstr_core::cstr;
+use cstr_core::{cstr, CStr};
 use heapless::Vec;
 
 pub fn iter_into_objs<const N: usize>(iterable: Obj) -> Result<[Obj; N], Error> {
@@ -238,5 +240,53 @@ pub extern "C" fn upy_disable_animation(disable: Obj) -> Obj {
         set_animation_disabled(disable.try_into()?);
         Ok(Obj::const_none())
     };
+    unsafe { try_or_raise(block) }
+}
+
+pub extern "C" fn upy_jpeg_info(data: Obj) -> Obj {
+    let block = || {
+        let buffer = unsafe { get_buffer(data) };
+
+        if let Ok(buffer) = buffer {
+            let info = jpeg_info(buffer);
+
+            if let Some(info) = info {
+                let obj = unsafe {
+                    let values = [
+                        mp_obj_new_int(info.0.x as _),
+                        mp_obj_new_int(info.0.y as _),
+                        mp_obj_new_int(info.1 as _),
+                    ];
+                    mp_obj_new_tuple(3, values.as_ptr())
+                };
+
+                Ok(obj)
+            } else {
+                let msg =
+                    unsafe { CStr::from_bytes_with_nul_unchecked(b"Invalid image format.\0") };
+                Err(Error::ValueError(msg))
+            }
+        } else {
+            let msg = unsafe { CStr::from_bytes_with_nul_unchecked(b"Buffer error.\0") };
+            Err(Error::ValueError(msg))
+        }
+    };
+
+    unsafe { try_or_raise(block) }
+}
+
+pub extern "C" fn upy_jpeg_test(data: Obj) -> Obj {
+    let block = || {
+        let buffer = unsafe { get_buffer(data) };
+
+        if let Ok(buffer) = buffer {
+            let result = jpeg_test(buffer);
+            Ok(result.into())
+        } else {
+            let msg = unsafe { CStr::from_bytes_with_nul_unchecked(b"Buffer error.\0") };
+            Err(Error::ValueError(msg))
+        }
+    };
+
     unsafe { try_or_raise(block) }
 }
