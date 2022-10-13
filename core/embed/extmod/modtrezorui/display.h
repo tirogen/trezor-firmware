@@ -29,6 +29,18 @@
 #include TREZOR_BOARD
 #include "display_interface.h"
 #include "fonts/fonts.h"
+#include "tjpgd/tjpgd.h"
+
+typedef struct {
+  uint32_t data_read;
+  uint32_t data_len;
+  uint32_t buffer_width;
+  uint32_t buffer_height;
+  int current_line;
+  int current_line_pix;
+  const uint8_t *data;
+  uint8_t *buffer;
+} jpeg_context_t;
 
 #define AVATAR_IMAGE_SIZE 144
 #if defined TREZOR_MODEL_T || defined TREZOR_MODEL_1
@@ -61,10 +73,21 @@ void display_clear(void);
 void display_bar(int x, int y, int w, int h, uint16_t c);
 void display_bar_radius(int x, int y, int w, int h, uint16_t c, uint16_t b,
                         uint8_t r);
+void display_bar_radius_buffer(int x, int y, int w, int h, uint8_t r,
+                               buffer_text_t *buffer);
 
 bool display_toif_info(const uint8_t *buf, uint32_t len, uint16_t *out_w,
                        uint16_t *out_h, toif_format_t *out_format);
+
+bool display_jpeg_info(const uint8_t *data, uint32_t len, uint16_t *out_w,
+                       uint16_t *out_h, uint16_t *out_mcu_height);
 void display_jpeg(int x, int y, const uint8_t *data, uint32_t datalen);
+
+void display_jpeg_buffer_prepare(JDEC *jd, jpeg_context_t *jpg_context,
+                                 uint8_t *buffer, const uint8_t *data,
+                                 uint32_t datalen, uint32_t line_width);
+void display_jpeg_buffer_decomp(JDEC *jd);
+
 void display_image(int x, int y, int w, int h, const void *data,
                    uint32_t datalen);
 void display_avatar(int x, int y, const void *data, uint32_t datalen,

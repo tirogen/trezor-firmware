@@ -159,6 +159,45 @@ void display_bar_radius(int x, int y, int w, int h, uint16_t c, uint16_t b,
   PIXELDATA_DIRTY();
 }
 
+void display_bar_radius_buffer(int x, int y, int w, int h, uint8_t r,
+                               buffer_text_t *buffer) {
+  if (h > 32) {
+    return;
+  }
+  if (r != 2 && r != 4 && r != 8 && r != 16) {
+    return;
+  } else {
+    r = 16 / r;
+  }
+  int x0 = 0, y0 = 0, x1 = 0, y1 = 0;
+  clamp_coords(x, y, w, h, &x0, &y0, &x1, &y1);
+  for (int j = y0; j <= y1; j++) {
+    for (int i = x0; i <= x1; i++) {
+      int rx = i - x;
+      int ry = j - y;
+      int p = j * DISPLAY_RESX + i;
+      uint8_t c = 0;
+      if (rx < CORNER_RADIUS / r && ry < CORNER_RADIUS / r) {
+        c = cornertable[rx * r + ry * r * CORNER_RADIUS];
+      } else if (rx < CORNER_RADIUS / r && ry >= h - CORNER_RADIUS / r) {
+        c = cornertable[rx * r + (h - 1 - ry) * r * CORNER_RADIUS];
+      } else if (rx >= w - CORNER_RADIUS / r && ry < CORNER_RADIUS / r) {
+        c = cornertable[(w - 1 - rx) * r + ry * r * CORNER_RADIUS];
+      } else if (rx >= w - CORNER_RADIUS / r && ry >= h - CORNER_RADIUS / r) {
+        c = cornertable[(w - 1 - rx) * r + (h - 1 - ry) * r * CORNER_RADIUS];
+      } else {
+        c = 15;
+      }
+      int b = p / 2;
+      if (p % 2) {
+        buffer->buffer[b] |= c << 4;
+      } else {
+        buffer->buffer[b] |= (c);
+      }
+    }
+  }
+}
+
 #define UZLIB_WINDOW_SIZE (1 << 10)
 
 static void uzlib_prepare(struct uzlib_uncomp *decomp, uint8_t *window,
@@ -294,6 +333,31 @@ static int display_jpeg_out(
   return 1;
 }
 
+bool display_jpeg_info(const uint8_t *data, uint32_t len, uint16_t *out_w,
+                       uint16_t *out_h, uint16_t *out_mcu_height) {
+  JDEC jd;
+  jpeg_info_t jpg;
+
+  jpg.data = data;
+  jpg.data_read = 0;
+  jpg.data_len = len;
+  jpg.x0 = 0;
+  jpg.y0 = 0;
+
+  JRESULT res = jd_prepare(&jd, display_jpeg_in, display_jpeg_work,
+                           sizeof(display_jpeg_work), &jpg);
+
+  *out_w = jd.width;
+  *out_h = jd.height;
+  *out_mcu_height = jd.msy * 8;
+
+  if (*out_mcu_height > 16) {
+    return false;
+  }
+
+  return res == JDR_OK;
+}
+
 void display_jpeg(int x, int y, const uint8_t *data, uint32_t datalen) {
   x += DISPLAY_OFFSET.x;
   y += DISPLAY_OFFSET.y;
@@ -311,6 +375,90 @@ void display_jpeg(int x, int y, const uint8_t *data, uint32_t datalen) {
              &jpg);
 
   jd_decomp(&jd, display_jpeg_out, 0);
+}
+
+static size_t display_jpeg_in_buffer(
+    JDEC *jdec,    /* Pointer to the decompression object */
+    uint8_t *buff, /* Pointer to buffer to store the read data */
+    size_t ndata   /* Number of bytes to read/remove */
+) {
+  jpeg_context_t *jpg = (jpeg_context_t *)jdec->device;
+
+  if (buff != NULL) {
+    if ((jpg->data_read + ndata) <= jpg->data_len) {
+      memcpy(buff, &jpg->data[jpg->data_read], ndata);
+    } else {
+      int rest = jpg->data_len - jpg->data_read;
+
+      if (rest > 0) {
+        memcpy(buff, &jpg->data[jpg->data_read], rest);
+      } else {
+        // error - no data
+        return 0;
+      }
+    }
+  }
+  jpg->data_read += ndata;
+  return ndata;
+}
+
+static int display_jpeg_out_buffer(
+    JDEC *jdec,   /* Pointer to the decompression object */
+    void *bitmap, /* Bitmap to be output */
+    JRECT *rect   /* Rectangle to output */
+) {
+  jpeg_context_t *jpg = (jpeg_context_t *)jdec->device;
+
+  int w = rect->right - rect->left + 1;
+  int h = rect->bottom - rect->top + 1;
+  int x = rect->left;
+
+  if (h > jpg->buffer_height) {
+    // unsupported height, call and let know
+    return 1;
+  }
+
+  int buffer_len = (int)(jpg->buffer_width * jpg->buffer_height);
+
+  for (int i = 0; i < h; i++) {
+    for (int j = 0; j < w; j++) {
+      int buffer_pos = (x + j) + (i * (int)jpg->buffer_width);
+      if (buffer_pos < buffer_len) {
+        ((uint16_t *)jpg->buffer)[buffer_pos] = ((uint16_t *)bitmap)[i * w + j];
+      }
+    }
+  }
+
+  jpg->current_line_pix += w;
+
+  if (jpg->current_line_pix >= jpg->buffer_width) {
+    jpg->current_line_pix = 0;
+    jpg->current_line += (int)(jdec->msy * 8);
+    // finished line, abort and continue later
+    return 0;
+  }
+
+  return 1;
+}
+
+void display_jpeg_buffer_prepare(JDEC *jd, jpeg_context_t *jpg_context,
+                                 uint8_t *buffer, const uint8_t *data,
+                                 uint32_t datalen, uint32_t line_width) {
+  jpg_context->data = data;
+  jpg_context->data_read = 0;
+  jpg_context->data_len = datalen;
+  jpg_context->buffer = buffer;
+  jpg_context->buffer_width = line_width;
+  jpg_context->buffer_height = 16;
+  jpg_context->current_line = 0;
+  jpg_context->current_line_pix = 0;
+
+  jd_prepare(jd, display_jpeg_in_buffer, display_jpeg_work,
+             sizeof(display_jpeg_work), jpg_context);
+}
+
+void display_jpeg_buffer_decomp(JDEC *jd) {
+  jd_decomp(jd, display_jpeg_out_buffer, 0);
 }
 
 #ifndef USE_DMA2D

@@ -1,9 +1,22 @@
 use super::ffi;
-use core::ptr;
+use core::{mem::MaybeUninit, ptr};
 use cty::c_int;
 use num_traits::FromPrimitive;
 
 use crate::trezorhal::buffers::BufferText;
+
+pub use ffi::{buffer_jpeg_t as BufferJpeg, jpeg_context_t as JpegContext, JDEC};
+
+impl Default for ffi::JDEC {
+    fn default() -> Self {
+        unsafe { MaybeUninit::<Self>::zeroed().assume_init() }
+    }
+}
+impl Default for JpegContext {
+    fn default() -> Self {
+        unsafe { MaybeUninit::<Self>::zeroed().assume_init() }
+    }
+}
 
 #[derive(PartialEq, Debug, Eq, FromPrimitive)]
 pub enum ToifFormat {
@@ -17,6 +30,12 @@ pub struct ToifInfo {
     pub width: u16,
     pub height: u16,
     pub format: ToifFormat,
+}
+
+pub struct JpegInfo {
+    pub width: u16,
+    pub height: u16,
+    pub mcu_height: u16,
 }
 
 pub fn backlight(val: i32) -> i32 {
@@ -97,6 +116,12 @@ pub fn bar_radius(x: i16, y: i16, w: i16, h: i16, fgcolor: u16, bgcolor: u16, ra
     }
 }
 
+pub fn bar_radius_buffer(x: i16, y: i16, w: i16, h: i16, radius: u8, buffer: &mut BufferText) {
+    unsafe {
+        ffi::display_bar_radius_buffer(x.into(), y.into(), w.into(), h.into(), radius, buffer as _)
+    }
+}
+
 pub fn icon(x: i16, y: i16, w: i16, h: i16, data: &[u8], fgcolor: u16, bgcolor: u16) {
     unsafe {
         ffi::display_icon(
@@ -122,6 +147,58 @@ pub fn image(x: i16, y: i16, w: i16, h: i16, data: &[u8]) {
             data.as_ptr() as _,
             data.len() as _,
         )
+    }
+}
+
+pub fn jpeg_info(data: &[u8]) -> Result<JpegInfo, ()> {
+    let mut width: cty::uint16_t = 0;
+    let mut height: cty::uint16_t = 0;
+    let mut mcu_height: cty::uint16_t = 0;
+    if unsafe {
+        ffi::display_jpeg_info(
+            data.as_ptr() as _,
+            data.len() as _,
+            &mut width,
+            &mut height,
+            &mut mcu_height,
+        )
+    } {
+        Ok(JpegInfo {
+            width,
+            height,
+            mcu_height,
+        })
+    } else {
+        Err(())
+    }
+}
+
+pub fn jpeg(x: i16, y: i16, data: &[u8]) {
+    unsafe { ffi::display_jpeg(x.into(), y.into(), data.as_ptr() as _, data.len() as _) }
+}
+
+pub fn jpeg_buffer_prepare(
+    jd: &mut JDEC,
+    jpg_context: &mut JpegContext,
+    buffer: &mut BufferJpeg,
+    data: &[u8],
+    line_width: i16,
+) {
+    unsafe {
+        ffi::display_jpeg_buffer_prepare(
+            jd as _,
+            jpg_context as _,
+            &mut buffer.buffer as _,
+            data.as_ptr() as _,
+            data.len() as _,
+            line_width as _,
+        );
+    }
+}
+
+pub fn jpeg_buffer_decomp(jd: &mut JDEC) {
+    unsafe {
+        ffi::display_jpeg_buffer_decomp(jd as _);
     }
 }
 

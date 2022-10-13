@@ -30,9 +30,17 @@
 #define BUFFER_SECTION
 #endif
 
+#if defined BOOTLOADER
+#define NODMA_BUFFER_SECTION
+#else
+#define NODMA_BUFFER_SECTION __attribute__((section(".no_dma_buffers")))
+#endif
+
 #define BUFFERS_16BPP 3
 #define BUFFERS_4BPP 3
 #define BUFFERS_TEXT 1
+#define BUFFERS_JPEG 1
+#define BUFFERS_BLURRING 1
 
 const int32_t text_buffer_height = FONT_MAX_HEIGHT;
 const int32_t buffer_width = DISPLAY_RESX;
@@ -40,6 +48,10 @@ const int32_t buffer_width = DISPLAY_RESX;
 BUFFER_SECTION line_buffer_16bpp_t line_buffers_16bpp[BUFFERS_16BPP];
 BUFFER_SECTION line_buffer_4bpp_t line_buffers_4bpp[BUFFERS_4BPP];
 BUFFER_SECTION buffer_text_t text_buffers[BUFFERS_TEXT];
+#if !defined BOOTLOADER
+NODMA_BUFFER_SECTION buffer_jpeg_t jpeg_buffers[BUFFERS_JPEG];
+NODMA_BUFFER_SECTION buffer_blurring_t blurring_buffers[BUFFERS_BLURRING];
+#endif
 
 line_buffer_16bpp_t* buffers_get_line_buffer_16bpp(uint16_t idx, bool clear) {
   if (idx >= BUFFERS_16BPP) {
@@ -70,5 +82,38 @@ buffer_text_t* buffers_get_text_buffer(uint16_t idx, bool clear) {
   }
   return &text_buffers[idx];
 }
+
+#ifdef BOOTLOADER
+buffer_jpeg_t* buffers_get_jpeg_buffer(uint16_t idx, bool clear) {
+  return NULL;
+}
+
+buffer_blurring_t* buffers_get_blurring_buffer(uint16_t idx, bool clear) {
+  return NULL;
+}
+#else
+
+buffer_jpeg_t* buffers_get_jpeg_buffer(uint16_t idx, bool clear) {
+  if (idx >= BUFFERS_JPEG) {
+    return NULL;
+  }
+
+  if (clear) {
+    memzero(&jpeg_buffers[idx], sizeof(jpeg_buffers[idx]));
+  }
+  return &jpeg_buffers[idx];
+}
+
+buffer_blurring_t* buffers_get_blurring_buffer(uint16_t idx, bool clear) {
+  if (idx >= BUFFERS_BLURRING) {
+    return NULL;
+  }
+
+  if (clear) {
+    memzero(&blurring_buffers[idx], sizeof(blurring_buffers[idx]));
+  }
+  return &blurring_buffers[idx];
+}
+#endif
 
 #endif
