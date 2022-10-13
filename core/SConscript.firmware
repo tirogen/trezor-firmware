@@ -377,6 +377,7 @@ SOURCE_TREZORHAL = [
     'embed/trezorhal/usbd_core.c',
     'embed/trezorhal/usbd_ctlreq.c',
     'embed/trezorhal/usbd_ioreq.c',
+    'embed/trezorhal/time_measurement.c',
     'embed/trezorhal/util.s',
     'embed/trezorhal/vectortable.s',
 ]

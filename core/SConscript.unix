@@ -341,6 +341,7 @@ SOURCE_UNIX = [
     'embed/unix/rng.c',
     'embed/unix/touch.c',
     'embed/unix/usb.c',
+    'embed/unix/time_measurement.c',
     'vendor/micropython/shared/runtime/gchelper_generic.c',
     'vendor/micropython/ports/unix/alloc.c',
     'vendor/micropython/ports/unix/gccollect.c',
