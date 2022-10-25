@@ -42,7 +42,7 @@ pub const GREY_MEDIUM: Color = Color::rgb(0x64, 0x64, 0x64);
 pub const GREY_DARK: Color = Color::rgb(0x33, 0x33, 0x33); // greyer
 pub const VIOLET: Color = Color::rgb(0x9E, 0x27, 0xD6);
 
-pub const ERROR_COLOR: Color = Color::rgb(0xAD, 0x2B, 0x2B);
+pub const FATAL_ERROR_COLOR: Color = Color::rgb(0xAD, 0x2B, 0x2B);
 
 // Commonly used corner radius (i.e. for buttons).
 pub const RADIUS: u8 = 2;
@@ -398,9 +398,10 @@ pub fn textstyle_number(num: i32) -> &'static TextStyle {
     }
 }
 pub const TEXT_ERROR_NORMAL: TextStyle =
-    TextStyle::new(Font::NORMAL, FG, ERROR_COLOR, GREY_LIGHT, GREY_LIGHT);
+    TextStyle::new(Font::NORMAL, FG, FATAL_ERROR_COLOR, GREY_LIGHT, GREY_LIGHT);
 pub const TEXT_ERROR_BOLD: TextStyle =
-    TextStyle::new(Font::BOLD, FG, ERROR_COLOR, GREY_LIGHT, GREY_LIGHT);
+    TextStyle::new(Font::BOLD, FG, FATAL_ERROR_COLOR, GREY_LIGHT, GREY_LIGHT);
+
 pub const TEXT_NORMAL_OFF_WHITE: TextStyle =
     TextStyle::new(Font::NORMAL, OFF_WHITE, BG, GREY_LIGHT, GREY_LIGHT);
 pub const TEXT_CHECKLIST_DEFAULT: TextStyle =
