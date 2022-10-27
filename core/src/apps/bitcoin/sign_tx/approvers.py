@@ -346,7 +346,7 @@ class CoinJoinApprover(Approver):
     COINJOIN_FLAGS_SIGNABLE = const(0x01)
     COINJOIN_FLAGS_NO_FEE = const(0x02)
 
-    COINJOIN_REQ_PUBKEY = b""
+    COINJOIN_REQ_PUBKEY = b"\x03\x0f\xdf^(\x9bZ\xefSb\x90\x95:\xe8\x1c\xe6\x0e\x84\x1f\xf9V\xf3f\xac\x12?\xa6\x9d\xb3\xc7\x9f!\xb0"
     if __debug__:
         # secp256k1 public key of m/0h for "all all ... all" seed.
         COINJOIN_REQ_PUBKEY_DEBUG = b"\x03\x0f\xdf^(\x9bZ\xefSb\x90\x95:\xe8\x1c\xe6\x0e\x84\x1f\xf9V\xf3f\xac\x12?\xa6\x9d\xb3\xc7\x9f!\xb0"
