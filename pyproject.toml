@@ -73,7 +73,7 @@ inotify = "*"
 yamllint = "^1.25.0"
 
 # tools
-binsize = "^0.1.1"
+binsize = "^0.1.2"
 
 [tool.poetry.dev-dependencies]
 scan-build = "*"
