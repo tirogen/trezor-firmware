@@ -1,5 +1,4 @@
 use crate::{
-    micropython::buffer::StrBuffer,
     trezorhal::random,
     ui::{
         component::{text::common::TextBox, Child, Component, ComponentExt, Event, EventCtx},
@@ -13,7 +12,7 @@ use super::{
     ButtonDetails, ButtonLayout, ChangingTextLine, ChoiceFactory, ChoiceItem, ChoicePage,
     ChoicePageMsg,
 };
-use heapless::String;
+use heapless::{String, Vec};
 
 pub enum PinEntryMsg {
     Confirmed,
@@ -24,39 +23,32 @@ const MAX_PIN_LENGTH: usize = 50;
 const MAX_VISIBLE_DOTS: usize = 18;
 const MAX_VISIBLE_DIGITS: usize = 18;
 
-const CHOICE_LENGTH: usize = 13;
+const ACTIONS_LENGTH: usize = 3;
+const DIGIT_LENGTH: usize = 10;
+const CHOICE_LENGTH: usize = ACTIONS_LENGTH + DIGIT_LENGTH;
 const DELETE_INDEX: usize = 0;
 const SHOW_INDEX: usize = 1;
 const PROMPT_INDEX: usize = 2;
-const CHOICES: [&str; CHOICE_LENGTH] = [
-    "DELETE",
-    "SHOW",
-    "ENTER PIN",
-    "0",
-    "1",
-    "2",
-    "3",
-    "4",
-    "5",
-    "6",
-    "7",
-    "8",
-    "9",
-];
+const ACTIONS: [&str; ACTIONS_LENGTH] = ["DELETE", "SHOW", "ENTER PIN"];
+const DIGITS: [&str; DIGIT_LENGTH] = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
 
-struct ChoiceFactoryPIN {
-    prompt: StrBuffer,
+struct ChoiceFactoryPIN<'a> {
+    current_digits: Vec<&'a str, 10>,
 }
 
-impl ChoiceFactoryPIN {
-    fn new(prompt: StrBuffer) -> Self {
-        Self { prompt }
+impl<'a> ChoiceFactoryPIN<'a> {
+    fn new(current_digits: Vec<&'a str, 10>) -> Self {
+        Self { current_digits }
     }
 }
 
-impl ChoiceFactory for ChoiceFactoryPIN {
+impl ChoiceFactory for ChoiceFactoryPIN<'_> {
     fn get(&self, choice_index: u8) -> ChoiceItem {
-        let choice_str = CHOICES[choice_index as usize];
+        let choice_str = if choice_index < ACTIONS_LENGTH as u8 {
+            ACTIONS[choice_index as usize]
+        } else {
+            self.current_digits[(choice_index - ACTIONS_LENGTH as u8) as usize]
+        };
 
         let mut choice_item = ChoiceItem::new(choice_str, ButtonLayout::default_three_icons());
 
@@ -84,22 +76,25 @@ impl ChoiceFactory for ChoiceFactoryPIN {
 }
 
 /// Component for entering a PIN.
-pub struct PinEntry {
-    choice_page: ChoicePage<ChoiceFactoryPIN>,
+pub struct PinEntry<'a> {
+    choice_page: ChoicePage<ChoiceFactoryPIN<'a>>,
+    current_digits: Vec<&'a str, 10>,
     pin_dots: Child<ChangingTextLine<String<MAX_PIN_LENGTH>>>,
     show_real_pin: bool,
     textbox: TextBox<MAX_PIN_LENGTH>,
 }
 
-impl PinEntry {
-    pub fn new(prompt: StrBuffer) -> Self {
-        let choices = ChoiceFactoryPIN::new(prompt);
+impl PinEntry<'_> {
+    pub fn new() -> Self {
+        let current_digits: Vec<&str, 10> = DIGITS.into_iter().collect();
+        let choices = ChoiceFactoryPIN::new(current_digits.clone());
 
         Self {
             // Starting at the digit 0
             choice_page: ChoicePage::new(choices)
                 .with_initial_page_counter(PROMPT_INDEX as u8 + 1)
                 .with_carousel(),
+            current_digits,
             pin_dots: Child::new(ChangingTextLine::center_mono(String::new())),
             show_real_pin: false,
             textbox: TextBox::empty(),
@@ -107,7 +102,7 @@ impl PinEntry {
     }
 
     fn append_new_digit(&mut self, ctx: &mut EventCtx, page_counter: u8) {
-        let digit = CHOICES[page_counter as usize];
+        let digit = self.current_digits[(page_counter - ACTIONS_LENGTH as u8) as usize];
         self.textbox.append_slice(ctx, digit);
     }
 
@@ -147,7 +142,7 @@ impl PinEntry {
     }
 }
 
-impl Component for PinEntry {
+impl Component for PinEntry<'_> {
     type Msg = PinEntryMsg;
 
     fn place(&mut self, bounds: Rect) -> Rect {
@@ -184,13 +179,13 @@ impl Component for PinEntry {
                     if !self.is_full() {
                         self.append_new_digit(ctx, page_counter);
                         self.update_pin_dots(ctx);
-                        // Choosing any random digit to be shown next
-                        let new_page_counter = random::uniform_between(
-                            PROMPT_INDEX as u32 + 1,
-                            (CHOICE_LENGTH - 1) as u32,
+                        // Randomizing the positions of all digits except the chosen one.
+                        random::shuffle_all_but_one(
+                            &mut self.current_digits,
+                            page_counter as usize - ACTIONS_LENGTH,
                         );
-                        self.choice_page
-                            .set_page_counter(ctx, new_page_counter as u8);
+                        let new_choices = ChoiceFactoryPIN::new(self.current_digits.clone());
+                        self.choice_page.reset(ctx, new_choices, false, true);
                         ctx.request_paint();
                     }
                 }
@@ -209,7 +204,7 @@ impl Component for PinEntry {
 use super::{ButtonAction, ButtonPos};
 
 #[cfg(feature = "ui_debug")]
-impl crate::trace::Trace for PinEntry {
+impl crate::trace::Trace for PinEntry<'_> {
     fn get_btn_action(&self, pos: ButtonPos) -> String<25> {
         match pos {
             ButtonPos::Left => ButtonAction::PrevPage.string(),
@@ -220,7 +215,9 @@ impl crate::trace::Trace for PinEntry {
                     DELETE_INDEX => ButtonAction::Action("Delete last digit").string(),
                     SHOW_INDEX => ButtonAction::Action("Show PIN").string(),
                     PROMPT_INDEX => ButtonAction::Confirm.string(),
-                    _ => ButtonAction::select_item(CHOICES[current_index]),
+                    _ => ButtonAction::select_item(
+                        self.current_digits[current_index - ACTIONS_LENGTH],
+                    ),
                 }
             }
         }
