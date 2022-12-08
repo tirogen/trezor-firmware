@@ -979,7 +979,10 @@ JRESULT jd_prepare (
 	jd->sz_pool = sz_pool;	/* Size of given work memory */
 	jd->infunc = infunc;	/* Stream input function */
 	jd->device = dev;		/* I/O device identifier */
-
+  // TREZOR: moved from decomp function
+  jd->dcv[2] = jd->dcv[1] = jd->dcv[0] = 0;	/* Initialize DC values */
+  jd->rsc = 0;
+  jd->rst = 0;
 	jd->inbuf = seg = alloc_pool(jd, JD_SZBUF);		/* Allocate stream input buffer */
 	if (!seg) return JDR_MEM1;
 
@@ -1122,7 +1125,7 @@ JRESULT jd_decomp (
 )
 {
 	unsigned int x, y, mx, my;
-	uint16_t rst, rsc;
+	//uint16_t rst, rsc;
 	JRESULT rc;
 
 
@@ -1131,16 +1134,17 @@ JRESULT jd_decomp (
 
 	mx = jd->msx * 8; my = jd->msy * 8;			/* Size of the MCU (pixel) */
 
-	jd->dcv[2] = jd->dcv[1] = jd->dcv[0] = 0;	/* Initialize DC values */
-	rst = rsc = 0;
+  // TREZOR: commented out to enable returning from interrupted decompression
+  //	jd->dcv[2] = jd->dcv[1] = jd->dcv[0] = 0;	/* Initialize DC values */
+	//  rst = rsc = 0;
 
 	rc = JDR_OK;
 	for (y = 0; y < jd->height; y += my) {		/* Vertical loop of MCUs */
 		for (x = 0; x < jd->width; x += mx) {	/* Horizontal loop of MCUs */
-			if (jd->nrst && rst++ == jd->nrst) {	/* Process restart interval if enabled */
-				rc = restart(jd, rsc++);
+			if (jd->nrst && jd->rst++ == jd->nrst) {	/* Process restart interval if enabled */
+				rc = restart(jd, jd->rsc++);
 				if (rc != JDR_OK) return rc;
-				rst = 1;
+        jd->rst = 1;
 			}
 			rc = mcu_load(jd);					/* Load an MCU (decompress huffman coded stream, dequantize and apply IDCT) */
 			if (rc != JDR_OK) return rc;

@@ -66,6 +66,8 @@ struct JDEC {
 	uint8_t ncomp;				/* Number of color components 1:grayscale, 3:color */
 	int16_t dcv[3];				/* Previous DC element of each component */
 	uint16_t nrst;				/* Restart inverval */
+  uint16_t rst;
+  uint16_t rsc;
 	uint16_t width, height;		/* Size of the input image (pixel) */
 	uint8_t* huffbits[2][2];	/* Huffman bit distribution tables [id][dcac] */
 	uint16_t* huffcode[2][2];	/* Huffman code word tables [id][dcac] */
