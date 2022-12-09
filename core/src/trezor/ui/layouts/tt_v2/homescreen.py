@@ -20,6 +20,7 @@ class HomescreenBase(RustLayout):
 
     def _paint(self) -> None:
         self.layout.paint()
+        ui.refresh()
 
     def _first_paint(self) -> None:
         if storage_cache.homescreen_shown is not self.RENDER_INDICATOR:
