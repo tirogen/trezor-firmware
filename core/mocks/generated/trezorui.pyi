@@ -59,6 +59,12 @@ class Display:
         format Raises an exception for corrupted images.
         """
 
+    def jpeg_info(self, image: bytes) -> tuple[int, int, int]:
+        """
+        Returns tuple containing jpeg image dimensions: width, height, mcu height
+        format Raises an exception for corrupted images.
+        """
+
     def image(self, x: int, y: int, image: bytes) -> None:
         """
         Renders an image at position (x,y).

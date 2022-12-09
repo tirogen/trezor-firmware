@@ -147,6 +147,33 @@ STATIC mp_obj_t mod_trezorui_Display_toif_info(mp_obj_t self, mp_obj_t image) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(mod_trezorui_Display_toif_info_obj,
                                  mod_trezorui_Display_toif_info);
 
+
+/// def jpeg_info(self, image: bytes) -> tuple[int, int, int]:
+///     """
+///     Returns tuple containing jpeg image dimensions: width, height, mcu height
+///     format Raises an exception for corrupted images.
+///     """
+STATIC mp_obj_t mod_trezorui_Display_jpeg_info(mp_obj_t self, mp_obj_t image) {
+  mp_buffer_info_t buffer = {0};
+  mp_get_buffer_raise(image, &buffer, MP_BUFFER_READ);
+
+  uint16_t w = 0;
+  uint16_t h = 0;
+  uint16_t mcu_height = 0;
+  bool valid = display_jpeg_info(buffer.buf, buffer.len, &w, &h, &mcu_height);
+
+  if (!valid) {
+    mp_raise_ValueError("Invalid image format");
+  }
+  mp_obj_tuple_t *tuple = MP_OBJ_TO_PTR(mp_obj_new_tuple(3, NULL));
+  tuple->items[0] = MP_OBJ_NEW_SMALL_INT(w);
+  tuple->items[1] = MP_OBJ_NEW_SMALL_INT(h);
+  tuple->items[2] = MP_OBJ_NEW_SMALL_INT(mcu_height);
+  return MP_OBJ_FROM_PTR(tuple);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(mod_trezorui_Display_jpeg_info_obj,
+                                 mod_trezorui_Display_jpeg_info);
+
 /// def image(self, x: int, y: int, image: bytes) -> None:
 ///     """
 ///     Renders an image at position (x,y).
@@ -617,6 +644,8 @@ STATIC const mp_rom_map_elem_t mod_trezorui_Display_locals_dict_table[] = {
      MP_ROM_PTR(&mod_trezorui_Display_bar_radius_obj)},
     {MP_ROM_QSTR(MP_QSTR_toif_info),
      MP_ROM_PTR(&mod_trezorui_Display_toif_info_obj)},
+    {MP_ROM_QSTR(MP_QSTR_jpeg_info),
+     MP_ROM_PTR(&mod_trezorui_Display_jpeg_info_obj)},
     {MP_ROM_QSTR(MP_QSTR_image), MP_ROM_PTR(&mod_trezorui_Display_image_obj)},
     {MP_ROM_QSTR(MP_QSTR_avatar), MP_ROM_PTR(&mod_trezorui_Display_avatar_obj)},
     {MP_ROM_QSTR(MP_QSTR_icon), MP_ROM_PTR(&mod_trezorui_Display_icon_obj)},

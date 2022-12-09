@@ -26,13 +26,13 @@ def _validate_homescreen(homescreen: bytes) -> None:
         )
 
     try:
-        w, h, toif_format = ui.display.toif_info(homescreen)
+        w, h, mcu_height = ui.display.jpeg_info(homescreen)
     except ValueError:
         raise DataError("Invalid homescreen")
-    if w != 144 or h != 144:
-        raise DataError("Homescreen must be 144x144 pixel large")
-    if toif_format != ui.display.TOIF_FULL_COLOR_BE:
-        raise DataError("Homescreen must be full-color TOIF image")
+    if w != 240 or h != 240:
+        raise DataError("Homescreen must be 240x240 pixel large")
+    if mcu_height > 16:
+        raise DataError("Unsupported jpeg type")
 
 
 async def apply_settings(ctx: Context, msg: ApplySettings) -> Success:
