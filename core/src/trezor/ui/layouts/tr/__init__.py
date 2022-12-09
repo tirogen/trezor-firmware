@@ -57,6 +57,7 @@ class RustLayout(ui.Layout):
             if msg is not None:
                 raise ui.Result(msg)
             self.layout.paint()
+            ui.refresh()
 
 
 async def confirm_action(
