@@ -24,8 +24,6 @@
 
 #if USE_DMA2D
 
-
-
 #define BUFFERS_16BPP 3
 #define BUFFERS_4BPP 3
 #define BUFFERS_TEXT 1
