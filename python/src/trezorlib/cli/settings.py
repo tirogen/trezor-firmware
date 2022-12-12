@@ -14,10 +14,10 @@
 # You should have received a copy of the License along with this library.
 # If not, see <https://www.gnu.org/licenses/lgpl-3.0.html>.
 
+import os
 from typing import TYPE_CHECKING, Optional, cast
 
 import click
-import os
 
 from .. import device, messages, toif
 from . import AliasedGroup, ChoiceType, with_client
@@ -103,13 +103,10 @@ def image_to_jpeg_240x240(filename: str) -> bytes:
         try:
             image = Image.open(filename)
         except Exception as e:
-            raise click.ClickException(
-                "Failed to open image"
-            ) from e
+            raise click.ClickException("Failed to open image") from e
 
-    if 'progressive' in image.info:
+    if "progressive" in image.info:
         raise click.ClickException("Progressive JPEG is not supported")
-
 
     if image.size != (240, 240):
         raise click.ClickException("Wrong size of image - should be 240x240")
@@ -246,15 +243,21 @@ def homescreen(client: "TrezorClient", filename: str) -> str:
         if client.features.model == "1":
             img = image_to_t1(filename)
         else:
-            if client.features.homescreen_format == HomescreenFormat.Jpeg240x240:
+            if (
+                client.features.homescreen_format
+                == messages.HomescreenFormat.Jpeg240x240
+            ):
                 img = image_to_jpeg_240x240(filename)
-            elif client.features.homescreen_format == HomescreenFormat.Toif144x144 or client.features.homescreen_format is None:
+            elif (
+                client.features.homescreen_format
+                == messages.HomescreenFormat.Toif144x144
+                or client.features.homescreen_format is None
+            ):
                 img = image_to_toif_144x144(filename)
             else:
                 raise click.ClickException(
                     "Unknown image format requested by the device."
                 )
-
 
     return device.apply_settings(client, homescreen=img)
 
@@ -266,7 +269,7 @@ def homescreen(client: "TrezorClient", filename: str) -> str:
 @click.argument("level", type=ChoiceType(SAFETY_LEVELS))
 @with_client
 def safety_checks(
-        client: "TrezorClient", always: bool, level: messages.SafetyCheckLevel
+    client: "TrezorClient", always: bool, level: messages.SafetyCheckLevel
 ) -> str:
     """Set safety check level.
 

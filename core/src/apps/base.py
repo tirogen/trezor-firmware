@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 import storage.cache as storage_cache
 import storage.device as storage_device
 from trezor import config, utils, wire, workflow
-from trezor.enums import MessageType, HomescreenFormat
+from trezor.enums import HomescreenFormat, MessageType
 from trezor.messages import Success, UnlockPath
 
 from . import workflow_handlers
