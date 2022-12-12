@@ -38,6 +38,18 @@
 #define TEXT_BUFFER_SIZE (BUFFER_PIXELS * TEXT_BUFFER_HEIGHT) / 2
 #define JPEG_BUFFER_SIZE (BUFFER_PIXELS * 16 * 2)
 
+#if defined BOOTLOADER
+#define BUFFER_SECTION __attribute__((section(".buf")))
+#else
+#define BUFFER_SECTION
+#endif
+
+#if defined BOOTLOADER || defined TREZOR_EMULATOR
+#define NODMA_BUFFER_SECTION
+#else
+#define NODMA_BUFFER_SECTION __attribute__((section(".no_dma_buffers")))
+#endif
+
 typedef __attribute__((aligned(4))) struct {
   uint8_t buffer[LINE_BUFFER_16BPP_SIZE];
 } line_buffer_16bpp_t;
@@ -64,10 +76,7 @@ extern const int32_t buffer_width;
 line_buffer_16bpp_t* buffers_get_line_buffer_16bpp(uint16_t idx, bool clear);
 line_buffer_4bpp_t* buffers_get_line_buffer_4bpp(uint16_t idx, bool clear);
 buffer_text_t* buffers_get_text_buffer(uint16_t idx, bool clear);
-
-#if !defined BOOTLOADER
 buffer_jpeg_t* buffers_get_jpeg_buffer(uint16_t idx, bool clear);
 buffer_blurring_t* buffers_get_blurring_buffer(uint16_t idx, bool clear);
-#endif
 
 #endif  // _BUFFERS_H

@@ -48,8 +48,7 @@
 static struct { int x, y; } DISPLAY_OFFSET;
 
 // 3100 is needed according to tjpgd docs, 6 << 10 is for huffman decoding table
-__attribute__((section(".no_dma_buffers")))
-static uint8_t display_jpeg_work[3100 + (6 << 10)];
+NODMA_BUFFER_SECTION static uint8_t display_jpeg_work[3100 + (6 << 10)];
 
 typedef struct {
   uint32_t data_read;
