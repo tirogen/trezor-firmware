@@ -45,6 +45,10 @@ class HomescreenBase(RustLayout):
             if msg is not None:
                 raise ui.Result(msg)
 
+    # In __debug__ mode, ignore {confirm,swipe,input}_signal.
+    def create_tasks(self) -> tuple[loop.AwaitableTask, ...]:
+        return self.handle_timers(), self.handle_input_and_rendering()
+
 
 class Homescreen(HomescreenBase):
     RENDER_INDICATOR = storage_cache.HOMESCREEN_ON
