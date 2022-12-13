@@ -51,6 +51,7 @@ class RustLayout(ui.Layout):
     def _paint(self) -> None:
         import storage.cache as storage_cache
 
+        ui.display.sync()
         painted = self.layout.paint()
         if storage_cache.homescreen_shown is not None and painted:
             storage_cache.homescreen_shown = None
@@ -191,6 +192,7 @@ def draw_simple(layout: Any) -> None:
     layout.attach_timer_fn(dummy_set_timer)
     ui.backlight_fade(ui.style.BACKLIGHT_DIM)
     ui.display.clear()
+    ui.display.sync()
     layout.paint()
     ui.refresh()
     ui.backlight_fade(ui.style.BACKLIGHT_NORMAL)

@@ -26,6 +26,11 @@ class Display:
         Clear display with black color.
         """
 
+    def sync(self) -> None:
+        """
+        Sync display (prevent tearing effect).
+        """
+
     def refresh(self) -> None:
         """
         Refresh display (update screen).
