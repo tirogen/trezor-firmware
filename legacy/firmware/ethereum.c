@@ -552,8 +552,8 @@ static bool ethereum_signing_init_common(struct signing_params *params) {
   return true;
 }
 
-static void ethereum_signing_handle_erc20(
-    struct signing_params *params, const EthereumTokenInfo *token) {
+static void ethereum_signing_handle_erc20(struct signing_params *params,
+                                          const EthereumTokenInfo *token) {
   if (params->has_to && ethereum_parse(params->to, params->pubkeyhash)) {
     params->pubkeyhash_set = true;
   } else {
@@ -1070,8 +1070,7 @@ bool ethereum_path_check(uint32_t address_n_count, const uint32_t *address_n,
     valid = valid && (path_slip44 == 60 || path_slip44 == 1);
   } else if (network->slip44 != 60 && network->slip44 != 1) {
     // Allow cross-signing with Ethereum unless it's testnet.
-    valid =
-        valid && (path_slip44 == network->slip44 || path_slip44 == 60);
+    valid = valid && (path_slip44 == network->slip44 || path_slip44 == 60);
   } else {
     valid = valid && (path_slip44 == network->slip44);
   }

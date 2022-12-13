@@ -48,13 +48,14 @@ typedef struct _ParsedEncodedEthereumDefinitions {
 
   // suffix
   uint8_t proof_length;
-  const proof_entry* proof;
+  const proof_entry *proof;
 
-  const ed25519_signature* signed_root_hash;
+  const ed25519_signature *signed_root_hash;
 } ParsedEncodedEthereumDefinitions;
 
 bool _parse_encoded_EthereumDefinitions(
-    ParsedEncodedEthereumDefinitions* const result, const pb_size_t size, const pb_byte_t *bytes) {
+    ParsedEncodedEthereumDefinitions *const result, const pb_size_t size,
+    const pb_byte_t *bytes) {
   // format version + definition type + data version + payload length + payload
   // (at least 1B) + proof length + signed Merkle tree root hash
   if (size < (FORMAT_VERSION_LENGTH + 1 + 4 + 2 + 1 + 1 +
@@ -72,8 +73,8 @@ bool _parse_encoded_EthereumDefinitions(
   result->data_version = read_be(cursor);
   cursor += 4;
 
-  result->payload_length = (((uint16_t)*cursor << 8) |
-                          ((uint16_t)*(cursor + 1)));
+  result->payload_length =
+      (((uint16_t)*cursor << 8) | ((uint16_t) * (cursor + 1)));
   cursor += 2;
 
   result->payload = cursor;
@@ -86,13 +87,14 @@ bool _parse_encoded_EthereumDefinitions(
   cursor += 1;
 
   // check the whole size of incoming bytes array
-  if (size != (cursor - bytes) + result->proof_length * sizeof(proof_entry) + MERKLE_TREE_SIGNED_ROOT_SIZE) {
+  if (size != (cursor - bytes) + result->proof_length * sizeof(proof_entry) +
+                  MERKLE_TREE_SIGNED_ROOT_SIZE) {
     return false;
   }
-  result->proof = (proof_entry*) cursor;
+  result->proof = (proof_entry *)cursor;
   cursor += result->proof_length * sizeof(proof_entry);
 
-  result->signed_root_hash = (ed25519_signature*) cursor;
+  result->signed_root_hash = (ed25519_signature *)cursor;
 
   return true;
 }
@@ -134,7 +136,8 @@ bool _decode_definition(const pb_size_t size, const pb_byte_t *bytes,
   sha256_Init(&context);
   // leaf hash = sha256('\x00' + leaf data)
   sha256_Update(&context, &hash_prefix, 1);
-  sha256_Update(&context, bytes, (parsed_def.payload - bytes) + parsed_def.payload_length);
+  sha256_Update(&context, bytes,
+                (parsed_def.payload - bytes) + parsed_def.payload_length);
   sha256_Final(&context, hash);
 
   int cmp = 0;
@@ -146,8 +149,8 @@ bool _decode_definition(const pb_size_t size, const pb_byte_t *bytes,
     // next_proof))
     sha256_Update(&context, &hash_prefix, 1);
     cmp = memcmp(hash, parsed_def.proof + i, SHA256_DIGEST_LENGTH);
-    min = cmp < 1 ? hash : (void*) (parsed_def.proof + i);
-    max = cmp > 0 ? hash : (void*) (parsed_def.proof + i);
+    min = cmp < 1 ? hash : (void *)(parsed_def.proof + i);
+    max = cmp > 0 ? hash : (void *)(parsed_def.proof + i);
     sha256_Update(&context, min, SHA256_DIGEST_LENGTH);
     sha256_Update(&context, max, SHA256_DIGEST_LENGTH);
     sha256_Final(&context, hash);
@@ -172,8 +175,8 @@ bool _decode_definition(const pb_size_t size, const pb_byte_t *bytes,
   const pb_msgdesc_t *fields = (expected_type == EthereumDefinitionType_NETWORK
                                     ? EthereumNetworkInfo_fields
                                     : EthereumTokenInfo_fields);
-  pb_istream_t stream = pb_istream_from_buffer(
-      parsed_def.payload, parsed_def.payload_length);
+  pb_istream_t stream =
+      pb_istream_from_buffer(parsed_def.payload, parsed_def.payload_length);
   bool status = pb_decode(&stream, fields, definition);
   if (!status) {
     // invalid message
@@ -184,11 +187,13 @@ bool _decode_definition(const pb_size_t size, const pb_byte_t *bytes,
   return true;
 }
 
-void _set_EthereumNetworkInfo_to_builtin(const uint64_t ref_chain_id, const uint32_t ref_slip44,
+void _set_EthereumNetworkInfo_to_builtin(const uint64_t ref_chain_id,
+                                         const uint32_t ref_slip44,
                                          EthereumNetworkInfo *network) {
   if (ref_chain_id == CHAIN_ID_UNKNOWN) {
     // we don't know chain id so we can use only slip44
-    network->slip44 = is_ethereum_slip44(ref_slip44) ? ref_slip44 : SLIP44_UNKNOWN;
+    network->slip44 =
+        is_ethereum_slip44(ref_slip44) ? ref_slip44 : SLIP44_UNKNOWN;
   } else {
     network->slip44 = ethereum_slip44_by_chain_id(ref_chain_id);
   }
@@ -199,9 +204,10 @@ void _set_EthereumNetworkInfo_to_builtin(const uint64_t ref_chain_id, const uint
   memzero(network->name, sizeof(network->name));
 }
 
-bool _get_EthereumNetworkInfo(
-    const EncodedNetwork *encoded_network,
-    const uint64_t ref_chain_id, const uint32_t ref_slip44, EthereumNetworkInfo *network) {
+bool _get_EthereumNetworkInfo(const EncodedNetwork *encoded_network,
+                              const uint64_t ref_chain_id,
+                              const uint32_t ref_slip44,
+                              EthereumNetworkInfo *network) {
   // try to get built-in definition
   _set_EthereumNetworkInfo_to_builtin(ref_chain_id, ref_slip44, network);
 
@@ -216,9 +222,11 @@ bool _get_EthereumNetworkInfo(
         fsm_sendFailure(FailureType_Failure_DataError,
                         _("Network definition mismatch"));
         return false;
-      } else if (ref_slip44 != SLIP44_UNKNOWN && network->slip44 != ref_slip44) {
+      } else if (ref_slip44 != SLIP44_UNKNOWN &&
+                 network->slip44 != ref_slip44) {
         // slip44 mismatch - reset network definition
-        _set_EthereumNetworkInfo_to_builtin(CHAIN_ID_UNKNOWN, SLIP44_UNKNOWN, network);
+        _set_EthereumNetworkInfo_to_builtin(CHAIN_ID_UNKNOWN, SLIP44_UNKNOWN,
+                                            network);
       } else {
         // chain_id does match the reference one (if provided) so prepend one
         // space character to symbol, terminate it (encoded definitions does not
@@ -230,17 +238,17 @@ bool _get_EthereumNetworkInfo(
       }
     } else {
       // decoding failed - reset network definition
-      _set_EthereumNetworkInfo_to_builtin(CHAIN_ID_UNKNOWN, SLIP44_UNKNOWN, network);
+      _set_EthereumNetworkInfo_to_builtin(CHAIN_ID_UNKNOWN, SLIP44_UNKNOWN,
+                                          network);
     }
   }
 
   return true;
 }
 
-bool _get_EthereumTokenInfo(
-    const EncodedToken *encoded_token,
-    const uint64_t ref_chain_id, const char *ref_address,
-    EthereumTokenInfo *token) {
+bool _get_EthereumTokenInfo(const EncodedToken *encoded_token,
+                            const uint64_t ref_chain_id,
+                            const char *ref_address, EthereumTokenInfo *token) {
   EthereumTokenInfo_address_t ref_address_bytes;
   const EthereumTokenInfo *builtin = UnknownToken;
 
@@ -286,21 +294,23 @@ bool _get_EthereumTokenInfo(
 }
 
 const EthereumDefinitionsDecoded *get_EthereumDefinitionsDecoded(
-    const EncodedNetwork *encoded_network,
-    const EncodedToken *encoded_token,
-    const uint64_t ref_chain_id, const uint32_t ref_slip44, const char *ref_address) {
+    const EncodedNetwork *encoded_network, const EncodedToken *encoded_token,
+    const uint64_t ref_chain_id, const uint32_t ref_slip44,
+    const char *ref_address) {
   static EthereumDefinitionsDecoded defs;
   memzero(&defs, sizeof(defs));
 
-  if (!_get_EthereumNetworkInfo(encoded_network, ref_chain_id, ref_slip44, &defs.network)) {
+  if (!_get_EthereumNetworkInfo(encoded_network, ref_chain_id, ref_slip44,
+                                &defs.network)) {
     // error while decoding - chain IDs mismatch
     return NULL;
   }
 
-  if (defs.network.slip44 != SLIP44_UNKNOWN && defs.network.chain_id != CHAIN_ID_UNKNOWN) {
+  if (defs.network.slip44 != SLIP44_UNKNOWN &&
+      defs.network.chain_id != CHAIN_ID_UNKNOWN) {
     // we have found network definition, we can try to load token definition
-    if (!_get_EthereumTokenInfo(encoded_token, defs.network.chain_id, ref_address,
-                                &defs.token)) {
+    if (!_get_EthereumTokenInfo(encoded_token, defs.network.chain_id,
+                                ref_address, &defs.token)) {
       return NULL;
     }
   } else {

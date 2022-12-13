@@ -31,8 +31,8 @@ typedef struct {
 } EthereumDefinitionsDecoded;
 
 const EthereumDefinitionsDecoded *get_EthereumDefinitionsDecoded(
-    const EncodedNetwork *encoded_network,
-    const EncodedToken *encoded_token,
-    const uint64_t ref_chain_id, const uint32_t ref_slip44, const char *ref_address);
+    const EncodedNetwork *encoded_network, const EncodedToken *encoded_token,
+    const uint64_t ref_chain_id, const uint32_t ref_slip44,
+    const char *ref_address);
 
 #endif
