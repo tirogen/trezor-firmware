@@ -28,21 +28,21 @@ impl ReturnToC for ConfirmMsg {
     }
 }
 
-pub struct Confirm {
+pub struct Confirm<'a> {
     bg: Pad,
     bg_color: Color,
     icon: Option<&'static [u8]>,
-    message: Child<Paragraphs<ParagraphVecShort<&'static str>>>,
+    message: Child<Paragraphs<ParagraphVecShort<&'a str>>>,
     left: Child<Button<&'static str>>,
     right: Child<Button<&'static str>>,
     confirm_left: bool,
 }
 
-impl Confirm {
+impl<'a> Confirm<'a> {
     pub fn new(
         bg_color: Color,
         icon: Option<&'static [u8]>,
-        message: Paragraphs<ParagraphVecShort<&'static str>>,
+        message: Paragraphs<ParagraphVecShort<&'a str>>,
         left: Button<&'static str>,
         right: Button<&'static str>,
         confirm_left: bool,
@@ -61,7 +61,7 @@ impl Confirm {
     }
 }
 
-impl Component for Confirm {
+impl<'a> Component for Confirm<'a> {
     type Msg = ConfirmMsg;
 
     fn place(&mut self, bounds: Rect) -> Rect {

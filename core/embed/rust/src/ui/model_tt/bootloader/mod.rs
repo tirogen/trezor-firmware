@@ -8,6 +8,7 @@ use crate::{
         model_tt::constant,
     },
 };
+use heapless::String;
 
 pub mod confirm;
 mod connect;
@@ -121,6 +122,16 @@ extern "C" fn screen_install_confirm(
 
     const ICON: Option<&'static [u8]> = Some(RECEIVE);
 
+    let mut version_str: String<30> = String::new();
+
+    if !vendor {
+        unwrap!(version_str.push_str("to version "));
+    } else {
+        unwrap!(version_str.push_str("version "));
+    }
+    unwrap!(version_str.push_str(version));
+    unwrap!(version_str.push_str("?"));
+
     let msg = if downgrade {
         "Downgrade firmware by"
     } else if vendor {
@@ -131,9 +142,9 @@ extern "C" fn screen_install_confirm(
 
     let mut messages = ParagraphVecShort::new();
 
-    messages.add(Paragraph::new(&theme::TEXT_NORMAL, msg));
-    messages.add(Paragraph::new(&theme::TEXT_NORMAL, text));
-    messages.add(Paragraph::new(&theme::TEXT_NORMAL, version));
+    messages.add(Paragraph::new(&theme::TEXT_NORMAL, msg).centered());
+    messages.add(Paragraph::new(&theme::TEXT_NORMAL, text).centered());
+    messages.add(Paragraph::new(&theme::TEXT_NORMAL, version_str.as_ref()).centered());
 
     if vendor || downgrade {
         messages.add(Paragraph::new(&theme::TEXT_BOLD, "Seed will be erased!").centered());
