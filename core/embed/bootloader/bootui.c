@@ -166,7 +166,7 @@ uint32_t ui_screen_firmware_fingerprint(const image_header *const hdr) {
 
 uint32_t ui_screen_install_confirm_upgrade(const vendor_header *const vhdr,
                                            const image_header *const hdr) {
-  const char *ver_str = format_ver("to version %d.%d.%d?", hdr->version);
+  const char *ver_str = format_ver("%d.%d.%d", hdr->version);
   return screen_install_confirm(vhdr->vstr, vhdr->vstr_len, ver_str, false,
                                 false);
 }
@@ -175,11 +175,11 @@ uint32_t ui_screen_install_confirm_newvendor_or_downgrade_wipe(
     const vendor_header *const vhdr, const image_header *const hdr,
     secbool downgrade_wipe) {
   if (downgrade_wipe) {
-    const char *ver_str = format_ver("to version %d.%d.%d?", hdr->version);
+    const char *ver_str = format_ver("%d.%d.%d", hdr->version);
     return screen_install_confirm(vhdr->vstr, vhdr->vstr_len, ver_str, true,
                                   false);
   } else {
-    const char *ver_str = format_ver("version %d.%d.%d?", hdr->version);
+    const char *ver_str = format_ver("%d.%d.%d", hdr->version);
     return screen_install_confirm(vhdr->vstr, vhdr->vstr_len, ver_str, false,
                                   true);
   }

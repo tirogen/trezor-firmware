@@ -660,7 +660,6 @@ impl<T: ParagraphStrType> ParagraphSource for Paragraph<T> {
     }
 }
 
-
 impl ParagraphStrType for &str {
     fn skip_prefix(&self, chars: usize) -> Self {
         &self[chars..]
