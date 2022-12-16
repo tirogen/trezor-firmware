@@ -235,7 +235,7 @@ extern "C" fn screen_install_progress(progress: u16, initialize: bool, initial_s
 #[no_mangle]
 extern "C" fn screen_wipe_progress(progress: u16, initialize: bool) -> u32 {
     screen_progress(
-        "Wiping device...",
+        "Wiping Trezor...",
         progress,
         initialize,
         theme::BLD_FG,
@@ -285,7 +285,7 @@ extern "C" fn screen_fwinfo(fingerprint: *const cty::c_char) -> u32 {
 extern "C" fn screen_wipe_success() -> u32 {
     let mut messages = ParagraphVecShort::new();
 
-    messages.add(Paragraph::new(&theme::TEXT_BOLD, "Device wiped").centered());
+    messages.add(Paragraph::new(&theme::TEXT_BOLD, "Trezor wiped").centered());
     messages.add(Paragraph::new(&theme::TEXT_BOLD, "successfully.").centered());
 
     let m_top =

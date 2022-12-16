@@ -35,8 +35,8 @@ pub struct Menu {
 
 impl Menu {
     pub fn new(bld_version: &'static str) -> Self {
-        let content_reboot = IconText::new("REBOOT", REBOOT);
-        let content_reset = IconText::new("FACTORY RESET", ERASE);
+        let content_reboot = IconText::new("REBOOT TREZOR", REBOOT);
+        let content_reset = IconText::new("WIPE TREZOR", ERASE);
 
         let mut instance = Self {
             bg: Pad::with_background(BLD_BG),
