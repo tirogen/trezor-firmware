@@ -36,6 +36,13 @@ pub trait ParagraphStrType: AsRef<str> {
     fn skip_prefix(&self, bytes: usize) -> Self;
 }
 
+#[cfg(feature = "bootloader")]
+impl ParagraphStrType for &str {
+    fn skip_prefix(&self, chars: usize) -> Self {
+        &self[chars..]
+    }
+}
+
 pub trait ParagraphSource {
     /// Determines the output type produced.
     type StrType: ParagraphStrType;
@@ -657,11 +664,5 @@ impl<T: ParagraphStrType> ParagraphSource for Paragraph<T> {
 
     fn size(&self) -> usize {
         1
-    }
-}
-
-impl ParagraphStrType for &str {
-    fn skip_prefix(&self, chars: usize) -> Self {
-        &self[chars..]
     }
 }

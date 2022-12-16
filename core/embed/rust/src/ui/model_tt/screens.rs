@@ -1,3 +1,5 @@
+#[cfg(feature = "micropython")]
+use crate::micropython::buffer::StrBuffer;
 use crate::ui::{
     component::{
         text::paragraphs::{Paragraph, ParagraphVecShort, Paragraphs, VecExt},
@@ -12,16 +14,29 @@ use crate::ui::{
     util::from_c_str,
 };
 
+#[cfg(not(feature = "micropython"))]
+fn get_str(text: &str) -> &str {
+    text
+}
+#[cfg(feature = "micropython")]
+fn get_str(text: &'static str) -> StrBuffer {
+    text.into()
+}
+
 #[no_mangle]
 extern "C" fn screen_fatal_error(msg: *const cty::c_char, file: *const cty::c_char) -> u32 {
     let m_top = if msg.is_null() {
         let mut messages = ParagraphVecShort::new();
 
-        messages.add(Paragraph::new(&TEXT_ERROR_BOLD, "FATAL ERROR!").centered());
+        messages.add(Paragraph::new(&TEXT_ERROR_BOLD, get_str("FATAL ERROR!")).centered());
         // .add(theme::TEXT_WIPE_NORMAL, unwrap!(unsafe { from_c_str(expr) }))
         //     .centered()
         messages.add(
-            Paragraph::new(&TEXT_ERROR_NORMAL, unwrap!(unsafe { from_c_str(file) })).centered(),
+            Paragraph::new(
+                &TEXT_ERROR_NORMAL,
+                get_str(unwrap!(unsafe { from_c_str(file) })),
+            )
+            .centered(),
         );
 
         Paragraphs::new(messages).with_placement(LinearPlacement::vertical().align_at_center())
@@ -29,15 +44,15 @@ extern "C" fn screen_fatal_error(msg: *const cty::c_char, file: *const cty::c_ch
         let msg = unwrap!(unsafe { from_c_str(msg) });
         let mut messages = ParagraphVecShort::new();
 
-        messages.add(Paragraph::new(&TEXT_ERROR_BOLD, "FATAL ERROR!").centered());
-        messages.add(Paragraph::new(&TEXT_ERROR_NORMAL, msg).centered());
+        messages.add(Paragraph::new(&TEXT_ERROR_BOLD, get_str("FATAL ERROR!")).centered());
+        messages.add(Paragraph::new(&TEXT_ERROR_NORMAL, get_str(msg)).centered());
 
         Paragraphs::new(messages).with_placement(LinearPlacement::vertical().align_at_center())
     };
     let mut messages = ParagraphVecShort::new();
 
-    messages.add(Paragraph::new(&TEXT_ERROR_BOLD, "PLEASE CONTACT").centered());
-    messages.add(Paragraph::new(&TEXT_ERROR_BOLD, "TREZOR SUPPORT").centered());
+    messages.add(Paragraph::new(&TEXT_ERROR_BOLD, get_str("PLEASE CONTACT")).centered());
+    messages.add(Paragraph::new(&TEXT_ERROR_BOLD, get_str("TREZOR SUPPORT")).centered());
     let m_bottom =
         Paragraphs::new(messages).with_placement(LinearPlacement::vertical().align_at_center());
 
@@ -61,21 +76,21 @@ extern "C" fn screen_error_shutdown(label: *const cty::c_char, msg: *const cty::
     let m_top = if msg.is_null() {
         let mut messages = ParagraphVecShort::new();
 
-        messages.add(Paragraph::new(&TEXT_ERROR_BOLD, label).centered());
+        messages.add(Paragraph::new(&TEXT_ERROR_BOLD, get_str(label)).centered());
         Paragraphs::new(messages).with_placement(LinearPlacement::vertical().align_at_center())
     } else {
         let mut messages = ParagraphVecShort::new();
         let msg = unwrap!(unsafe { from_c_str(msg) });
 
-        messages.add(Paragraph::new(&TEXT_ERROR_BOLD, label).centered());
-        messages.add(Paragraph::new(&TEXT_ERROR_NORMAL, msg).centered());
+        messages.add(Paragraph::new(&TEXT_ERROR_BOLD, get_str(label)).centered());
+        messages.add(Paragraph::new(&TEXT_ERROR_NORMAL, get_str(msg)).centered());
 
         Paragraphs::new(messages).with_placement(LinearPlacement::vertical().align_at_center())
     };
     let mut messages = ParagraphVecShort::new();
 
-    messages.add(Paragraph::new(&TEXT_ERROR_BOLD, "PLEASE UNPLUG").centered());
-    messages.add(Paragraph::new(&TEXT_ERROR_BOLD, "THE DEVICE").centered());
+    messages.add(Paragraph::new(&TEXT_ERROR_BOLD, get_str("PLEASE UNPLUG")).centered());
+    messages.add(Paragraph::new(&TEXT_ERROR_BOLD, get_str("THE DEVICE")).centered());
     let m_bottom =
         Paragraphs::new(messages).with_placement(LinearPlacement::vertical().align_at_center());
 

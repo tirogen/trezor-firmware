@@ -2,7 +2,7 @@ use crate::{
     alpha,
     ui::{
         component::{
-            text::paragraphs::{ParagraphVecShort, Paragraphs},
+            text::paragraphs::{ParagraphStrType, ParagraphVecShort, Paragraphs},
             Child, Component, Event, EventCtx, Never, Pad,
         },
         constant::screen,
@@ -13,23 +13,23 @@ use crate::{
 
 use crate::ui::model_tt::constant::{HEIGHT, WIDTH};
 
-pub struct ResultScreen {
+pub struct ResultScreen<T> {
     bg: Pad,
     small_pad: Pad,
     fg_color: Color,
     bg_color: Color,
     icon: &'static [u8],
-    message_top: Child<Paragraphs<ParagraphVecShort<&'static str>>>,
-    message_bottom: Child<Paragraphs<ParagraphVecShort<&'static str>>>,
+    message_top: Child<Paragraphs<ParagraphVecShort<T>>>,
+    message_bottom: Child<Paragraphs<ParagraphVecShort<T>>>,
 }
 
-impl ResultScreen {
+impl<T: ParagraphStrType> ResultScreen<T> {
     pub fn new(
         fg_color: Color,
         bg_color: Color,
         icon: &'static [u8],
-        message_top: Paragraphs<ParagraphVecShort<&'static str>>,
-        message_bottom: Paragraphs<ParagraphVecShort<&'static str>>,
+        message_top: Paragraphs<ParagraphVecShort<T>>,
+        message_bottom: Paragraphs<ParagraphVecShort<T>>,
         complete_draw: bool,
     ) -> Self {
         let mut instance = Self {
@@ -51,7 +51,7 @@ impl ResultScreen {
     }
 }
 
-impl Component for ResultScreen {
+impl<T: ParagraphStrType> Component for ResultScreen<T> {
     type Msg = Never;
 
     fn place(&mut self, bounds: Rect) -> Rect {
