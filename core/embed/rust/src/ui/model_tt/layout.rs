@@ -33,7 +33,8 @@ use crate::{
             obj::{ComponentMsgObj, LayoutObj},
             result::{CANCELLED, CONFIRMED, INFO},
             util::{
-                iter_into_array, iter_into_objs, upy_disable_animation, ConfirmBlob, PropsList,
+                iter_into_array, iter_into_objs, upy_disable_animation, upy_jpeg_info, ConfirmBlob,
+                PropsList,
             },
         },
     },
@@ -1260,6 +1261,10 @@ pub static mp_module_trezorui2: Module = obj_module! {
     /// def disable_animation(disable: bool) -> None:
     ///     """Disable animations, debug builds only."""
     Qstr::MP_QSTR_disable_animation => obj_fn_1!(upy_disable_animation).as_obj(),
+
+    /// def jpeg_info(data: bytes) -> (width: int, height: int, mcu_height: int):
+    ///     """Get JPEG image dimensions."""
+    Qstr::MP_QSTR_jpeg_info => obj_fn_1!(upy_jpeg_info).as_obj(),
 
     /// def confirm_action(
     ///     *,

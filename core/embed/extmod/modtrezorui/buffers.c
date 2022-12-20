@@ -28,6 +28,7 @@
 #define BUFFERS_4BPP 3
 #define BUFFERS_TEXT 1
 #define BUFFERS_JPEG 1
+#define BUFFERS_JPEG_WORK 1
 #define BUFFERS_BLURRING 1
 
 const int32_t text_buffer_height = FONT_MAX_HEIGHT;
@@ -37,6 +38,7 @@ BUFFER_SECTION line_buffer_16bpp_t line_buffers_16bpp[BUFFERS_16BPP];
 BUFFER_SECTION line_buffer_4bpp_t line_buffers_4bpp[BUFFERS_4BPP];
 BUFFER_SECTION buffer_text_t text_buffers[BUFFERS_TEXT];
 NODMA_BUFFER_SECTION buffer_jpeg_t jpeg_buffers[BUFFERS_JPEG];
+NODMA_BUFFER_SECTION buffer_jpeg_work_t jpeg_work_buffers[BUFFERS_JPEG_WORK];
 NODMA_BUFFER_SECTION buffer_blurring_t blurring_buffers[BUFFERS_BLURRING];
 
 line_buffer_16bpp_t* buffers_get_line_buffer_16bpp(uint16_t idx, bool clear) {
@@ -78,6 +80,17 @@ buffer_jpeg_t* buffers_get_jpeg_buffer(uint16_t idx, bool clear) {
     memzero(&jpeg_buffers[idx], sizeof(jpeg_buffers[idx]));
   }
   return &jpeg_buffers[idx];
+}
+
+buffer_jpeg_work_t* buffers_get_jpeg_work_buffer(uint16_t idx, bool clear) {
+  if (idx >= BUFFERS_JPEG_WORK) {
+    return NULL;
+  }
+
+  if (clear) {
+    memzero(&jpeg_work_buffers[idx], sizeof(jpeg_work_buffers[idx]));
+  }
+  return &jpeg_work_buffers[idx];
 }
 
 buffer_blurring_t* buffers_get_blurring_buffer(uint16_t idx, bool clear) {

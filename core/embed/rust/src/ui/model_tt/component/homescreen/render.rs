@@ -7,9 +7,10 @@ use crate::{
     trezorhal::{
         buffers::{get_blurring_buffer, get_jpeg_buffer},
         display,
-        display::{
-            bar_radius_buffer, jpeg_buffer_decomp, jpeg_buffer_prepare, BufferJpeg, JpegContext,
-            ToifFormat, JDEC,
+        display::{bar_radius_buffer, ToifFormat},
+        tjpgd::{
+            jpeg_buffer_decomp, jpeg_buffer_prepare, jpeg_get_context, BufferJpeg, JpegContext,
+            JDEC,
         },
         uzlib::UzlibContext,
     },
@@ -241,17 +242,14 @@ fn homescreen_line(
     icon_data: &[u8],
     text_buffer: &mut BufferText,
     text_info: HomescreenTextInfo,
-    image_data: &[u8],
+    image_data: &[u16],
     y: i16,
 ) -> bool {
     let t_buffer = unsafe { get_buffer_4bpp((y & 0x1) as u16, true) };
     let mut img_buffer = unsafe { get_buffer_16bpp((y & 0x1) as u16, false) };
 
     for x in 0..HOMESCREEN_IMAGE_SIZE {
-        let x0 = (2 * x) as usize;
-        let x1 = x0 + 1;
-        let hi = image_data[x1];
-        let lo = image_data[x0];
+        let d = image_data[x as usize];
 
         const DIM_BORDER: i16 = 20;
 
@@ -271,16 +269,16 @@ fn homescreen_line(
         {
             let coef = (65536_f32 * HOMESCREEN_DIM) as u32;
 
-            let r = hi & 0xF8;
-            let g = ((hi & 0x07) << 5) | ((lo & 0xE0) >> 3);
-            let b = (lo & 0x1F) << 3;
+            let r = (d & 0xF800) >> 8;
+            let g = (d & 0x07E0) >> 3;
+            let b = (d & 0x001F) << 3;
 
             let r = (((coef * r as u32) >> 8) & 0xF800) as u16;
             let g = (((coef * g as u32) >> 13) & 0x07E0) as u16;
             let b = (((coef * b as u32) >> 19) & 0x001F) as u16;
             r | g | b
         } else {
-            (hi as u16) << 8 | lo as u16
+            d
         };
 
         let j = 2 * x as usize;
@@ -320,31 +318,29 @@ fn homescreen_next_text(
 }
 
 #[inline(always)]
-fn update_accs_add(data: &[u8], idx: usize, acc_r: &mut u16, acc_g: &mut u16, acc_b: &mut u16) {
-    let lo = data[2_usize * idx];
-    let hi = data[2_usize * idx + 1];
-    let r = hi & 0xF8;
-    let g = ((hi & 0x07) << 5) | ((lo & 0xE0) >> 3);
-    let b = (lo & 0x1F) << 3;
-    *acc_r += r as u16;
-    *acc_g += g as u16;
-    *acc_b += b as u16;
+fn update_accs_add(data: &[u16], idx: usize, acc_r: &mut u16, acc_g: &mut u16, acc_b: &mut u16) {
+    let d = data[idx];
+    let r = (d & 0xF800) >> 8;
+    let g = (d & 0x07E0) >> 3;
+    let b = (d & 0x001F) << 3;
+    *acc_r += r;
+    *acc_g += g;
+    *acc_b += b;
 }
 
 #[inline(always)]
-fn update_accs_sub(data: &[u8], idx: usize, acc_r: &mut u16, acc_g: &mut u16, acc_b: &mut u16) {
-    let lo = data[2_usize * idx];
-    let hi = data[2_usize * idx + 1];
-    let r = hi & 0xF8;
-    let g = ((hi & 0x07) << 5) | ((lo & 0xE0) >> 3);
-    let b = (lo & 0x1F) << 3;
-    *acc_r -= r as u16;
-    *acc_g -= g as u16;
-    *acc_b -= b as u16;
+fn update_accs_sub(data: &[u16], idx: usize, acc_r: &mut u16, acc_g: &mut u16, acc_b: &mut u16) {
+    let d = data[idx];
+    let r = (d & 0xF800) >> 8;
+    let g = (d & 0x07E0) >> 3;
+    let b = (d & 0x001F) << 3;
+    *acc_r -= r;
+    *acc_g -= g;
+    *acc_b -= b;
 }
 
 // computes color averages for one line of image data
-fn compute_line_avgs(avg_dest: &mut [[u16; HOMESCREEN_IMAGE_SIZE as usize]; COLORS], data: &[u8]) {
+fn compute_line_avgs(avg_dest: &mut [[u16; HOMESCREEN_IMAGE_SIZE as usize]; COLORS], data: &[u16]) {
     let mut acc_r = 0;
     let mut acc_g = 0;
     let mut acc_b = 0;
@@ -394,9 +390,9 @@ fn vertical_avg(
 }
 
 #[inline(always)]
-fn get_data(buffer: &mut BufferJpeg, line_num: i16, mcu_height: i16) -> &mut [u8] {
-    let data_start = ((line_num % mcu_height) * WIDTH * 2) as usize;
-    let data_end = (((line_num % mcu_height) + 1) * WIDTH * 2) as usize;
+fn get_data(buffer: &mut BufferJpeg, line_num: i16, mcu_height: i16) -> &mut [u16] {
+    let data_start = ((line_num % mcu_height) * WIDTH) as usize;
+    let data_end = (((line_num % mcu_height) + 1) * WIDTH) as usize;
     &mut buffer.buffer[data_start..data_end]
 }
 
@@ -418,8 +414,9 @@ pub fn homescreen_blurred(data: &[u8], texts: &[HomescreenText]) {
     let jpeg_ok = jpeg_size.x == WIDTH && jpeg_size.y == HEIGHT && mcu_height <= 16;
     let jpg_buffer = unsafe { get_jpeg_buffer(0, true) };
     let mut jd: JDEC = JDEC::default();
-    let mut jpg_ctx: JpegContext = JpegContext::default();
-    jpeg_buffer_prepare(&mut jd, &mut jpg_ctx, jpg_buffer, data, WIDTH);
+    let mut jpg_ctx: JpegContext = jpeg_get_context(data, jpg_buffer, WIDTH);
+
+    jpeg_buffer_prepare(&mut jd, &mut jpg_ctx);
 
     if jpeg_ok {
         jpeg_buffer_decomp(&mut jd);
@@ -560,14 +557,12 @@ pub fn homescreen(
 
     let jpg_buffer = unsafe { get_jpeg_buffer(0, true) };
     let mut jd: JDEC = JDEC::default();
-    let mut jpg_ctx: JpegContext = JpegContext::default();
-    jpeg_buffer_prepare(&mut jd, &mut jpg_ctx, jpg_buffer, data, WIDTH);
+
+    let mut jpg_ctx: JpegContext = jpeg_get_context(data, jpg_buffer, WIDTH);
+
+    jpeg_buffer_prepare(&mut jd, &mut jpg_ctx);
 
     set_window(screen());
-
-    let mut jd: JDEC = JDEC::default();
-    let mut jpg_ctx: JpegContext = JpegContext::default();
-    jpeg_buffer_prepare(&mut jd, &mut jpg_ctx, jpg_buffer, data, WIDTH);
 
     let mcu_height = mcu_height as i16;
 

@@ -14,7 +14,7 @@ BRT_PROTECT_CALL = ButtonRequestType.ProtectCall  # CACHE
 
 
 def _validate_homescreen(homescreen: bytes) -> None:
-    from trezor import ui
+    import trezorui2
     import storage.device as storage_device
 
     if homescreen == b"":
@@ -26,7 +26,7 @@ def _validate_homescreen(homescreen: bytes) -> None:
         )
 
     try:
-        w, h, mcu_height = ui.display.jpeg_info(homescreen)
+        w, h, mcu_height = trezorui2.jpeg_info(homescreen)
     except ValueError:
         raise DataError("Invalid homescreen")
     if w != 240 or h != 240:

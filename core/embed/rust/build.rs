@@ -334,9 +334,13 @@ fn generate_trezorhal_bindings() {
         .allowlist_function("buffers_get_line_buffer_4bpp")
         .allowlist_function("buffers_get_text_buffer")
         .allowlist_function("buffers_get_jpeg_buffer")
+        .allowlist_function("buffers_get_jpeg_work_buffer")
         .allowlist_function("buffers_get_blurring_buffer")
         .allowlist_var("text_buffer_height")
         .allowlist_var("buffer_width")
+        //tjpgd
+        .allowlist_function("jd_prepare")
+        .allowlist_function("jd_decomp")
         //usb
         .allowlist_function("usb_configured");
     // Write the bindings to a file in the OUR_DIR.

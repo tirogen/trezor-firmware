@@ -36,7 +36,10 @@
 #define LINE_BUFFER_16BPP_SIZE BUFFER_PIXELS * 2
 #define LINE_BUFFER_4BPP_SIZE BUFFER_PIXELS / 2
 #define TEXT_BUFFER_SIZE (BUFFER_PIXELS * TEXT_BUFFER_HEIGHT) / 2
-#define JPEG_BUFFER_SIZE (BUFFER_PIXELS * 16 * 2)
+#define JPEG_BUFFER_SIZE (BUFFER_PIXELS * 16)
+
+// 3100 is needed according to tjpgd docs, 6 << 10 is for huffman decoding table
+#define JPEG_WORK_SIZE (3100 + (6 << 10))
 
 #if defined BOOTLOADER
 #define BUFFER_SECTION __attribute__((section(".buf")))
@@ -63,8 +66,12 @@ typedef __attribute__((aligned(4))) struct {
 } buffer_text_t;
 
 typedef __attribute__((aligned(4))) struct {
-  uint8_t buffer[JPEG_BUFFER_SIZE];
+  uint16_t buffer[JPEG_BUFFER_SIZE];
 } buffer_jpeg_t;
+
+typedef __attribute__((aligned(4))) struct {
+  uint8_t buffer[JPEG_WORK_SIZE];
+} buffer_jpeg_work_t;
 
 typedef __attribute__((aligned(4))) struct {
   uint16_t buffer[10][3][BUFFER_PIXELS];
@@ -77,6 +84,7 @@ line_buffer_16bpp_t* buffers_get_line_buffer_16bpp(uint16_t idx, bool clear);
 line_buffer_4bpp_t* buffers_get_line_buffer_4bpp(uint16_t idx, bool clear);
 buffer_text_t* buffers_get_text_buffer(uint16_t idx, bool clear);
 buffer_jpeg_t* buffers_get_jpeg_buffer(uint16_t idx, bool clear);
+buffer_jpeg_work_t* buffers_get_jpeg_work_buffer(uint16_t idx, bool clear);
 buffer_blurring_t* buffers_get_blurring_buffer(uint16_t idx, bool clear);
 
 #endif  // _BUFFERS_H
