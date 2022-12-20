@@ -185,7 +185,7 @@ SOURCE_MOD += [
 ]
 
 SOURCE_SPEED = [
-    'embed/extmod/modtrezorui/tjpgd/tjpgd.c',
+
 ]
 
 CPPDEFINES_MOD += [

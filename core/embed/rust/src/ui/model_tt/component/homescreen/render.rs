@@ -10,8 +10,8 @@ use crate::{
         display::{bar_radius_buffer, ToifFormat},
         tjpgd::{
             jpeg_buffer_decomp, jpeg_buffer_prepare, jpeg_get_context, BufferJpeg, JpegContext,
-            JDEC,
         },
+        tjpgdlib::JDEC,
         uzlib::UzlibContext,
     },
     ui::{

@@ -339,8 +339,8 @@ fn generate_trezorhal_bindings() {
         .allowlist_var("text_buffer_height")
         .allowlist_var("buffer_width")
         //tjpgd
-        .allowlist_function("jd_prepare")
-        .allowlist_function("jd_decomp")
+        // .allowlist_function("jd_prepare")
+        // .allowlist_function("jd_decomp")
         //usb
         .allowlist_function("usb_configured");
     // Write the bindings to a file in the OUR_DIR.

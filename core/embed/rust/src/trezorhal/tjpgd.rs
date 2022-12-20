@@ -1,8 +1,9 @@
 use super::ffi;
 use core::{mem::MaybeUninit, ptr::NonNull, slice};
 
-use crate::trezorhal::buffers::{get_jpeg_buffer, get_jpeg_work_buffer};
-pub use ffi::{buffer_jpeg_t as BufferJpeg, JDEC, JRECT, JRESULT_JDR_OK};
+use crate::trezorhal::buffers::{ get_jpeg_buffer, get_jpeg_work_buffer};
+pub use ffi::{buffer_jpeg_t as BufferJpeg};
+use crate::trezorhal::tjpgdlib::{jd_decomp, jd_prepare, JDEC, JDR_OK, JRECT, JRESULT, size_t, uint8_t};
 
 impl Default for JDEC {
     fn default() -> Self {
@@ -27,9 +28,9 @@ pub struct JpegContext<'a> {
     buffer: &'a mut [u16],
 }
 
-unsafe extern "C" fn jpeg_in_buffer(jd: *mut JDEC, buff: *mut u8, n_data: usize) -> usize {
+unsafe extern "C" fn jpeg_in_buffer(jd: *mut JDEC, buff: *mut uint8_t, n_data: size_t) -> size_t {
     let context = unsafe { NonNull::new_unchecked((*jd).device as *mut JpegContext).as_mut() };
-
+    let n_data = n_data as usize;
     if !buff.is_null() {
         let buff = unsafe { slice::from_raw_parts_mut(buff, n_data) };
 
@@ -50,7 +51,7 @@ unsafe extern "C" fn jpeg_in_buffer(jd: *mut JDEC, buff: *mut u8, n_data: usize)
     }
 
     context.data_read += n_data;
-    n_data
+    n_data as _
 }
 
 unsafe extern "C" fn jpeg_out_buffer(
@@ -116,11 +117,11 @@ pub fn jpeg_get_context<'a>(
 pub fn jpeg_buffer_prepare<'a>(jd: &mut JDEC, context: &'a mut JpegContext<'a>) {
     let work_buffer = unsafe { &get_jpeg_work_buffer(0, true).buffer };
     unsafe {
-        ffi::jd_prepare(
+        jd_prepare(
             jd as *mut _,
             Some(jpeg_in_buffer),
             work_buffer.as_ptr() as *mut _,
-            work_buffer.len(),
+            work_buffer.len() as _,
             context as *mut JpegContext as *mut _,
         );
     }
@@ -128,7 +129,7 @@ pub fn jpeg_buffer_prepare<'a>(jd: &mut JDEC, context: &'a mut JpegContext<'a>) 
 
 pub fn jpeg_buffer_decomp(jd: &mut JDEC) {
     unsafe {
-        ffi::jd_decomp(jd as _, Some(jpeg_out_buffer), 0);
+        jd_decomp(jd as _, Some(jpeg_out_buffer), 0);
     }
 }
 
@@ -139,11 +140,11 @@ pub fn jpeg_info(data: &[u8]) -> Result<JpegInfo, ()> {
     let mut context = jpeg_get_context(data, unsafe { get_jpeg_buffer(0, false) }, 0);
 
     let res = unsafe {
-        ffi::jd_prepare(
+        jd_prepare(
             &mut jd as *mut _,
             Some(jpeg_in_buffer),
             work_buffer.as_ptr() as *mut _,
-            work_buffer.len(),
+            work_buffer.len() as _,
             &mut context as *mut JpegContext as *mut _,
         )
     };
@@ -154,7 +155,7 @@ pub fn jpeg_info(data: &[u8]) -> Result<JpegInfo, ()> {
         mcu_height: (jd.msy * 8) as u16,
     };
 
-    if info.mcu_height > 16 || res != JRESULT_JDR_OK {
+    if info.mcu_height > 16 || res != JDR_OK {
         return Err(());
     }
 
