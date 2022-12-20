@@ -130,58 +130,6 @@ pub fn image(x: i16, y: i16, w: i16, h: i16, data: &[u8]) {
         )
     }
 }
-//
-// pub fn jpeg_info(data: &[u8]) -> Result<JpegInfo, ()> {
-//     let mut width: cty::uint16_t = 0;
-//     let mut height: cty::uint16_t = 0;
-//     let mut mcu_height: cty::uint16_t = 0;
-//     if unsafe {
-//         ffi::display_jpeg_info(
-//             data.as_ptr() as _,
-//             data.len() as _,
-//             &mut width,
-//             &mut height,
-//             &mut mcu_height,
-//         )
-//     } {
-//         Ok(JpegInfo {
-//             width,
-//             height,
-//             mcu_height,
-//         })
-//     } else {
-//         Err(())
-//     }
-// }
-//
-// pub fn jpeg(x: i16, y: i16, data: &[u8]) {
-//     unsafe { ffi::display_jpeg(x.into(), y.into(), data.as_ptr() as _,
-// data.len() as _) } }
-//
-// pub fn jpeg_buffer_prepare(
-//     jd: &mut JDEC,
-//     jpg_context: &mut JpegContext,
-//     buffer: &mut BufferJpeg,
-//     data: &[u8],
-//     line_width: i16,
-// ) {
-//     unsafe {
-//         ffi::display_jpeg_buffer_prepare(
-//             jd as _,
-//             jpg_context as _,
-//             &mut buffer.buffer as _,
-//             data.as_ptr() as _,
-//             data.len() as _,
-//             line_width as _,
-//         );
-//     }
-// }
-//
-// pub fn jpeg_buffer_decomp(jd: &mut JDEC) {
-//     unsafe {
-//         ffi::display_jpeg_buffer_decomp(jd as _);
-//     }
-// }
 
 pub fn toif_info(data: &[u8]) -> Result<ToifInfo, ()> {
     let mut width: cty::uint16_t = 0;
