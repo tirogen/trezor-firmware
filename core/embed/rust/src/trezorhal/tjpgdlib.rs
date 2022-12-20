@@ -1,6 +1,5 @@
 #![allow(dead_code, mutable_transmutes, non_camel_case_types, non_snake_case, non_upper_case_globals, unused_assignments, unused_mut)]
 
-
 extern "C" {
     fn memset(
         _: *mut cty::c_void,
@@ -57,6 +56,9 @@ pub struct JDEC {
     pub qttbl: [*mut int32_t; 4],
     pub wreg: uint32_t,
     pub marker: uint8_t,
+    pub longofs: [[uint8_t; 2]; 2],
+    pub hufflut_ac: [*mut uint16_t; 2],
+    pub hufflut_dc: [*mut uint8_t; 2],
     pub workbuf: *mut cty::c_void,
     pub mcubuf: *mut jd_yuv_t,
     pub pool: *mut cty::c_void,
@@ -372,6 +374,92 @@ unsafe extern "C" fn create_huffman_tbl(
                 *pd.offset(i as isize) = d;
                 i = i.wrapping_add(1);
             }
+            let mut span: cty::c_uint = 0;
+            let mut td: cty::c_uint = 0;
+            let mut ti: cty::c_uint = 0;
+            let mut tbl_ac: *mut uint16_t = 0 as *mut uint16_t;
+            let mut tbl_dc: *mut uint8_t = 0 as *mut uint8_t;
+            if cls != 0 {
+                tbl_ac = alloc_pool(
+                    jd,
+                    (((1 as cty::c_int) << 10 as cty::c_int) as cty::c_ulong)
+                        .wrapping_mul(::core::mem::size_of::<uint16_t>() as cty::c_ulong),
+                ) as *mut uint16_t;
+                if tbl_ac.is_null() {
+                    return JDR_MEM1;
+                }
+                let ref mut fresh15 = (*jd).hufflut_ac[num as usize];
+                *fresh15 = tbl_ac;
+                memset(
+                    tbl_ac as *mut cty::c_void,
+                    0xff as cty::c_int,
+                    (((1 as cty::c_int) << 10 as cty::c_int) as cty::c_ulong)
+                        .wrapping_mul(::core::mem::size_of::<uint16_t>() as cty::c_ulong),
+                );
+            } else {
+                tbl_dc = alloc_pool(
+                    jd,
+                    (((1 as cty::c_int) << 10 as cty::c_int) as cty::c_ulong)
+                        .wrapping_mul(::core::mem::size_of::<uint8_t>() as cty::c_ulong),
+                ) as *mut uint8_t;
+                if tbl_dc.is_null() {
+                    return JDR_MEM1;
+                }
+                let ref mut fresh16 = (*jd).hufflut_dc[num as usize];
+                *fresh16 = tbl_dc;
+                memset(
+                    tbl_dc as *mut cty::c_void,
+                    0xff as cty::c_int,
+                    (((1 as cty::c_int) << 10 as cty::c_int) as cty::c_ulong)
+                        .wrapping_mul(::core::mem::size_of::<uint8_t>() as cty::c_ulong),
+                );
+            }
+            b = 0 as cty::c_int as cty::c_uint;
+            i = b;
+            while b < 10 as cty::c_int as cty::c_uint {
+                j = *pb.offset(b as isize) as cty::c_uint;
+                while j != 0 {
+                    ti = ((*ph.offset(i as isize) as cty::c_int)
+                        << ((10 as cty::c_int - 1 as cty::c_int) as cty::c_uint)
+                        .wrapping_sub(b)
+                        & ((1 as cty::c_int) << 10 as cty::c_int) - 1 as cty::c_int)
+                        as cty::c_uint;
+                    if cls != 0 {
+                        let fresh17 = i;
+                        i = i.wrapping_add(1);
+                        td = *pd.offset(fresh17 as isize) as cty::c_uint
+                            | b.wrapping_add(1 as cty::c_int as cty::c_uint)
+                            << 8 as cty::c_int;
+                        span = ((1 as cty::c_int)
+                            << ((10 as cty::c_int - 1 as cty::c_int) as cty::c_uint)
+                            .wrapping_sub(b)) as cty::c_uint;
+                        while span != 0 {
+                            span = span.wrapping_sub(1);
+                            let fresh18 = ti;
+                            ti = ti.wrapping_add(1);
+                            *tbl_ac.offset(fresh18 as isize) = td as uint16_t;
+                        }
+                    } else {
+                        let fresh19 = i;
+                        i = i.wrapping_add(1);
+                        td = *pd.offset(fresh19 as isize) as cty::c_uint
+                            | b.wrapping_add(1 as cty::c_int as cty::c_uint)
+                            << 4 as cty::c_int;
+                        span = ((1 as cty::c_int)
+                            << ((10 as cty::c_int - 1 as cty::c_int) as cty::c_uint)
+                            .wrapping_sub(b)) as cty::c_uint;
+                        while span != 0 {
+                            span = span.wrapping_sub(1);
+                            let fresh20 = ti;
+                            ti = ti.wrapping_add(1);
+                            *tbl_dc.offset(fresh20 as isize) = td as uint8_t;
+                        }
+                    }
+                    j = j.wrapping_sub(1);
+                }
+                b = b.wrapping_add(1);
+            }
+            (*jd).longofs[num as usize][cls as usize] = i as uint8_t;
         }
         return JDR_OK;
     }
@@ -410,9 +498,9 @@ unsafe extern "C" fn huffext(
                         return 0 as cty::c_int - JDR_INP as cty::c_int;
                     }
                 }
-                let fresh15 = dp;
+                let fresh21 = dp;
                 dp = dp.offset(1);
-                d = *fresh15 as cty::c_uint;
+                d = *fresh21 as cty::c_uint;
                 dc = dc.wrapping_sub(1);
                 if flg != 0 {
                     flg = 0 as cty::c_int as cty::c_uint;
@@ -429,23 +517,39 @@ unsafe extern "C" fn huffext(
             wbit = wbit.wrapping_add(8 as cty::c_int as cty::c_uint);
         }
         (*jd).dctr = dc;
-        let ref mut fresh16 = (*jd).dptr;
-        *fresh16 = dp;
+        let ref mut fresh22 = (*jd).dptr;
+        *fresh22 = dp;
         (*jd).wreg = w;
-        hb = (*jd).huffbits[id as usize][cls as usize];
-        hc = (*jd).huffcode[id as usize][cls as usize];
-        hd = (*jd).huffdata[id as usize][cls as usize];
-        bl = 1 as cty::c_int as cty::c_uint;
+        d = w >> wbit.wrapping_sub(10 as cty::c_int as cty::c_uint);
+        if cls != 0 {
+            d = *((*jd).hufflut_ac[id as usize]).offset(d as isize) as cty::c_uint;
+            if d != 0xffff as cty::c_int as cty::c_uint {
+                (*jd).dbit = wbit.wrapping_sub(d >> 8 as cty::c_int) as uint8_t;
+                return (d & 0xff as cty::c_int as cty::c_uint) as cty::c_int;
+            }
+        } else {
+            d = *((*jd).hufflut_dc[id as usize]).offset(d as isize) as cty::c_uint;
+            if d != 0xff as cty::c_int as cty::c_uint {
+                (*jd).dbit = wbit.wrapping_sub(d >> 4 as cty::c_int) as uint8_t;
+                return (d & 0xf as cty::c_int as cty::c_uint) as cty::c_int;
+            }
+        }
+        hb = ((*jd).huffbits[id as usize][cls as usize]).offset(10 as cty::c_int as isize);
+        hc = ((*jd).huffcode[id as usize][cls as usize])
+            .offset((*jd).longofs[id as usize][cls as usize] as cty::c_int as isize);
+        hd = ((*jd).huffdata[id as usize][cls as usize])
+            .offset((*jd).longofs[id as usize][cls as usize] as cty::c_int as isize);
+        bl = (10 as cty::c_int + 1 as cty::c_int) as cty::c_uint;
         while bl <= 16 as cty::c_int as cty::c_uint {
-            let fresh17 = hb;
+            let fresh23 = hb;
             hb = hb.offset(1);
-            nc = *fresh17 as cty::c_uint;
+            nc = *fresh23 as cty::c_uint;
             if nc != 0 {
                 d = w >> wbit.wrapping_sub(bl);
                 loop {
-                    let fresh18 = hc;
+                    let fresh24 = hc;
                     hc = hc.offset(1);
-                    if d == *fresh18 as cty::c_uint {
+                    if d == *fresh24 as cty::c_uint {
                         (*jd).dbit = wbit.wrapping_sub(bl) as uint8_t;
                         return *hd as cty::c_int;
                     }
@@ -486,9 +590,9 @@ unsafe extern "C" fn bitext(mut jd: *mut JDEC, mut nbit: cty::c_uint) -> cty::c_
                         return 0 as cty::c_int - JDR_INP as cty::c_int;
                     }
                 }
-                let fresh19 = dp;
+                let fresh25 = dp;
                 dp = dp.offset(1);
-                d = *fresh19 as cty::c_uint;
+                d = *fresh25 as cty::c_uint;
                 dc = dc.wrapping_sub(1);
                 if flg != 0 {
                     flg = 0 as cty::c_int as cty::c_uint;
@@ -507,8 +611,8 @@ unsafe extern "C" fn bitext(mut jd: *mut JDEC, mut nbit: cty::c_uint) -> cty::c_
         (*jd).wreg = w;
         (*jd).dbit = wbit.wrapping_sub(nbit) as uint8_t;
         (*jd).dctr = dc;
-        let ref mut fresh20 = (*jd).dptr;
-        *fresh20 = dp;
+        let ref mut fresh26 = (*jd).dptr;
+        *fresh26 = dp;
         return (w >> wbit.wrapping_sub(nbit).wrapping_rem(32 as cty::c_int as cty::c_uint))
             as cty::c_int;
     }
@@ -536,15 +640,15 @@ unsafe extern "C" fn restart(mut jd: *mut JDEC, mut rstn: uint16_t) -> JRESULT {
                         return JDR_INP;
                     }
                 }
-                let fresh21 = dp;
+                let fresh27 = dp;
                 dp = dp.offset(1);
                 marker = ((marker as cty::c_int) << 8 as cty::c_int
-                    | *fresh21 as cty::c_int) as uint16_t;
+                    | *fresh27 as cty::c_int) as uint16_t;
                 dc = dc.wrapping_sub(1);
                 i = i.wrapping_add(1);
             }
-            let ref mut fresh22 = (*jd).dptr;
-            *fresh22 = dp;
+            let ref mut fresh28 = (*jd).dptr;
+            *fresh28 = dp;
             (*jd).dctr = dc;
         }
         if marker as cty::c_int & 0xffd8 as cty::c_int != 0xffd0 as cty::c_int
@@ -554,11 +658,11 @@ unsafe extern "C" fn restart(mut jd: *mut JDEC, mut rstn: uint16_t) -> JRESULT {
             return JDR_FMT1;
         }
         (*jd).dbit = 0 as cty::c_int as uint8_t;
-        let ref mut fresh23 = (*jd).dcv[0 as cty::c_int as usize];
-        *fresh23 = 0 as cty::c_int as int16_t;
-        let ref mut fresh24 = (*jd).dcv[1 as cty::c_int as usize];
-        *fresh24 = *fresh23;
-        (*jd).dcv[2 as cty::c_int as usize] = *fresh24;
+        let ref mut fresh29 = (*jd).dcv[0 as cty::c_int as usize];
+        *fresh29 = 0 as cty::c_int as int16_t;
+        let ref mut fresh30 = (*jd).dcv[1 as cty::c_int as usize];
+        *fresh30 = *fresh29;
+        (*jd).dcv[2 as cty::c_int as usize] = *fresh30;
         return JDR_OK;
     }
 }
@@ -718,9 +822,9 @@ unsafe extern "C" fn mcu_load(mut jd: *mut JDEC) -> JRESULT {
             if cmp != 0 && (*jd).ncomp as cty::c_int != 3 as cty::c_int {
                 i = 0 as cty::c_int as cty::c_uint;
                 while i < 64 as cty::c_int as cty::c_uint {
-                    let fresh25 = i;
+                    let fresh31 = i;
                     i = i.wrapping_add(1);
-                    *bp.offset(fresh25 as isize) = 128 as cty::c_int as jd_yuv_t;
+                    *bp.offset(fresh31 as isize) = 128 as cty::c_int as jd_yuv_t;
                 }
             } else {
                 id = (if cmp != 0 { 1 as cty::c_int } else { 0 as cty::c_int })
@@ -809,12 +913,12 @@ unsafe extern "C" fn mcu_load(mut jd: *mut JDEC) -> JRESULT {
                     {
                         d = (*tmp / 256 as cty::c_int + 128 as cty::c_int) as jd_yuv_t
                             as cty::c_int;
-                        if 1 as cty::c_int >= 1 as cty::c_int {
+                        if 2 as cty::c_int >= 1 as cty::c_int {
                             i = 0 as cty::c_int as cty::c_uint;
                             while i < 64 as cty::c_int as cty::c_uint {
-                                let fresh26 = i;
+                                let fresh32 = i;
                                 i = i.wrapping_add(1);
-                                *bp.offset(fresh26 as isize) = d as jd_yuv_t;
+                                *bp.offset(fresh32 as isize) = d as jd_yuv_t;
                             }
                         } else {
                             memset(
@@ -934,27 +1038,27 @@ unsafe extern "C" fn mcu_output(
                         } else {
                             pc = pc.offset(1);
                         }
-                        let fresh27 = py;
+                        let fresh33 = py;
                         py = py.offset(1);
-                        yy = *fresh27 as cty::c_int;
-                        let fresh28 = pix;
+                        yy = *fresh33 as cty::c_int;
+                        let fresh34 = pix;
                         pix = pix.offset(1);
-                        *fresh28 = BYTECLIP(
+                        *fresh34 = BYTECLIP(
                             yy
                                 + (1.402f64 * CVACC as cty::c_double) as cty::c_int * cr
                                 / CVACC,
                         );
-                        let fresh29 = pix;
+                        let fresh35 = pix;
                         pix = pix.offset(1);
-                        *fresh29 = BYTECLIP(
+                        *fresh35 = BYTECLIP(
                             yy
                                 - ((0.344f64 * CVACC as cty::c_double) as cty::c_int * cb
                                 + (0.714f64 * CVACC as cty::c_double) as cty::c_int * cr)
                                 / CVACC,
                         );
-                        let fresh30 = pix;
+                        let fresh36 = pix;
                         pix = pix.offset(1);
-                        *fresh30 = BYTECLIP(
+                        *fresh36 = BYTECLIP(
                             yy
                                 + (1.772f64 * CVACC as cty::c_double) as cty::c_int * cb
                                 / CVACC,
@@ -981,11 +1085,11 @@ unsafe extern "C" fn mcu_output(
                                     .offset((64 as cty::c_int - 8 as cty::c_int) as isize);
                             }
                         }
-                        let fresh31 = py;
+                        let fresh37 = py;
                         py = py.offset(1);
-                        let fresh32 = pix;
+                        let fresh38 = pix;
                         pix = pix.offset(1);
-                        *fresh32 = *fresh31 as uint8_t;
+                        *fresh38 = *fresh37 as uint8_t;
                         ix = ix.wrapping_add(1);
                     }
                     iy = iy.wrapping_add(1);
@@ -1037,32 +1141,32 @@ unsafe extern "C" fn mcu_output(
                         while y_0 < w {
                             x_0 = 0 as cty::c_int as cty::c_uint;
                             while x_0 < w {
-                                let fresh33 = pix;
+                                let fresh39 = pix;
                                 pix = pix.offset(1);
-                                r = r.wrapping_add(*fresh33 as cty::c_uint);
+                                r = r.wrapping_add(*fresh39 as cty::c_uint);
                                 if 1 as cty::c_int != 2 as cty::c_int {
-                                    let fresh34 = pix;
+                                    let fresh40 = pix;
                                     pix = pix.offset(1);
-                                    g = g.wrapping_add(*fresh34 as cty::c_uint);
-                                    let fresh35 = pix;
+                                    g = g.wrapping_add(*fresh40 as cty::c_uint);
+                                    let fresh41 = pix;
                                     pix = pix.offset(1);
-                                    b = b.wrapping_add(*fresh35 as cty::c_uint);
+                                    b = b.wrapping_add(*fresh41 as cty::c_uint);
                                 }
                                 x_0 = x_0.wrapping_add(1);
                             }
                             pix = pix.offset(a as isize);
                             y_0 = y_0.wrapping_add(1);
                         }
-                        let fresh36 = op;
+                        let fresh42 = op;
                         op = op.offset(1);
-                        *fresh36 = (r >> s) as uint8_t;
+                        *fresh42 = (r >> s) as uint8_t;
                         if 1 as cty::c_int != 2 as cty::c_int {
-                            let fresh37 = op;
+                            let fresh43 = op;
                             op = op.offset(1);
-                            *fresh37 = (g >> s) as uint8_t;
-                            let fresh38 = op;
+                            *fresh43 = (g >> s) as uint8_t;
+                            let fresh44 = op;
                             op = op.offset(1);
-                            *fresh38 = (b >> s) as uint8_t;
+                            *fresh44 = (b >> s) as uint8_t;
                         }
                         ix = ix.wrapping_add(w);
                     }
@@ -1085,32 +1189,32 @@ unsafe extern "C" fn mcu_output(
                     yy = *py as cty::c_int;
                     py = py.offset(64 as cty::c_int as isize);
                     if 1 as cty::c_int != 2 as cty::c_int {
-                        let fresh39 = pix;
+                        let fresh45 = pix;
                         pix = pix.offset(1);
-                        *fresh39 = BYTECLIP(
+                        *fresh45 = BYTECLIP(
                             yy
                                 + (1.402f64 * CVACC as cty::c_double) as cty::c_int * cr
                                 / CVACC,
                         );
-                        let fresh40 = pix;
+                        let fresh46 = pix;
                         pix = pix.offset(1);
-                        *fresh40 = BYTECLIP(
+                        *fresh46 = BYTECLIP(
                             yy
                                 - ((0.344f64 * CVACC as cty::c_double) as cty::c_int * cb
                                 + (0.714f64 * CVACC as cty::c_double) as cty::c_int * cr)
                                 / CVACC,
                         );
-                        let fresh41 = pix;
+                        let fresh47 = pix;
                         pix = pix.offset(1);
-                        *fresh41 = BYTECLIP(
+                        *fresh47 = BYTECLIP(
                             yy
                                 + (1.772f64 * CVACC as cty::c_double) as cty::c_int * cb
                                 / CVACC,
                         );
                     } else {
-                        let fresh42 = pix;
+                        let fresh48 = pix;
                         pix = pix.offset(1);
-                        *fresh42 = yy as uint8_t;
+                        *fresh48 = yy as uint8_t;
                     }
                     ix = ix.wrapping_add(8 as cty::c_int as cty::c_uint);
                 }
@@ -1129,22 +1233,22 @@ unsafe extern "C" fn mcu_output(
             while y_1 < ry {
                 x_1 = 0 as cty::c_int as cty::c_uint;
                 while x_1 < rx {
-                    let fresh43 = s_0;
+                    let fresh49 = s_0;
                     s_0 = s_0.offset(1);
-                    let fresh44 = d;
+                    let fresh50 = d;
                     d = d.offset(1);
-                    *fresh44 = *fresh43;
+                    *fresh50 = *fresh49;
                     if 1 as cty::c_int != 2 as cty::c_int {
-                        let fresh45 = s_0;
+                        let fresh51 = s_0;
                         s_0 = s_0.offset(1);
-                        let fresh46 = d;
+                        let fresh52 = d;
                         d = d.offset(1);
-                        *fresh46 = *fresh45;
-                        let fresh47 = s_0;
+                        *fresh52 = *fresh51;
+                        let fresh53 = s_0;
                         s_0 = s_0.offset(1);
-                        let fresh48 = d;
+                        let fresh54 = d;
                         d = d.offset(1);
-                        *fresh48 = *fresh47;
+                        *fresh54 = *fresh53;
                     }
                     x_1 = x_1.wrapping_add(1);
                 }
@@ -1169,22 +1273,22 @@ unsafe extern "C" fn mcu_output(
             let mut d_0: *mut uint16_t = s_1 as *mut uint16_t;
             let mut n: cty::c_uint = rx.wrapping_mul(ry);
             loop {
-                let fresh49 = s_1;
+                let fresh55 = s_1;
                 s_1 = s_1.offset(1);
-                w_0 = ((*fresh49 as cty::c_int & 0xf8 as cty::c_int) << 8 as cty::c_int)
+                w_0 = ((*fresh55 as cty::c_int & 0xf8 as cty::c_int) << 8 as cty::c_int)
                     as uint16_t;
-                let fresh50 = s_1;
+                let fresh56 = s_1;
                 s_1 = s_1.offset(1);
                 w_0 = (w_0 as cty::c_int
-                    | (*fresh50 as cty::c_int & 0xfc as cty::c_int) << 3 as cty::c_int)
+                    | (*fresh56 as cty::c_int & 0xfc as cty::c_int) << 3 as cty::c_int)
                     as uint16_t;
-                let fresh51 = s_1;
+                let fresh57 = s_1;
                 s_1 = s_1.offset(1);
-                w_0 = (w_0 as cty::c_int | *fresh51 as cty::c_int >> 3 as cty::c_int)
+                w_0 = (w_0 as cty::c_int | *fresh57 as cty::c_int >> 3 as cty::c_int)
                     as uint16_t;
-                let fresh52 = d_0;
+                let fresh58 = d_0;
                 d_0 = d_0.offset(1);
-                *fresh52 = w_0;
+                *fresh58 = w_0;
                 n = n.wrapping_sub(1);
                 if !(n != 0) {
                     break;
@@ -1224,23 +1328,23 @@ pub unsafe extern "C" fn jd_prepare(
             0 as cty::c_int,
             ::core::mem::size_of::<JDEC>() as cty::c_ulong,
         );
-        let ref mut fresh53 = (*jd).pool;
-        *fresh53 = pool;
+        let ref mut fresh59 = (*jd).pool;
+        *fresh59 = pool;
         (*jd).sz_pool = sz_pool;
-        let ref mut fresh54 = (*jd).infunc;
-        *fresh54 = infunc;
-        let ref mut fresh55 = (*jd).device;
-        *fresh55 = dev;
-        let ref mut fresh56 = (*jd).dcv[0 as cty::c_int as usize];
-        *fresh56 = 0 as cty::c_int as int16_t;
-        let ref mut fresh57 = (*jd).dcv[1 as cty::c_int as usize];
-        *fresh57 = *fresh56;
-        (*jd).dcv[2 as cty::c_int as usize] = *fresh57;
+        let ref mut fresh60 = (*jd).infunc;
+        *fresh60 = infunc;
+        let ref mut fresh61 = (*jd).device;
+        *fresh61 = dev;
+        let ref mut fresh62 = (*jd).dcv[0 as cty::c_int as usize];
+        *fresh62 = 0 as cty::c_int as int16_t;
+        let ref mut fresh63 = (*jd).dcv[1 as cty::c_int as usize];
+        *fresh63 = *fresh62;
+        (*jd).dcv[2 as cty::c_int as usize] = *fresh63;
         (*jd).rsc = 0 as cty::c_int as uint16_t;
         (*jd).rst = 0 as cty::c_int as uint16_t;
         seg = alloc_pool(jd, 512 as cty::c_int as size_t) as *mut uint8_t;
-        let ref mut fresh58 = (*jd).inbuf;
-        *fresh58 = seg;
+        let ref mut fresh64 = (*jd).inbuf;
+        *fresh64 = seg;
         if seg.is_null() {
             return JDR_MEM1;
         }
@@ -1455,13 +1559,13 @@ pub unsafe extern "C" fn jd_prepare(
                         if len < 256 as cty::c_int as cty::c_ulong {
                             len = 256 as cty::c_int as size_t;
                         }
-                        let ref mut fresh59 = (*jd).workbuf;
-                        *fresh59 = alloc_pool(jd, len);
+                        let ref mut fresh65 = (*jd).workbuf;
+                        *fresh65 = alloc_pool(jd, len);
                         if ((*jd).workbuf).is_null() {
                             return JDR_MEM1;
                         }
-                        let ref mut fresh60 = (*jd).mcubuf;
-                        *fresh60 = alloc_pool(
+                        let ref mut fresh66 = (*jd).mcubuf;
+                        *fresh66 = alloc_pool(
                             jd,
                             (n
                                 .wrapping_add(2 as cty::c_int as cty::c_uint)
@@ -1487,11 +1591,11 @@ pub unsafe extern "C" fn jd_prepare(
                                     as size_t,
                             );
                         }
-                        let ref mut fresh61 = (*jd).dptr;
-                        *fresh61 = seg
+                        let ref mut fresh67 = (*jd).dptr;
+                        *fresh67 = seg
                             .offset(ofs as isize)
                             .offset(
-                                -((if 1 as cty::c_int != 0 {
+                                -((if 2 as cty::c_int != 0 {
                                     0 as cty::c_int
                                 } else {
                                     1 as cty::c_int
@@ -1500,40 +1604,40 @@ pub unsafe extern "C" fn jd_prepare(
                         return JDR_OK;
                     }
                     193 => {
-                        current_block_111 = 16906717074776190969;
+                        current_block_111 = 12749676338018479376;
                     }
                     194 => {
-                        current_block_111 = 16906717074776190969;
+                        current_block_111 = 12749676338018479376;
                     }
                     195 => {
-                        current_block_111 = 18210558662916816231;
+                        current_block_111 = 7120504289787790845;
                     }
                     197 => {
-                        current_block_111 = 5618369753603485945;
+                        current_block_111 = 11626555135028741001;
                     }
                     198 => {
-                        current_block_111 = 13992101357592761495;
+                        current_block_111 = 12215488699659360936;
                     }
                     199 => {
-                        current_block_111 = 18404220242566206249;
+                        current_block_111 = 5192055691381141330;
                     }
                     201 => {
-                        current_block_111 = 10598429224220880311;
+                        current_block_111 = 1443089516996880600;
                     }
                     202 => {
-                        current_block_111 = 4494302639901776910;
+                        current_block_111 = 15064317190960798138;
                     }
                     203 => {
-                        current_block_111 = 2127167334458604251;
+                        current_block_111 = 14109165499131509865;
                     }
                     205 => {
-                        current_block_111 = 17705285835291424192;
+                        current_block_111 = 9711326356574826945;
                     }
                     207 => {
-                        current_block_111 = 16589588568544228422;
+                        current_block_111 = 13359995684220628626;
                     }
                     206 | 217 => {
-                        current_block_111 = 16589588568544228422;
+                        current_block_111 = 13359995684220628626;
                     }
                     _ => {
                         if ((*jd).infunc)
@@ -1546,8 +1650,8 @@ pub unsafe extern "C" fn jd_prepare(
                     }
                 }
                 match current_block_111 {
-                    16906717074776190969 => {
-                        current_block_111 = 18210558662916816231;
+                    12749676338018479376 => {
+                        current_block_111 = 7120504289787790845;
                     }
                     5265702136860997526 => {
                         break 's_526;
@@ -1555,49 +1659,49 @@ pub unsafe extern "C" fn jd_prepare(
                     _ => {}
                 }
                 match current_block_111 {
-                    18210558662916816231 => {
-                        current_block_111 = 5618369753603485945;
+                    7120504289787790845 => {
+                        current_block_111 = 11626555135028741001;
                     }
                     _ => {}
                 }
                 match current_block_111 {
-                    5618369753603485945 => {
-                        current_block_111 = 13992101357592761495;
+                    11626555135028741001 => {
+                        current_block_111 = 12215488699659360936;
                     }
                     _ => {}
                 }
                 match current_block_111 {
-                    13992101357592761495 => {
-                        current_block_111 = 18404220242566206249;
+                    12215488699659360936 => {
+                        current_block_111 = 5192055691381141330;
                     }
                     _ => {}
                 }
                 match current_block_111 {
-                    18404220242566206249 => {
-                        current_block_111 = 10598429224220880311;
+                    5192055691381141330 => {
+                        current_block_111 = 1443089516996880600;
                     }
                     _ => {}
                 }
                 match current_block_111 {
-                    10598429224220880311 => {
-                        current_block_111 = 4494302639901776910;
+                    1443089516996880600 => {
+                        current_block_111 = 15064317190960798138;
                     }
                     _ => {}
                 }
                 match current_block_111 {
-                    4494302639901776910 => {
-                        current_block_111 = 2127167334458604251;
+                    15064317190960798138 => {
+                        current_block_111 = 14109165499131509865;
                     }
                     _ => {}
                 }
                 match current_block_111 {
-                    2127167334458604251 => {
-                        current_block_111 = 17705285835291424192;
+                    14109165499131509865 => {
+                        current_block_111 = 9711326356574826945;
                     }
                     _ => {}
                 }
                 match current_block_111 {
-                    17705285835291424192 => {}
+                    9711326356574826945 => {}
                     _ => {}
                 }
                 return JDR_FMT3;
@@ -1634,16 +1738,16 @@ pub unsafe extern "C" fn jd_decomp(
             while x < (*jd).width as cty::c_uint {
                 if (*jd).nrst as cty::c_int != 0
                     && {
-                    let ref mut fresh62 = (*jd).rst;
-                    let fresh63 = *fresh62;
-                    *fresh62 = (*fresh62).wrapping_add(1);
-                    fresh63 as cty::c_int == (*jd).nrst as cty::c_int
+                    let ref mut fresh68 = (*jd).rst;
+                    let fresh69 = *fresh68;
+                    *fresh68 = (*fresh68).wrapping_add(1);
+                    fresh69 as cty::c_int == (*jd).nrst as cty::c_int
                 }
                 {
-                    let ref mut fresh64 = (*jd).rsc;
-                    let fresh65 = *fresh64;
-                    *fresh64 = (*fresh64).wrapping_add(1);
-                    rc = restart(jd, fresh65);
+                    let ref mut fresh70 = (*jd).rsc;
+                    let fresh71 = *fresh70;
+                    *fresh70 = (*fresh70).wrapping_add(1);
+                    rc = restart(jd, fresh71);
                     if rc as cty::c_uint != JDR_OK as cty::c_int as cty::c_uint {
                         return rc;
                     }
