@@ -63,7 +63,7 @@ pub struct JDEC {
     pub mcubuf: *mut i16,
     pub pool: *mut cty::c_void,
     pub sz_pool: usize,
-    pub infunc: Option<unsafe extern "C" fn(*mut JDEC, *mut u8, usize) -> usize>,
+    pub infunc: Option<unsafe fn(*mut JDEC, *mut u8, usize) -> usize>,
     pub device: *mut cty::c_void,
 }
 static mut Zig: [u8; 64] = [
@@ -162,7 +162,7 @@ unsafe fn alloc_pool(mut jd: *mut JDEC, mut ndata: usize) -> *mut cty::c_void {
         return rp as *mut cty::c_void;
     }
 }
-unsafe extern "C" fn create_qt_tbl(
+unsafe fn create_qt_tbl(
     mut jd: *mut JDEC,
     mut data: *const u8,
     mut ndata: usize,
@@ -204,7 +204,7 @@ unsafe extern "C" fn create_qt_tbl(
         return JDR_OK;
     }
 }
-unsafe extern "C" fn create_huffman_tbl(
+unsafe fn create_huffman_tbl(
     mut jd: *mut JDEC,
     mut data: *const u8,
     mut ndata: usize,
@@ -369,7 +369,7 @@ unsafe extern "C" fn create_huffman_tbl(
         return JDR_OK;
     }
 }
-unsafe extern "C" fn huffext(mut jd: *mut JDEC, mut id: u32, mut cls: u32) -> i32 {
+unsafe fn huffext(mut jd: *mut JDEC, mut id: u32, mut cls: u32) -> i32 {
     unsafe {
         let mut dc: usize = (*jd).dctr;
         let mut dp: *mut u8 = (*jd).dptr;
@@ -462,7 +462,7 @@ unsafe extern "C" fn huffext(mut jd: *mut JDEC, mut id: u32, mut cls: u32) -> i3
         return 0 as i32 - JDR_FMT1 as i32;
     }
 }
-unsafe extern "C" fn bitext(mut jd: *mut JDEC, mut nbit: u32) -> i32 {
+unsafe fn bitext(mut jd: *mut JDEC, mut nbit: u32) -> i32 {
     unsafe {
         let mut dc: usize = (*jd).dctr;
         let mut dp: *mut u8 = (*jd).dptr;
@@ -509,7 +509,7 @@ unsafe extern "C" fn bitext(mut jd: *mut JDEC, mut nbit: u32) -> i32 {
         return (w >> wbit.wrapping_sub(nbit).wrapping_rem(32)) as i32;
     }
 }
-unsafe extern "C" fn restart(mut jd: *mut JDEC, mut rstn: u16) -> JRESULT {
+unsafe fn restart(mut jd: *mut JDEC, mut rstn: u16) -> JRESULT {
     unsafe {
         let mut i: u32 = 0;
         let mut dp: *mut u8 = (*jd).dptr;
@@ -551,7 +551,7 @@ unsafe extern "C" fn restart(mut jd: *mut JDEC, mut rstn: u16) -> JRESULT {
         return JDR_OK;
     }
 }
-unsafe extern "C" fn block_idct(mut src: *mut i32, mut dst: *mut i16) {
+unsafe fn block_idct(mut src: *mut i32, mut dst: *mut i16) {
     unsafe {
         let M13: i32 = (1.41421f64 * 4096_f64) as i32;
         let M2: i32 = (1.08239f64 * 4096_f64) as i32;
@@ -656,7 +656,7 @@ unsafe extern "C" fn block_idct(mut src: *mut i32, mut dst: *mut i16) {
         }
     }
 }
-unsafe extern "C" fn mcu_load(mut jd: *mut JDEC) -> JRESULT {
+unsafe fn mcu_load(mut jd: *mut JDEC) -> JRESULT {
     unsafe {
         let mut tmp: *mut i32 = (*jd).workbuf as *mut i32;
         let mut d: i32 = 0;
@@ -770,9 +770,9 @@ unsafe extern "C" fn mcu_load(mut jd: *mut JDEC) -> JRESULT {
         return JDR_OK;
     }
 }
-unsafe extern "C" fn mcu_output(
+unsafe fn mcu_output(
     mut jd: *mut JDEC,
-    mut outfunc: Option<unsafe extern "C" fn(*mut JDEC, *mut cty::c_void, *mut JRECT) -> i32>,
+    mut outfunc: Option<unsafe fn(*mut JDEC, *mut cty::c_void, *mut JRECT) -> i32>,
     mut x: u32,
     mut y: u32,
 ) -> JRESULT {
@@ -1076,9 +1076,9 @@ unsafe extern "C" fn mcu_output(
     }
 }
 #[no_mangle]
-pub unsafe extern "C" fn jd_prepare(
+pub unsafe fn jd_prepare(
     mut jd: *mut JDEC,
-    mut infunc: Option<unsafe extern "C" fn(*mut JDEC, *mut u8, usize) -> usize>,
+    mut infunc: Option<unsafe fn(*mut JDEC, *mut u8, usize) -> usize>,
     mut pool: *mut cty::c_void,
     mut sz_pool: usize,
     mut dev: *mut cty::c_void,
@@ -1397,9 +1397,9 @@ pub unsafe extern "C" fn jd_prepare(
     }
 }
 #[no_mangle]
-pub unsafe extern "C" fn jd_decomp(
+pub unsafe fn jd_decomp(
     mut jd: *mut JDEC,
-    mut outfunc: Option<unsafe extern "C" fn(*mut JDEC, *mut cty::c_void, *mut JRECT) -> i32>,
+    mut outfunc: Option<unsafe fn(*mut JDEC, *mut cty::c_void, *mut JRECT) -> i32>,
     mut scale: u8,
 ) -> JRESULT {
     unsafe {
