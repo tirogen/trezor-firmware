@@ -14,10 +14,10 @@ use crate::{
     },
 };
 
+use crate::trezorhal::time_measurements::{clear_acc, get_ticks, init_ticks};
 use render::{
     homescreen, homescreen_blurred, HomescreenNotification, HomescreenText, HOMESCREEN_IMAGE_SIZE,
 };
-use crate::trezorhal::time_measurements::{clear_acc, get_ticks, init_ticks};
 
 use super::{theme, Loader, LoaderMsg};
 
