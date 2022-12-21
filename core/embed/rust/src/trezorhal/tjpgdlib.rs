@@ -7,7 +7,7 @@ extern "C" {
         _: cty::c_ulong,
     ) -> *mut cty::c_void;
 }
-pub type size_t = cty::c_ulong;
+
 pub type int16_t = cty::c_short;
 pub type int32_t = cty::c_int;
 pub type uint8_t = cty::c_uchar;
@@ -35,7 +35,7 @@ pub struct JRECT {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct JDEC {
-    pub dctr: size_t,
+    pub dctr: usize,
     pub dptr: *mut uint8_t,
     pub inbuf: *mut uint8_t,
     pub dbit: uint8_t,
@@ -62,9 +62,9 @@ pub struct JDEC {
     pub workbuf: *mut cty::c_void,
     pub mcubuf: *mut jd_yuv_t,
     pub pool: *mut cty::c_void,
-    pub sz_pool: size_t,
+    pub sz_pool: usize,
     pub infunc: Option::<
-        unsafe extern "C" fn(*mut JDEC, *mut uint8_t, size_t) -> size_t,
+        unsafe extern "C" fn(*mut JDEC, *mut uint8_t, usize) -> usize,
     >,
     pub device: *mut cty::c_void,
 }
@@ -211,15 +211,14 @@ unsafe extern "C" fn BYTECLIP(mut val: cty::c_int) -> uint8_t {
 }
 unsafe extern "C" fn alloc_pool(
     mut jd: *mut JDEC,
-    mut ndata: size_t,
+    mut ndata: usize,
 ) -> *mut cty::c_void {
     unsafe {
         let mut rp: *mut cty::c_char = 0 as *mut cty::c_char;
-        ndata = ndata.wrapping_add(3 as cty::c_int as cty::c_ulong)
-            & !(3 as cty::c_int) as cty::c_ulong;
+        ndata = (ndata + 3) & !3;
         if (*jd).sz_pool >= ndata {
             let ref mut fresh0 = (*jd).sz_pool;
-            *fresh0 = (*fresh0 as cty::c_ulong).wrapping_sub(ndata) as size_t as size_t;
+            *fresh0 = *fresh0 - ndata;
             rp = (*jd).pool as *mut cty::c_char;
             let ref mut fresh1 = (*jd).pool;
             *fresh1 = rp.offset(ndata as isize) as *mut cty::c_void;
@@ -230,7 +229,7 @@ unsafe extern "C" fn alloc_pool(
 unsafe extern "C" fn create_qt_tbl(
     mut jd: *mut JDEC,
     mut data: *const uint8_t,
-    mut ndata: size_t,
+    mut ndata: usize,
 ) -> JRESULT {
     unsafe {
         let mut i: cty::c_uint = 0;
@@ -238,11 +237,11 @@ unsafe extern "C" fn create_qt_tbl(
         let mut d: uint8_t = 0;
         let mut pb: *mut int32_t = 0 as *mut int32_t;
         while ndata != 0 {
-            if ndata < 65 as cty::c_int as cty::c_ulong {
+            if ndata < 65 {
                 return JDR_FMT1;
             }
-            ndata = (ndata as cty::c_ulong).wrapping_sub(65 as cty::c_int as cty::c_ulong)
-                as size_t as size_t;
+            ndata -= 65;
+
             let fresh2 = data;
             data = data.offset(1);
             d = *fresh2;
@@ -250,11 +249,7 @@ unsafe extern "C" fn create_qt_tbl(
                 return JDR_FMT1;
             }
             i = (d as cty::c_int & 3 as cty::c_int) as cty::c_uint;
-            pb = alloc_pool(
-                jd,
-                (64 as cty::c_int as cty::c_ulong)
-                    .wrapping_mul(::core::mem::size_of::<int32_t>() as cty::c_ulong),
-            ) as *mut int32_t;
+            pb = alloc_pool(jd,64 * ::core::mem::size_of::<int32_t>()) as *mut int32_t;
             if pb.is_null() {
                 return JDR_MEM1;
             }
@@ -279,7 +274,7 @@ unsafe extern "C" fn create_qt_tbl(
 unsafe extern "C" fn create_huffman_tbl(
     mut jd: *mut JDEC,
     mut data: *const uint8_t,
-    mut ndata: size_t,
+    mut ndata: usize,
 ) -> JRESULT {
     unsafe {
         let mut i: cty::c_uint = 0;
@@ -287,18 +282,17 @@ unsafe extern "C" fn create_huffman_tbl(
         let mut b: cty::c_uint = 0;
         let mut cls: cty::c_uint = 0;
         let mut num: cty::c_uint = 0;
-        let mut np: size_t = 0;
+        let mut np: usize = 0;
         let mut d: uint8_t = 0;
         let mut pb: *mut uint8_t = 0 as *mut uint8_t;
         let mut pd: *mut uint8_t = 0 as *mut uint8_t;
         let mut hc: uint16_t = 0;
         let mut ph: *mut uint16_t = 0 as *mut uint16_t;
         while ndata != 0 {
-            if ndata < 17 as cty::c_int as cty::c_ulong {
+            if ndata < 17 {
                 return JDR_FMT1;
             }
-            ndata = (ndata as cty::c_ulong).wrapping_sub(17 as cty::c_int as cty::c_ulong)
-                as size_t as size_t;
+            ndata -= 17;
             let fresh5 = data;
             data = data.offset(1);
             d = *fresh5;
@@ -307,27 +301,24 @@ unsafe extern "C" fn create_huffman_tbl(
             }
             cls = (d as cty::c_int >> 4 as cty::c_int) as cty::c_uint;
             num = (d as cty::c_int & 0xf as cty::c_int) as cty::c_uint;
-            pb = alloc_pool(jd, 16 as cty::c_int as size_t) as *mut uint8_t;
+            pb = alloc_pool(jd, 16 as cty::c_int as usize) as *mut uint8_t;
             if pb.is_null() {
                 return JDR_MEM1;
             }
             let ref mut fresh6 = (*jd).huffbits[num as usize][cls as usize];
             *fresh6 = pb;
             i = 0 as cty::c_int as cty::c_uint;
-            np = i as size_t;
+            np = i as usize;
             while i < 16 as cty::c_int as cty::c_uint {
                 let fresh7 = data;
                 data = data.offset(1);
                 let ref mut fresh8 = *pb.offset(i as isize);
                 *fresh8 = *fresh7;
-                np = (np as cty::c_ulong).wrapping_add(*fresh8 as cty::c_ulong) as size_t
-                    as size_t;
+                np = (np as cty::c_ulong).wrapping_add(*fresh8 as cty::c_ulong) as usize
+                    as usize;
                 i = i.wrapping_add(1);
             }
-            ph = alloc_pool(
-                jd,
-                np.wrapping_mul(::core::mem::size_of::<uint16_t>() as cty::c_ulong),
-            ) as *mut uint16_t;
+            ph = alloc_pool(jd,np * core::mem::size_of::<uint16_t>()) as *mut uint16_t;
             if ph.is_null() {
                 return JDR_MEM1;
             }
@@ -356,7 +347,7 @@ unsafe extern "C" fn create_huffman_tbl(
             if ndata < np {
                 return JDR_FMT1;
             }
-            ndata = (ndata as cty::c_ulong).wrapping_sub(np) as size_t as size_t;
+            ndata -= np;
             pd = alloc_pool(jd, np) as *mut uint8_t;
             if pd.is_null() {
                 return JDR_MEM1;
@@ -364,7 +355,7 @@ unsafe extern "C" fn create_huffman_tbl(
             let ref mut fresh13 = (*jd).huffdata[num as usize][cls as usize];
             *fresh13 = pd;
             i = 0 as cty::c_int as cty::c_uint;
-            while (i as cty::c_ulong) < np {
+            while i  < np as u32 {
                 let fresh14 = data;
                 data = data.offset(1);
                 d = *fresh14;
@@ -382,9 +373,7 @@ unsafe extern "C" fn create_huffman_tbl(
             if cls != 0 {
                 tbl_ac = alloc_pool(
                     jd,
-                    (((1 as cty::c_int) << 10 as cty::c_int) as cty::c_ulong)
-                        .wrapping_mul(::core::mem::size_of::<uint16_t>() as cty::c_ulong),
-                ) as *mut uint16_t;
+                    (1 << 10) * ::core::mem::size_of::<uint16_t>()) as *mut uint16_t;
                 if tbl_ac.is_null() {
                     return JDR_MEM1;
                 }
@@ -398,10 +387,7 @@ unsafe extern "C" fn create_huffman_tbl(
                 );
             } else {
                 tbl_dc = alloc_pool(
-                    jd,
-                    (((1 as cty::c_int) << 10 as cty::c_int) as cty::c_ulong)
-                        .wrapping_mul(::core::mem::size_of::<uint8_t>() as cty::c_ulong),
-                ) as *mut uint8_t;
+                    jd,(1 << 10)  * ::core::mem::size_of::<uint8_t>()) as *mut uint8_t;
                 if tbl_dc.is_null() {
                     return JDR_MEM1;
                 }
@@ -470,7 +456,7 @@ unsafe extern "C" fn huffext(
     mut cls: cty::c_uint,
 ) -> cty::c_int {
     unsafe {
-        let mut dc: size_t = (*jd).dctr;
+        let mut dc: usize = (*jd).dctr;
         let mut dp: *mut uint8_t = (*jd).dptr;
         let mut d: cty::c_uint = 0;
         let mut flg: cty::c_uint = 0 as cty::c_int as cty::c_uint;
@@ -493,7 +479,7 @@ unsafe extern "C" fn huffext(
                     dc = ((*jd).infunc)
                         .expect(
                             "non-null function pointer",
-                        )(jd, dp, 512 as cty::c_int as size_t);
+                        )(jd, dp, 512 as cty::c_int as usize);
                     if dc == 0 {
                         return 0 as cty::c_int - JDR_INP as cty::c_int;
                     }
@@ -567,7 +553,7 @@ unsafe extern "C" fn huffext(
 }
 unsafe extern "C" fn bitext(mut jd: *mut JDEC, mut nbit: cty::c_uint) -> cty::c_int {
     unsafe {
-        let mut dc: size_t = (*jd).dctr;
+        let mut dc: usize = (*jd).dctr;
         let mut dp: *mut uint8_t = (*jd).dptr;
         let mut d: cty::c_uint = 0;
         let mut flg: cty::c_uint = 0 as cty::c_int as cty::c_uint;
@@ -585,7 +571,7 @@ unsafe extern "C" fn bitext(mut jd: *mut JDEC, mut nbit: cty::c_uint) -> cty::c_
                     dc = ((*jd).infunc)
                         .expect(
                             "non-null function pointer",
-                        )(jd, dp, 512 as cty::c_int as size_t);
+                        )(jd, dp, 512 as cty::c_int as usize);
                     if dc == 0 {
                         return 0 as cty::c_int - JDR_INP as cty::c_int;
                     }
@@ -621,7 +607,7 @@ unsafe extern "C" fn restart(mut jd: *mut JDEC, mut rstn: uint16_t) -> JRESULT {
     unsafe {
         let mut i: cty::c_uint = 0;
         let mut dp: *mut uint8_t = (*jd).dptr;
-        let mut dc: size_t = (*jd).dctr;
+        let mut dc: usize = (*jd).dctr;
         let mut marker: uint16_t = 0;
         if (*jd).marker != 0 {
             marker = (0xff00 as cty::c_int | (*jd).marker as cty::c_int) as uint16_t;
@@ -635,7 +621,7 @@ unsafe extern "C" fn restart(mut jd: *mut JDEC, mut rstn: uint16_t) -> JRESULT {
                     dc = ((*jd).infunc)
                         .expect(
                             "non-null function pointer",
-                        )(jd, dp, 512 as cty::c_int as size_t);
+                        )(jd, dp, 512 as cty::c_int as usize);
                     if dc == 0 {
                         return JDR_INP;
                     }
@@ -1308,10 +1294,10 @@ unsafe extern "C" fn mcu_output(
 pub unsafe extern "C" fn jd_prepare(
     mut jd: *mut JDEC,
     mut infunc: Option::<
-        unsafe extern "C" fn(*mut JDEC, *mut uint8_t, size_t) -> size_t,
+        unsafe extern "C" fn(*mut JDEC, *mut uint8_t, usize) -> usize,
     >,
     mut pool: *mut cty::c_void,
-    mut sz_pool: size_t,
+    mut sz_pool: usize,
     mut dev: *mut cty::c_void,
 ) -> JRESULT {
     unsafe {
@@ -1321,7 +1307,7 @@ pub unsafe extern "C" fn jd_prepare(
         let mut n: cty::c_uint = 0;
         let mut i: cty::c_uint = 0;
         let mut ofs: cty::c_uint = 0;
-        let mut len: size_t = 0;
+        let mut len: usize = 0;
         let mut rc: JRESULT = JDR_OK;
         memset(
             jd as *mut cty::c_void,
@@ -1342,7 +1328,7 @@ pub unsafe extern "C" fn jd_prepare(
         (*jd).dcv[2 as cty::c_int as usize] = *fresh63;
         (*jd).rsc = 0 as cty::c_int as uint16_t;
         (*jd).rst = 0 as cty::c_int as uint16_t;
-        seg = alloc_pool(jd, 512 as cty::c_int as size_t) as *mut uint8_t;
+        seg = alloc_pool(jd, 512 as cty::c_int as usize) as *mut uint8_t;
         let ref mut fresh64 = (*jd).inbuf;
         *fresh64 = seg;
         if seg.is_null() {
@@ -1352,8 +1338,8 @@ pub unsafe extern "C" fn jd_prepare(
         ofs = marker as cty::c_uint;
         loop {
             if ((*jd).infunc)
-                .expect("non-null function pointer")(jd, seg, 1 as cty::c_int as size_t)
-                != 1 as cty::c_int as cty::c_ulong
+                .expect("non-null function pointer")(jd, seg, 1 as cty::c_int as usize)
+                != 1
             {
                 return JDR_INP;
             }
@@ -1366,8 +1352,8 @@ pub unsafe extern "C" fn jd_prepare(
         }
         loop {
             if ((*jd).infunc)
-                .expect("non-null function pointer")(jd, seg, 4 as cty::c_int as size_t)
-                != 4 as cty::c_int as cty::c_ulong
+                .expect("non-null function pointer")(jd, seg, 4)
+                != 4
             {
                 return JDR_INP;
             }
@@ -1377,22 +1363,19 @@ pub unsafe extern "C" fn jd_prepare(
             len = ((*seg.offset(2 as cty::c_int as isize) as uint16_t as cty::c_int)
                 << 8 as cty::c_int
                 | *seg.offset(2 as cty::c_int as isize).offset(1 as cty::c_int as isize)
-                as uint16_t as cty::c_int) as uint16_t as size_t;
-            if len <= 2 as cty::c_int as cty::c_ulong
+                as uint16_t as cty::c_int) as uint16_t as usize;
+            if len <= 2
                 || marker as cty::c_int >> 8 as cty::c_int != 0xff as cty::c_int
             {
                 return JDR_FMT1;
             }
-            len = (len as cty::c_ulong).wrapping_sub(2 as cty::c_int as cty::c_ulong)
-                as size_t as size_t;
-            ofs = (ofs as cty::c_ulong)
-                .wrapping_add((4 as cty::c_int as cty::c_ulong).wrapping_add(len))
-                as cty::c_uint as cty::c_uint;
+            len = len.wrapping_sub(2);
+            ofs = (ofs as usize).wrapping_add(4+len) as cty::c_uint;
             's_526: {
                 let mut current_block_111: u64;
                 match marker as cty::c_int & 0xff as cty::c_int {
                     192 => {
-                        if len > 512 as cty::c_int as cty::c_ulong {
+                        if len > 512 {
                             return JDR_MEM2;
                         }
                         if ((*jd).infunc).expect("non-null function pointer")(jd, seg, len)
@@ -1458,7 +1441,7 @@ pub unsafe extern "C" fn jd_prepare(
                         current_block_111 = 5265702136860997526;
                     }
                     221 => {
-                        if len > 512 as cty::c_int as cty::c_ulong {
+                        if len > 512 {
                             return JDR_MEM2;
                         }
                         if ((*jd).infunc).expect("non-null function pointer")(jd, seg, len)
@@ -1473,7 +1456,7 @@ pub unsafe extern "C" fn jd_prepare(
                         current_block_111 = 5265702136860997526;
                     }
                     196 => {
-                        if len > 512 as cty::c_int as cty::c_ulong {
+                        if len > 512 {
                             return JDR_MEM2;
                         }
                         if ((*jd).infunc).expect("non-null function pointer")(jd, seg, len)
@@ -1488,7 +1471,7 @@ pub unsafe extern "C" fn jd_prepare(
                         current_block_111 = 5265702136860997526;
                     }
                     219 => {
-                        if len > 512 as cty::c_int as cty::c_ulong {
+                        if len > 512 {
                             return JDR_MEM2;
                         }
                         if ((*jd).infunc).expect("non-null function pointer")(jd, seg, len)
@@ -1503,7 +1486,7 @@ pub unsafe extern "C" fn jd_prepare(
                         current_block_111 = 5265702136860997526;
                     }
                     218 => {
-                        if len > 512 as cty::c_int as cty::c_ulong {
+                        if len > 512 {
                             return JDR_MEM2;
                         }
                         if ((*jd).infunc).expect("non-null function pointer")(jd, seg, len)
@@ -1555,9 +1538,9 @@ pub unsafe extern "C" fn jd_prepare(
                         len = n
                             .wrapping_mul(64 as cty::c_int as cty::c_uint)
                             .wrapping_mul(2 as cty::c_int as cty::c_uint)
-                            .wrapping_add(64 as cty::c_int as cty::c_uint) as size_t;
-                        if len < 256 as cty::c_int as cty::c_ulong {
-                            len = 256 as cty::c_int as size_t;
+                            .wrapping_add(64 as cty::c_int as cty::c_uint) as usize;
+                        if len < 256 {
+                            len = 256;
                         }
                         let ref mut fresh65 = (*jd).workbuf;
                         *fresh65 = alloc_pool(jd, len);
@@ -1568,12 +1551,12 @@ pub unsafe extern "C" fn jd_prepare(
                         *fresh66 = alloc_pool(
                             jd,
                             (n
-                                .wrapping_add(2 as cty::c_int as cty::c_uint)
-                                .wrapping_mul(64 as cty::c_int as cty::c_uint)
-                                as cty::c_ulong)
+                                .wrapping_add(2)
+                                .wrapping_mul(64)
+                                as usize)
                                 .wrapping_mul(
-                                    ::core::mem::size_of::<jd_yuv_t>() as cty::c_ulong,
-                                ),
+                                    ::core::mem::size_of::<jd_yuv_t>() as usize,
+                                )
                         ) as *mut jd_yuv_t;
                         if ((*jd).mcubuf).is_null() {
                             return JDR_MEM1;
@@ -1588,7 +1571,7 @@ pub unsafe extern "C" fn jd_prepare(
                                 jd,
                                 seg.offset(ofs as isize),
                                 (512 as cty::c_int as cty::c_uint).wrapping_sub(ofs)
-                                    as size_t,
+                                    as usize,
                             );
                         }
                         let ref mut fresh67 = (*jd).dptr;
