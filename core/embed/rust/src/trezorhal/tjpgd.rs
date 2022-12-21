@@ -30,7 +30,7 @@ pub struct JpegContext<'a> {
     buffer: &'a mut [u16],
 }
 
-unsafe extern "C" fn jpeg_in_buffer(jd: *mut JDEC, buff: *mut u8, n_data: usize) -> usize {
+unsafe fn jpeg_in_buffer(jd: *mut JDEC, buff: *mut u8, n_data: usize) -> usize {
     let context = unsafe { NonNull::new_unchecked((*jd).device as *mut JpegContext).as_mut() };
     let n_data = n_data as usize;
     if !buff.is_null() {
@@ -56,7 +56,7 @@ unsafe extern "C" fn jpeg_in_buffer(jd: *mut JDEC, buff: *mut u8, n_data: usize)
     n_data as _
 }
 
-unsafe extern "C" fn jpeg_out_buffer(
+unsafe fn jpeg_out_buffer(
     jd: *mut JDEC,
     bitmap_raw: *mut cty::c_void,
     rect: *mut JRECT,

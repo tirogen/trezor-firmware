@@ -8,6 +8,8 @@
     unused_mut
 )]
 
+use core::slice;
+
 extern "C" {
     fn memset(_: *mut cty::c_void, _: i32, _: cty::c_ulong) -> *mut cty::c_void;
 }
@@ -162,6 +164,25 @@ unsafe fn alloc_pool(mut jd: *mut JDEC, mut ndata: usize) -> *mut cty::c_void {
         return rp as *mut cty::c_void;
     }
 }
+
+unsafe fn alloc_pool_u8(mut jd: *mut JDEC, mut ndata: usize) -> Result<&'static mut [u8], ()> {
+    unsafe {
+        let mut rp: *mut cty::c_char = 0 as *mut cty::c_char;
+        let ndata_aligned = (ndata + 3) & !3;
+        if (*jd).sz_pool >= ndata_aligned {
+            let ref mut fresh0 = (*jd).sz_pool;
+            *fresh0 = *fresh0 - ndata_aligned;
+            rp = (*jd).pool as *mut cty::c_char;
+            let ref mut fresh1 = (*jd).pool;
+            *fresh1 = rp.offset(ndata_aligned as isize) as *mut cty::c_void;
+            return Ok(slice::from_raw_parts_mut(rp as *mut u8, ndata));
+        }
+        Err(())
+    }
+
+}
+
+
 unsafe fn create_qt_tbl(mut jd: *mut JDEC, mut data: *const u8, mut ndata: usize) -> JRESULT {
     unsafe {
         let mut i: u32 = 0;
