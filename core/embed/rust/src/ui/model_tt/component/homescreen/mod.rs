@@ -17,6 +17,7 @@ use crate::{
 use render::{
     homescreen, homescreen_blurred, HomescreenNotification, HomescreenText, HOMESCREEN_IMAGE_SIZE,
 };
+use crate::trezorhal::time_measurements::{clear_acc, get_ticks, init_ticks};
 
 use super::{theme, Loader, LoaderMsg};
 
@@ -194,6 +195,7 @@ where
             let notification = self.get_notification();
 
             let res = get_image();
+            init_ticks();
             if let Ok(data) = res {
                 homescreen(
                     data.as_ref(),
@@ -209,6 +211,8 @@ where
                     self.paint_notification_only,
                 );
             }
+            get_ticks();
+            clear_acc();
         }
     }
 
@@ -290,11 +294,14 @@ where
         ];
 
         let res = get_image();
+        init_ticks();
         if let Ok(data) = res {
             homescreen_blurred(data.as_ref(), &texts);
         } else {
             homescreen_blurred(IMAGE_HOMESCREEN, &texts);
         }
+        get_ticks();
+        clear_acc();
     }
 }
 
