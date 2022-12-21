@@ -390,11 +390,7 @@ unsafe extern "C" fn huffext(mut jd: *mut JDEC, mut id: u32, mut cls: u32) -> i3
             } else {
                 if dc == 0 {
                     dp = (*jd).inbuf;
-                    dc = ((*jd).infunc).expect("non-null function pointer")(
-                        jd,
-                        dp,
-                        512 as i32 as usize,
-                    );
+                    dc = ((*jd).infunc).expect("non-null function pointer")(jd, dp, 512);
                     if dc == 0 {
                         return 0 as i32 - JDR_INP as i32;
                     }
@@ -543,17 +539,15 @@ unsafe extern "C" fn restart(mut jd: *mut JDEC, mut rstn: u16) -> JRESULT {
             *fresh28 = dp;
             (*jd).dctr = dc;
         }
-        if marker as i32 & 0xffd8 as i32 != 0xffd0 as i32
-            || marker as i32 & 7 as i32 != rstn as i32 & 7 as i32
-        {
+        if marker as i32 & 0xffd8 != 0xffd0 || marker as i32 & 7 != rstn as i32 & 7 {
             return JDR_FMT1;
         }
-        (*jd).dbit = 0 as i32 as u8;
-        let ref mut fresh29 = (*jd).dcv[0 as i32 as usize];
-        *fresh29 = 0 as i32 as i16;
-        let ref mut fresh30 = (*jd).dcv[1 as i32 as usize];
+        (*jd).dbit = 0 as u8;
+        let ref mut fresh29 = (*jd).dcv[0];
+        *fresh29 = 0 as i16;
+        let ref mut fresh30 = (*jd).dcv[1];
         *fresh30 = *fresh29;
-        (*jd).dcv[2 as i32 as usize] = *fresh30;
+        (*jd).dcv[2 as usize] = *fresh30;
         return JDR_OK;
     }
 }
@@ -705,10 +699,9 @@ unsafe extern "C" fn mcu_load(mut jd: *mut JDEC) -> JRESULT {
                     if e < 0 as i32 {
                         return (0 as i32 - e) as JRESULT;
                     }
-                    bc = ((1) << bc.wrapping_sub(1 as i32 as u32)) as u32;
+                    bc = ((1) << bc.wrapping_sub(1)) as u32;
                     if e as u32 & bc == 0 {
-                        e = (e as u32).wrapping_sub((bc << 1 as i32).wrapping_sub(1 as i32 as u32))
-                            as i32;
+                        e = (e as u32).wrapping_sub((bc << 1).wrapping_sub(1)) as i32;
                     }
                     d += e;
                     (*jd).dcv[cmp as usize] = d as i16;
@@ -743,9 +736,7 @@ unsafe extern "C" fn mcu_load(mut jd: *mut JDEC) -> JRESULT {
                         }
                         bc = ((1) << bc.wrapping_sub(1)) as u32;
                         if d as u32 & bc == 0 {
-                            d = (d as u32)
-                                .wrapping_sub((bc << 1 as i32).wrapping_sub(1 as i32 as u32))
-                                as i32;
+                            d = (d as u32).wrapping_sub((bc << 1 as i32).wrapping_sub(1)) as i32;
                         }
                         i = Zig[z as usize] as u32;
                         *tmp.offset(i as isize) = d * *dqf.offset(i as isize) >> 8 as i32;
@@ -766,7 +757,7 @@ unsafe extern "C" fn mcu_load(mut jd: *mut JDEC) -> JRESULT {
                                 *bp.offset(fresh32 as isize) = d as i16;
                             }
                         } else {
-                            memset(bp as *mut cty::c_void, d, 64 as i32 as cty::c_ulong);
+                            memset(bp as *mut cty::c_void, d, 64 as cty::c_ulong);
                         }
                     } else {
                         block_idct(tmp, bp);
@@ -848,11 +839,11 @@ unsafe extern "C" fn mcu_output(
                     py = py.offset(iy.wrapping_mul(8) as isize);
                     ix = 0 as i32 as u32;
                     while ix < mx {
-                        cb = *pc.offset(0) as i32 - 128 as i32;
-                        cr = *pc.offset(64) as i32 - 128 as i32;
-                        if mx == 16 as i32 as u32 {
-                            if ix == 8 as i32 as u32 {
-                                py = py.offset((64 as i32 - 8 as i32) as isize);
+                        cb = *pc.offset(0) as i32 - 128;
+                        cr = *pc.offset(64) as i32 - 128;
+                        if mx == 16 {
+                            if ix == 8 {
+                                py = py.offset((64 - 8) as isize);
                             }
                             pc = pc.offset((ix & 1) as isize);
                         } else {
@@ -914,7 +905,7 @@ unsafe extern "C" fn mcu_output(
                 let mut w: u32 = 0;
                 let mut a: u32 = 0;
                 let mut op: *mut u8 = 0 as *mut u8;
-                s = ((*jd).scale as i32 * 2 as i32) as u32;
+                s = ((*jd).scale as i32 * 2) as u32;
                 w = ((1 as i32) << (*jd).scale as i32) as u32;
                 a = mx.wrapping_sub(w).wrapping_mul(
                     (if 1 as i32 != 2 as i32 {
@@ -1113,28 +1104,28 @@ pub unsafe extern "C" fn jd_prepare(
         *fresh60 = infunc;
         let ref mut fresh61 = (*jd).device;
         *fresh61 = dev;
-        let ref mut fresh62 = (*jd).dcv[0 as i32 as usize];
-        *fresh62 = 0 as i32 as i16;
-        let ref mut fresh63 = (*jd).dcv[1 as i32 as usize];
+        let ref mut fresh62 = (*jd).dcv[0];
+        *fresh62 = 0;
+        let ref mut fresh63 = (*jd).dcv[1];
         *fresh63 = *fresh62;
-        (*jd).dcv[2 as i32 as usize] = *fresh63;
-        (*jd).rsc = 0 as i32 as u16;
-        (*jd).rst = 0 as i32 as u16;
-        seg = alloc_pool(jd, 512 as i32 as usize) as *mut u8;
+        (*jd).dcv[2 as usize] = *fresh63;
+        (*jd).rsc = 0;
+        (*jd).rst = 0;
+        seg = alloc_pool(jd, 512) as *mut u8;
         let ref mut fresh64 = (*jd).inbuf;
         *fresh64 = seg;
         if seg.is_null() {
             return JDR_MEM1;
         }
-        marker = 0 as i32 as u16;
+        marker = 0;
         ofs = marker as u32;
         loop {
-            if ((*jd).infunc).expect("non-null function pointer")(jd, seg, 1 as i32 as usize) != 1 {
+            if ((*jd).infunc).expect("non-null function pointer")(jd, seg, 1) != 1 {
                 return JDR_INP;
             }
             ofs = ofs.wrapping_add(1);
-            marker = ((marker as i32) << 8 as i32 | *seg.offset(0 as i32 as isize) as i32) as u16;
-            if !(marker as i32 != 0xffd8 as i32) {
+            marker = ((marker as i32) << 8 | *seg.offset(0) as i32) as u16;
+            if !(marker as i32 != 0xffd8) {
                 break;
             }
         }
@@ -1142,12 +1133,9 @@ pub unsafe extern "C" fn jd_prepare(
             if ((*jd).infunc).expect("non-null function pointer")(jd, seg, 4) != 4 {
                 return JDR_INP;
             }
-            marker = ((*seg as u16 as i32) << 8 as i32
-                | *seg.offset(1 as i32 as isize) as u16 as i32) as u16;
-            len = ((*seg.offset(2 as i32 as isize) as u16 as i32) << 8 as i32
-                | *seg.offset(2 as i32 as isize).offset(1 as i32 as isize) as u16 as i32)
-                as u16 as usize;
-            if len <= 2 || marker as i32 >> 8 as i32 != 0xff as i32 {
+            marker = ((*seg as i32) << 8 | *seg.offset(1) as i32) as u16;
+            len = ((*seg.offset(2) as i32) << 8 as i32 | *seg.offset(2).offset(1) as i32) as usize;
+            if len <= 2 || marker as i32 >> 8 != 0xff {
                 return JDR_FMT1;
             }
             len = len.wrapping_sub(2);
@@ -1162,45 +1150,36 @@ pub unsafe extern "C" fn jd_prepare(
                         if ((*jd).infunc).expect("non-null function pointer")(jd, seg, len) != len {
                             return JDR_INP;
                         }
-                        (*jd).width = ((*(&mut *seg.offset(3 as i32 as isize) as *mut u8) as u16
-                            as i32)
+                        (*jd).width = ((*(&mut *seg.offset(3) as *mut u8) as u16 as i32)
                             << 8 as i32
-                            | *(&mut *seg.offset(3 as i32 as isize) as *mut u8)
-                                .offset(1 as i32 as isize) as u16
-                                as i32) as u16;
-                        (*jd).height = ((*(&mut *seg.offset(1 as i32 as isize) as *mut u8) as u16
-                            as i32)
+                            | *(&mut *seg.offset(3) as *mut u8).offset(1) as u16 as i32)
+                            as u16;
+                        (*jd).height = ((*(&mut *seg.offset(1) as *mut u8) as u16 as i32)
                             << 8 as i32
-                            | *(&mut *seg.offset(1 as i32 as isize) as *mut u8)
-                                .offset(1 as i32 as isize) as u16
-                                as i32) as u16;
-                        (*jd).ncomp = *seg.offset(5 as i32 as isize);
+                            | *(&mut *seg.offset(1) as *mut u8).offset(1) as u16 as i32)
+                            as u16;
+                        (*jd).ncomp = *seg.offset(5);
                         if (*jd).ncomp as i32 != 3 as i32 && (*jd).ncomp as i32 != 1 as i32 {
                             return JDR_FMT3;
                         }
-                        i = 0 as i32 as u32;
+                        i = 0;
                         while i < (*jd).ncomp as u32 {
                             b = *seg.offset(
-                                (7 as i32 as u32).wrapping_add((3 as i32 as u32).wrapping_mul(i))
-                                    as isize,
+                                (7 as u32).wrapping_add((3 as u32).wrapping_mul(i)) as isize
                             );
-                            if i == 0 as i32 as u32 {
-                                if b as i32 != 0x11 as i32
-                                    && b as i32 != 0x22 as i32
-                                    && b as i32 != 0x21 as i32
-                                {
+                            if i == 0 {
+                                if b as i32 != 0x11 && b as i32 != 0x22 && b as i32 != 0x21 {
                                     return JDR_FMT3;
                                 }
-                                (*jd).msx = (b as i32 >> 4 as i32) as u8;
-                                (*jd).msy = (b as i32 & 15 as i32) as u8;
-                            } else if b as i32 != 0x11 as i32 {
+                                (*jd).msx = (b as i32 >> 4) as u8;
+                                (*jd).msy = (b as i32 & 15) as u8;
+                            } else if b as i32 != 0x11 {
                                 return JDR_FMT3;
                             }
                             (*jd).qtid[i as usize] = *seg.offset(
-                                (8 as i32 as u32).wrapping_add((3 as i32 as u32).wrapping_mul(i))
-                                    as isize,
+                                (8 as u32).wrapping_add((3 as u32).wrapping_mul(i)) as isize,
                             );
-                            if (*jd).qtid[i as usize] as i32 > 3 as i32 {
+                            if (*jd).qtid[i as usize] as i32 > 3 {
                                 return JDR_FMT3;
                             }
                             i = i.wrapping_add(1);
@@ -1214,9 +1193,7 @@ pub unsafe extern "C" fn jd_prepare(
                         if ((*jd).infunc).expect("non-null function pointer")(jd, seg, len) != len {
                             return JDR_INP;
                         }
-                        (*jd).nrst = ((*seg as u16 as i32) << 8 as i32
-                            | *seg.offset(1 as i32 as isize) as u16 as i32)
-                            as u16;
+                        (*jd).nrst = ((*seg as i32) << 8 | *seg.offset(1) as i32) as u16;
                         current_block_111 = 5265702136860997526;
                     }
                     196 => {
@@ -1268,8 +1245,8 @@ pub unsafe extern "C" fn jd_prepare(
                                 return JDR_FMT3;
                             }
                             n = (if i != 0 { 1 as i32 } else { 0 as i32 }) as u32;
-                            if ((*jd).huffbits[n as usize][0 as i32 as usize]).is_null()
-                                || ((*jd).huffbits[n as usize][1 as i32 as usize]).is_null()
+                            if ((*jd).huffbits[n as usize][0]).is_null()
+                                || ((*jd).huffbits[n as usize][1]).is_null()
                             {
                                 return JDR_FMT1;
                             }
@@ -1282,10 +1259,7 @@ pub unsafe extern "C" fn jd_prepare(
                         if n == 0 {
                             return JDR_FMT1;
                         }
-                        len = n
-                            .wrapping_mul(64 as i32 as u32)
-                            .wrapping_mul(2 as i32 as u32)
-                            .wrapping_add(64 as i32 as u32) as usize;
+                        len = n.wrapping_mul(64).wrapping_mul(2).wrapping_add(64) as usize;
                         if len < 256 {
                             len = 256;
                         }
@@ -1308,7 +1282,7 @@ pub unsafe extern "C" fn jd_prepare(
                             (*jd).dctr = ((*jd).infunc).expect("non-null function pointer")(
                                 jd,
                                 seg.offset(ofs as isize),
-                                (512 as i32 as u32).wrapping_sub(ofs) as usize,
+                                (512 as u32).wrapping_sub(ofs) as usize,
                             );
                         }
                         let ref mut fresh67 = (*jd).dptr;
@@ -1455,17 +1429,17 @@ pub unsafe extern "C" fn jd_decomp(
                     let fresh71 = *fresh70;
                     *fresh70 = (*fresh70).wrapping_add(1);
                     rc = restart(jd, fresh71);
-                    if rc as u32 != JDR_OK as i32 as u32 {
+                    if rc as u32 != JDR_OK as u32 {
                         return rc;
                     }
-                    (*jd).rst = 1 as i32 as u16;
+                    (*jd).rst = 1;
                 }
                 rc = mcu_load(jd);
-                if rc as u32 != JDR_OK as i32 as u32 {
+                if rc as u32 != JDR_OK as u32 {
                     return rc;
                 }
                 rc = mcu_output(jd, outfunc, x, y);
-                if rc as u32 != JDR_OK as i32 as u32 {
+                if rc as u32 != JDR_OK as u32 {
                     return rc;
                 }
                 x = x.wrapping_add(mx);
