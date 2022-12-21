@@ -3,18 +3,13 @@
 extern "C" {
     fn memset(
         _: *mut cty::c_void,
-        _: cty::c_int,
+        _: i32,
         _: cty::c_ulong,
     ) -> *mut cty::c_void;
 }
 
-pub type int16_t = cty::c_short;
-pub type int32_t = cty::c_int;
-pub type uint8_t = cty::c_uchar;
-pub type uint16_t = cty::c_ushort;
-pub type uint32_t = cty::c_uint;
-pub type jd_yuv_t = int16_t;
-pub type JRESULT = cty::c_uint;
+
+pub type JRESULT = u32;
 pub const JDR_FMT3: JRESULT = 8;
 pub const JDR_FMT2: JRESULT = 7;
 pub const JDR_FMT1: JRESULT = 6;
@@ -27,187 +22,187 @@ pub const JDR_OK: JRESULT = 0;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct JRECT {
-    pub left: uint16_t,
-    pub right: uint16_t,
-    pub top: uint16_t,
-    pub bottom: uint16_t,
+    pub left: u16,
+    pub right: u16,
+    pub top: u16,
+    pub bottom: u16,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct JDEC {
     pub dctr: usize,
-    pub dptr: *mut uint8_t,
-    pub inbuf: *mut uint8_t,
-    pub dbit: uint8_t,
-    pub scale: uint8_t,
-    pub msx: uint8_t,
-    pub msy: uint8_t,
-    pub qtid: [uint8_t; 3],
-    pub ncomp: uint8_t,
-    pub dcv: [int16_t; 3],
-    pub nrst: uint16_t,
-    pub rst: uint16_t,
-    pub rsc: uint16_t,
-    pub width: uint16_t,
-    pub height: uint16_t,
-    pub huffbits: [[*mut uint8_t; 2]; 2],
-    pub huffcode: [[*mut uint16_t; 2]; 2],
-    pub huffdata: [[*mut uint8_t; 2]; 2],
-    pub qttbl: [*mut int32_t; 4],
-    pub wreg: uint32_t,
-    pub marker: uint8_t,
-    pub longofs: [[uint8_t; 2]; 2],
-    pub hufflut_ac: [*mut uint16_t; 2],
-    pub hufflut_dc: [*mut uint8_t; 2],
+    pub dptr: *mut u8,
+    pub inbuf: *mut u8,
+    pub dbit: u8,
+    pub scale: u8,
+    pub msx: u8,
+    pub msy: u8,
+    pub qtid: [u8; 3],
+    pub ncomp: u8,
+    pub dcv: [i16; 3],
+    pub nrst: u16,
+    pub rst: u16,
+    pub rsc: u16,
+    pub width: u16,
+    pub height: u16,
+    pub huffbits: [[*mut u8; 2]; 2],
+    pub huffcode: [[*mut u16; 2]; 2],
+    pub huffdata: [[*mut u8; 2]; 2],
+    pub qttbl: [*mut i32; 4],
+    pub wreg: u32,
+    pub marker: u8,
+    pub longofs: [[u8; 2]; 2],
+    pub hufflut_ac: [*mut u16; 2],
+    pub hufflut_dc: [*mut u8; 2],
     pub workbuf: *mut cty::c_void,
-    pub mcubuf: *mut jd_yuv_t,
+    pub mcubuf: *mut i16,
     pub pool: *mut cty::c_void,
     pub sz_pool: usize,
     pub infunc: Option::<
-        unsafe extern "C" fn(*mut JDEC, *mut uint8_t, usize) -> usize,
+        unsafe extern "C" fn(*mut JDEC, *mut u8, usize) -> usize,
     >,
     pub device: *mut cty::c_void,
 }
-static mut Zig: [uint8_t; 64] = [
-    0 as cty::c_int as uint8_t,
-    1 as cty::c_int as uint8_t,
-    8 as cty::c_int as uint8_t,
-    16 as cty::c_int as uint8_t,
-    9 as cty::c_int as uint8_t,
-    2 as cty::c_int as uint8_t,
-    3 as cty::c_int as uint8_t,
-    10 as cty::c_int as uint8_t,
-    17 as cty::c_int as uint8_t,
-    24 as cty::c_int as uint8_t,
-    32 as cty::c_int as uint8_t,
-    25 as cty::c_int as uint8_t,
-    18 as cty::c_int as uint8_t,
-    11 as cty::c_int as uint8_t,
-    4 as cty::c_int as uint8_t,
-    5 as cty::c_int as uint8_t,
-    12 as cty::c_int as uint8_t,
-    19 as cty::c_int as uint8_t,
-    26 as cty::c_int as uint8_t,
-    33 as cty::c_int as uint8_t,
-    40 as cty::c_int as uint8_t,
-    48 as cty::c_int as uint8_t,
-    41 as cty::c_int as uint8_t,
-    34 as cty::c_int as uint8_t,
-    27 as cty::c_int as uint8_t,
-    20 as cty::c_int as uint8_t,
-    13 as cty::c_int as uint8_t,
-    6 as cty::c_int as uint8_t,
-    7 as cty::c_int as uint8_t,
-    14 as cty::c_int as uint8_t,
-    21 as cty::c_int as uint8_t,
-    28 as cty::c_int as uint8_t,
-    35 as cty::c_int as uint8_t,
-    42 as cty::c_int as uint8_t,
-    49 as cty::c_int as uint8_t,
-    56 as cty::c_int as uint8_t,
-    57 as cty::c_int as uint8_t,
-    50 as cty::c_int as uint8_t,
-    43 as cty::c_int as uint8_t,
-    36 as cty::c_int as uint8_t,
-    29 as cty::c_int as uint8_t,
-    22 as cty::c_int as uint8_t,
-    15 as cty::c_int as uint8_t,
-    23 as cty::c_int as uint8_t,
-    30 as cty::c_int as uint8_t,
-    37 as cty::c_int as uint8_t,
-    44 as cty::c_int as uint8_t,
-    51 as cty::c_int as uint8_t,
-    58 as cty::c_int as uint8_t,
-    59 as cty::c_int as uint8_t,
-    52 as cty::c_int as uint8_t,
-    45 as cty::c_int as uint8_t,
-    38 as cty::c_int as uint8_t,
-    31 as cty::c_int as uint8_t,
-    39 as cty::c_int as uint8_t,
-    46 as cty::c_int as uint8_t,
-    53 as cty::c_int as uint8_t,
-    60 as cty::c_int as uint8_t,
-    61 as cty::c_int as uint8_t,
-    54 as cty::c_int as uint8_t,
-    47 as cty::c_int as uint8_t,
-    55 as cty::c_int as uint8_t,
-    62 as cty::c_int as uint8_t,
-    63 as cty::c_int as uint8_t,
+static mut Zig: [u8; 64] = [
+    0,
+    1,
+    8,
+    16,
+    9,
+    2,
+    3,
+    10,
+    17,
+    24,
+    32,
+    25,
+    18,
+    11,
+    4,
+    5,
+    12,
+    19,
+    26,
+    33,
+    40,
+    48,
+    41,
+    34,
+    27,
+    20,
+    13,
+    6,
+    7,
+    14,
+    21,
+    28,
+    35,
+    42,
+    49,
+    56,
+    57,
+    50,
+    43,
+    36,
+    29,
+    22,
+    15,
+    23,
+    30,
+    37,
+    44,
+    51,
+    58,
+    59,
+    52,
+    45,
+    38,
+    31,
+    39,
+    46,
+    53,
+    60,
+    61,
+    54,
+    47,
+    55,
+    62,
+    63,
 ];
-static mut Ipsf: [uint16_t; 64] = [
-    (1.00000f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (1.38704f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (1.30656f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (1.17588f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (1.00000f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (0.78570f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (0.54120f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (0.27590f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (1.38704f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (1.92388f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (1.81226f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (1.63099f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (1.38704f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (1.08979f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (0.75066f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (0.38268f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (1.30656f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (1.81226f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (1.70711f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (1.53636f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (1.30656f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (1.02656f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (0.70711f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (0.36048f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (1.17588f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (1.63099f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (1.53636f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (1.38268f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (1.17588f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (0.92388f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (0.63638f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (0.32442f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (1.00000f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (1.38704f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (1.30656f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (1.17588f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (1.00000f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (0.78570f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (0.54120f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (0.27590f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (0.78570f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (1.08979f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (1.02656f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (0.92388f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (0.78570f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (0.61732f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (0.42522f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (0.21677f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (0.54120f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (0.75066f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (0.70711f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (0.63638f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (0.54120f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (0.42522f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (0.29290f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (0.14932f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (0.27590f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (0.38268f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (0.36048f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (0.32442f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (0.27590f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (0.21678f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (0.14932f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
-    (0.07612f64 * 8192 as cty::c_int as cty::c_double) as uint16_t,
+static mut Ipsf: [u16; 64] = [
+    (1.00000f64 * 8192 as i32 as f64) as u16,
+    (1.38704f64 * 8192 as i32 as f64) as u16,
+    (1.30656f64 * 8192 as i32 as f64) as u16,
+    (1.17588f64 * 8192 as i32 as f64) as u16,
+    (1.00000f64 * 8192 as i32 as f64) as u16,
+    (0.78570f64 * 8192 as i32 as f64) as u16,
+    (0.54120f64 * 8192 as i32 as f64) as u16,
+    (0.27590f64 * 8192 as i32 as f64) as u16,
+    (1.38704f64 * 8192 as i32 as f64) as u16,
+    (1.92388f64 * 8192 as i32 as f64) as u16,
+    (1.81226f64 * 8192 as i32 as f64) as u16,
+    (1.63099f64 * 8192 as i32 as f64) as u16,
+    (1.38704f64 * 8192 as i32 as f64) as u16,
+    (1.08979f64 * 8192 as i32 as f64) as u16,
+    (0.75066f64 * 8192 as i32 as f64) as u16,
+    (0.38268f64 * 8192 as i32 as f64) as u16,
+    (1.30656f64 * 8192 as i32 as f64) as u16,
+    (1.81226f64 * 8192 as i32 as f64) as u16,
+    (1.70711f64 * 8192 as i32 as f64) as u16,
+    (1.53636f64 * 8192 as i32 as f64) as u16,
+    (1.30656f64 * 8192 as i32 as f64) as u16,
+    (1.02656f64 * 8192 as i32 as f64) as u16,
+    (0.70711f64 * 8192 as i32 as f64) as u16,
+    (0.36048f64 * 8192 as i32 as f64) as u16,
+    (1.17588f64 * 8192 as i32 as f64) as u16,
+    (1.63099f64 * 8192 as i32 as f64) as u16,
+    (1.53636f64 * 8192 as i32 as f64) as u16,
+    (1.38268f64 * 8192 as i32 as f64) as u16,
+    (1.17588f64 * 8192 as i32 as f64) as u16,
+    (0.92388f64 * 8192 as i32 as f64) as u16,
+    (0.63638f64 * 8192 as i32 as f64) as u16,
+    (0.32442f64 * 8192 as i32 as f64) as u16,
+    (1.00000f64 * 8192 as i32 as f64) as u16,
+    (1.38704f64 * 8192 as i32 as f64) as u16,
+    (1.30656f64 * 8192 as i32 as f64) as u16,
+    (1.17588f64 * 8192 as i32 as f64) as u16,
+    (1.00000f64 * 8192 as i32 as f64) as u16,
+    (0.78570f64 * 8192 as i32 as f64) as u16,
+    (0.54120f64 * 8192 as i32 as f64) as u16,
+    (0.27590f64 * 8192 as i32 as f64) as u16,
+    (0.78570f64 * 8192 as i32 as f64) as u16,
+    (1.08979f64 * 8192 as i32 as f64) as u16,
+    (1.02656f64 * 8192 as i32 as f64) as u16,
+    (0.92388f64 * 8192 as i32 as f64) as u16,
+    (0.78570f64 * 8192 as i32 as f64) as u16,
+    (0.61732f64 * 8192 as i32 as f64) as u16,
+    (0.42522f64 * 8192 as i32 as f64) as u16,
+    (0.21677f64 * 8192 as i32 as f64) as u16,
+    (0.54120f64 * 8192 as i32 as f64) as u16,
+    (0.75066f64 * 8192 as i32 as f64) as u16,
+    (0.70711f64 * 8192 as i32 as f64) as u16,
+    (0.63638f64 * 8192 as i32 as f64) as u16,
+    (0.54120f64 * 8192 as i32 as f64) as u16,
+    (0.42522f64 * 8192 as i32 as f64) as u16,
+    (0.29290f64 * 8192 as i32 as f64) as u16,
+    (0.14932f64 * 8192 as i32 as f64) as u16,
+    (0.27590f64 * 8192 as i32 as f64) as u16,
+    (0.38268f64 * 8192 as i32 as f64) as u16,
+    (0.36048f64 * 8192 as i32 as f64) as u16,
+    (0.32442f64 * 8192 as i32 as f64) as u16,
+    (0.27590f64 * 8192 as i32 as f64) as u16,
+    (0.21678f64 * 8192 as i32 as f64) as u16,
+    (0.14932f64 * 8192 as i32 as f64) as u16,
+    (0.07612f64 * 8192 as i32 as f64) as u16,
 ];
-unsafe extern "C" fn BYTECLIP(mut val: cty::c_int) -> uint8_t {
-    if val < 0 as cty::c_int {
-        return 0 as cty::c_int as uint8_t;
+unsafe extern "C" fn BYTECLIP(mut val: i32) -> u8 {
+    if val < 0 as i32 {
+        return 0 as i32 as u8;
     }
-    if val > 255 as cty::c_int {
-        return 255 as cty::c_int as uint8_t;
+    if val > 255 as i32 {
+        return 255 as i32 as u8;
     }
-    return val as uint8_t;
+    return val as u8;
 }
 unsafe extern "C" fn alloc_pool(
     mut jd: *mut JDEC,
@@ -228,14 +223,14 @@ unsafe extern "C" fn alloc_pool(
 }
 unsafe extern "C" fn create_qt_tbl(
     mut jd: *mut JDEC,
-    mut data: *const uint8_t,
+    mut data: *const u8,
     mut ndata: usize,
 ) -> JRESULT {
     unsafe {
-        let mut i: cty::c_uint = 0;
-        let mut zi: cty::c_uint = 0;
-        let mut d: uint8_t = 0;
-        let mut pb: *mut int32_t = 0 as *mut int32_t;
+        let mut i: u32 = 0;
+        let mut zi: u32 = 0;
+        let mut d: u8 = 0;
+        let mut pb: *mut i32 = 0 as *mut i32;
         while ndata != 0 {
             if ndata < 65 {
                 return JDR_FMT1;
@@ -245,26 +240,26 @@ unsafe extern "C" fn create_qt_tbl(
             let fresh2 = data;
             data = data.offset(1);
             d = *fresh2;
-            if d as cty::c_int & 0xf0 as cty::c_int != 0 {
+            if d as i32 & 0xf0 as i32 != 0 {
                 return JDR_FMT1;
             }
-            i = (d as cty::c_int & 3 as cty::c_int) as cty::c_uint;
-            pb = alloc_pool(jd,64 * ::core::mem::size_of::<int32_t>()) as *mut int32_t;
+            i = (d as i32 & 3 as i32) as u32;
+            pb = alloc_pool(jd,64 * ::core::mem::size_of::<i32>()) as *mut i32;
             if pb.is_null() {
                 return JDR_MEM1;
             }
             let ref mut fresh3 = (*jd).qttbl[i as usize];
             *fresh3 = pb;
-            i = 0 as cty::c_int as cty::c_uint;
-            while i < 64 as cty::c_int as cty::c_uint {
-                zi = Zig[i as usize] as cty::c_uint;
+            i = 0 as i32 as u32;
+            while i < 64 as i32 as u32 {
+                zi = Zig[i as usize] as u32;
                 let fresh4 = data;
                 data = data.offset(1);
                 *pb
                     .offset(
                         zi as isize,
-                    ) = (*fresh4 as uint32_t).wrapping_mul(Ipsf[zi as usize] as cty::c_uint)
-                    as int32_t;
+                    ) = (*fresh4 as u32).wrapping_mul(Ipsf[zi as usize] as u32)
+                    as i32;
                 i = i.wrapping_add(1);
             }
         }
@@ -273,21 +268,21 @@ unsafe extern "C" fn create_qt_tbl(
 }
 unsafe extern "C" fn create_huffman_tbl(
     mut jd: *mut JDEC,
-    mut data: *const uint8_t,
+    mut data: *const u8,
     mut ndata: usize,
 ) -> JRESULT {
     unsafe {
-        let mut i: cty::c_uint = 0;
-        let mut j: cty::c_uint = 0;
-        let mut b: cty::c_uint = 0;
-        let mut cls: cty::c_uint = 0;
-        let mut num: cty::c_uint = 0;
+        let mut i: u32 = 0;
+        let mut j: u32 = 0;
+        let mut b: u32 = 0;
+        let mut cls: u32 = 0;
+        let mut num: u32 = 0;
         let mut np: usize = 0;
-        let mut d: uint8_t = 0;
-        let mut pb: *mut uint8_t = 0 as *mut uint8_t;
-        let mut pd: *mut uint8_t = 0 as *mut uint8_t;
-        let mut hc: uint16_t = 0;
-        let mut ph: *mut uint16_t = 0 as *mut uint16_t;
+        let mut d: u8 = 0;
+        let mut pb: *mut u8 = 0 as *mut u8;
+        let mut pd: *mut u8 = 0 as *mut u8;
+        let mut hc: u16 = 0;
+        let mut ph: *mut u16 = 0 as *mut u16;
         while ndata != 0 {
             if ndata < 17 {
                 return JDR_FMT1;
@@ -296,20 +291,20 @@ unsafe extern "C" fn create_huffman_tbl(
             let fresh5 = data;
             data = data.offset(1);
             d = *fresh5;
-            if d as cty::c_int & 0xee as cty::c_int != 0 {
+            if d as i32 & 0xee as i32 != 0 {
                 return JDR_FMT1;
             }
-            cls = (d as cty::c_int >> 4 as cty::c_int) as cty::c_uint;
-            num = (d as cty::c_int & 0xf as cty::c_int) as cty::c_uint;
-            pb = alloc_pool(jd, 16 as cty::c_int as usize) as *mut uint8_t;
+            cls = (d as i32 >> 4 as i32) as u32;
+            num = (d as i32 & 0xf as i32) as u32;
+            pb = alloc_pool(jd, 16 as i32 as usize) as *mut u8;
             if pb.is_null() {
                 return JDR_MEM1;
             }
             let ref mut fresh6 = (*jd).huffbits[num as usize][cls as usize];
             *fresh6 = pb;
-            i = 0 as cty::c_int as cty::c_uint;
+            i = 0 as i32 as u32;
             np = i as usize;
-            while i < 16 as cty::c_int as cty::c_uint {
+            while i < 16 as i32 as u32 {
                 let fresh7 = data;
                 data = data.offset(1);
                 let ref mut fresh8 = *pb.offset(i as isize);
@@ -318,17 +313,17 @@ unsafe extern "C" fn create_huffman_tbl(
                     as usize;
                 i = i.wrapping_add(1);
             }
-            ph = alloc_pool(jd,np * core::mem::size_of::<uint16_t>()) as *mut uint16_t;
+            ph = alloc_pool(jd,np * core::mem::size_of::<u16>()) as *mut u16;
             if ph.is_null() {
                 return JDR_MEM1;
             }
             let ref mut fresh9 = (*jd).huffcode[num as usize][cls as usize];
             *fresh9 = ph;
-            hc = 0 as cty::c_int as uint16_t;
-            i = 0 as cty::c_int as cty::c_uint;
+            hc = 0 as i32 as u16;
+            i = 0 as i32 as u32;
             j = i;
-            while i < 16 as cty::c_int as cty::c_uint {
-                b = *pb.offset(i as isize) as cty::c_uint;
+            while i < 16 as i32 as u32 {
+                b = *pb.offset(i as isize) as u32;
                 loop {
                     let fresh10 = b;
                     b = b.wrapping_sub(1);
@@ -341,39 +336,39 @@ unsafe extern "C" fn create_huffman_tbl(
                     j = j.wrapping_add(1);
                     *ph.offset(fresh12 as isize) = fresh11;
                 }
-                hc = ((hc as cty::c_int) << 1 as cty::c_int) as uint16_t;
+                hc = ((hc as i32) << 1 as i32) as u16;
                 i = i.wrapping_add(1);
             }
             if ndata < np {
                 return JDR_FMT1;
             }
             ndata -= np;
-            pd = alloc_pool(jd, np) as *mut uint8_t;
+            pd = alloc_pool(jd, np) as *mut u8;
             if pd.is_null() {
                 return JDR_MEM1;
             }
             let ref mut fresh13 = (*jd).huffdata[num as usize][cls as usize];
             *fresh13 = pd;
-            i = 0 as cty::c_int as cty::c_uint;
+            i = 0 as i32 as u32;
             while i  < np as u32 {
                 let fresh14 = data;
                 data = data.offset(1);
                 d = *fresh14;
-                if cls == 0 && d as cty::c_int > 11 as cty::c_int {
+                if cls == 0 && d as i32 > 11 as i32 {
                     return JDR_FMT1;
                 }
                 *pd.offset(i as isize) = d;
                 i = i.wrapping_add(1);
             }
-            let mut span: cty::c_uint = 0;
-            let mut td: cty::c_uint = 0;
-            let mut ti: cty::c_uint = 0;
-            let mut tbl_ac: *mut uint16_t = 0 as *mut uint16_t;
-            let mut tbl_dc: *mut uint8_t = 0 as *mut uint8_t;
+            let mut span: u32 = 0;
+            let mut td: u32 = 0;
+            let mut ti: u32 = 0;
+            let mut tbl_ac: *mut u16 = 0 as *mut u16;
+            let mut tbl_dc: *mut u8 = 0 as *mut u8;
             if cls != 0 {
                 tbl_ac = alloc_pool(
                     jd,
-                    (1 << 10) * ::core::mem::size_of::<uint16_t>()) as *mut uint16_t;
+                    (1 << 10) * ::core::mem::size_of::<u16>()) as *mut u16;
                 if tbl_ac.is_null() {
                     return JDR_MEM1;
                 }
@@ -381,13 +376,13 @@ unsafe extern "C" fn create_huffman_tbl(
                 *fresh15 = tbl_ac;
                 memset(
                     tbl_ac as *mut cty::c_void,
-                    0xff as cty::c_int,
-                    (((1 as cty::c_int) << 10 as cty::c_int) as cty::c_ulong)
-                        .wrapping_mul(::core::mem::size_of::<uint16_t>() as cty::c_ulong),
+                    0xff as i32,
+                    (((1 as i32) << 10 as i32) as cty::c_ulong)
+                        .wrapping_mul(::core::mem::size_of::<u16>() as cty::c_ulong),
                 );
             } else {
                 tbl_dc = alloc_pool(
-                    jd,(1 << 10)  * ::core::mem::size_of::<uint8_t>()) as *mut uint8_t;
+                    jd,(1 << 10)  * ::core::mem::size_of::<u8>()) as *mut u8;
                 if tbl_dc.is_null() {
                     return JDR_MEM1;
                 }
@@ -395,149 +390,149 @@ unsafe extern "C" fn create_huffman_tbl(
                 *fresh16 = tbl_dc;
                 memset(
                     tbl_dc as *mut cty::c_void,
-                    0xff as cty::c_int,
-                    (((1 as cty::c_int) << 10 as cty::c_int) as cty::c_ulong)
-                        .wrapping_mul(::core::mem::size_of::<uint8_t>() as cty::c_ulong),
+                    0xff as i32,
+                    (((1 as i32) << 10 as i32) as cty::c_ulong)
+                        .wrapping_mul(::core::mem::size_of::<u8>() as cty::c_ulong),
                 );
             }
-            b = 0 as cty::c_int as cty::c_uint;
+            b = 0 as i32 as u32;
             i = b;
-            while b < 10 as cty::c_int as cty::c_uint {
-                j = *pb.offset(b as isize) as cty::c_uint;
+            while b < 10 as i32 as u32 {
+                j = *pb.offset(b as isize) as u32;
                 while j != 0 {
-                    ti = ((*ph.offset(i as isize) as cty::c_int)
-                        << ((10 as cty::c_int - 1 as cty::c_int) as cty::c_uint)
+                    ti = ((*ph.offset(i as isize) as i32)
+                        << ((10 as i32 - 1 as i32) as u32)
                         .wrapping_sub(b)
-                        & ((1 as cty::c_int) << 10 as cty::c_int) - 1 as cty::c_int)
-                        as cty::c_uint;
+                        & ((1 as i32) << 10 as i32) - 1 as i32)
+                        as u32;
                     if cls != 0 {
                         let fresh17 = i;
                         i = i.wrapping_add(1);
-                        td = *pd.offset(fresh17 as isize) as cty::c_uint
-                            | b.wrapping_add(1 as cty::c_int as cty::c_uint)
-                            << 8 as cty::c_int;
-                        span = ((1 as cty::c_int)
-                            << ((10 as cty::c_int - 1 as cty::c_int) as cty::c_uint)
-                            .wrapping_sub(b)) as cty::c_uint;
+                        td = *pd.offset(fresh17 as isize) as u32
+                            | b.wrapping_add(1 as i32 as u32)
+                            << 8 as i32;
+                        span = ((1 as i32)
+                            << ((10 as i32 - 1 as i32) as u32)
+                            .wrapping_sub(b)) as u32;
                         while span != 0 {
                             span = span.wrapping_sub(1);
                             let fresh18 = ti;
                             ti = ti.wrapping_add(1);
-                            *tbl_ac.offset(fresh18 as isize) = td as uint16_t;
+                            *tbl_ac.offset(fresh18 as isize) = td as u16;
                         }
                     } else {
                         let fresh19 = i;
                         i = i.wrapping_add(1);
-                        td = *pd.offset(fresh19 as isize) as cty::c_uint
-                            | b.wrapping_add(1 as cty::c_int as cty::c_uint)
-                            << 4 as cty::c_int;
-                        span = ((1 as cty::c_int)
-                            << ((10 as cty::c_int - 1 as cty::c_int) as cty::c_uint)
-                            .wrapping_sub(b)) as cty::c_uint;
+                        td = *pd.offset(fresh19 as isize) as u32
+                            | b.wrapping_add(1 as i32 as u32)
+                            << 4 as i32;
+                        span = ((1 as i32)
+                            << ((10 as i32 - 1 as i32) as u32)
+                            .wrapping_sub(b)) as u32;
                         while span != 0 {
                             span = span.wrapping_sub(1);
                             let fresh20 = ti;
                             ti = ti.wrapping_add(1);
-                            *tbl_dc.offset(fresh20 as isize) = td as uint8_t;
+                            *tbl_dc.offset(fresh20 as isize) = td as u8;
                         }
                     }
                     j = j.wrapping_sub(1);
                 }
                 b = b.wrapping_add(1);
             }
-            (*jd).longofs[num as usize][cls as usize] = i as uint8_t;
+            (*jd).longofs[num as usize][cls as usize] = i as u8;
         }
         return JDR_OK;
     }
 }
 unsafe extern "C" fn huffext(
     mut jd: *mut JDEC,
-    mut id: cty::c_uint,
-    mut cls: cty::c_uint,
-) -> cty::c_int {
+    mut id: u32,
+    mut cls: u32,
+) -> i32 {
     unsafe {
         let mut dc: usize = (*jd).dctr;
-        let mut dp: *mut uint8_t = (*jd).dptr;
-        let mut d: cty::c_uint = 0;
-        let mut flg: cty::c_uint = 0 as cty::c_int as cty::c_uint;
-        let mut hb: *const uint8_t = 0 as *const uint8_t;
-        let mut hd: *const uint8_t = 0 as *const uint8_t;
-        let mut hc: *const uint16_t = 0 as *const uint16_t;
-        let mut nc: cty::c_uint = 0;
-        let mut bl: cty::c_uint = 0;
-        let mut wbit: cty::c_uint = ((*jd).dbit as cty::c_int % 32 as cty::c_int)
-            as cty::c_uint;
-        let mut w: uint32_t = ((*jd).wreg as cty::c_ulong
-            & ((1 as cty::c_ulong) << wbit).wrapping_sub(1 as cty::c_int as cty::c_ulong))
-            as uint32_t;
-        while wbit < 16 as cty::c_int as cty::c_uint {
+        let mut dp: *mut u8 = (*jd).dptr;
+        let mut d: u32 = 0;
+        let mut flg: u32 = 0 as i32 as u32;
+        let mut hb: *const u8 = 0 as *const u8;
+        let mut hd: *const u8 = 0 as *const u8;
+        let mut hc: *const u16 = 0 as *const u16;
+        let mut nc: u32 = 0;
+        let mut bl: u32 = 0;
+        let mut wbit: u32 = ((*jd).dbit as i32 % 32 as i32)
+            as u32;
+        let mut w: u32 = ((*jd).wreg as cty::c_ulong
+            & ((1 as cty::c_ulong) << wbit).wrapping_sub(1 as i32 as cty::c_ulong))
+            as u32;
+        while wbit < 16 as i32 as u32 {
             if (*jd).marker != 0 {
-                d = 0xff as cty::c_int as cty::c_uint;
+                d = 0xff as i32 as u32;
             } else {
                 if dc == 0 {
                     dp = (*jd).inbuf;
                     dc = ((*jd).infunc)
                         .expect(
                             "non-null function pointer",
-                        )(jd, dp, 512 as cty::c_int as usize);
+                        )(jd, dp, 512 as i32 as usize);
                     if dc == 0 {
-                        return 0 as cty::c_int - JDR_INP as cty::c_int;
+                        return 0 as i32 - JDR_INP as i32;
                     }
                 }
                 let fresh21 = dp;
                 dp = dp.offset(1);
-                d = *fresh21 as cty::c_uint;
+                d = *fresh21 as u32;
                 dc = dc.wrapping_sub(1);
                 if flg != 0 {
-                    flg = 0 as cty::c_int as cty::c_uint;
-                    if d != 0 as cty::c_int as cty::c_uint {
-                        (*jd).marker = d as uint8_t;
+                    flg = 0 as i32 as u32;
+                    if d != 0 as i32 as u32 {
+                        (*jd).marker = d as u8;
                     }
-                    d = 0xff as cty::c_int as cty::c_uint;
-                } else if d == 0xff as cty::c_int as cty::c_uint {
-                    flg = 1 as cty::c_int as cty::c_uint;
+                    d = 0xff as i32 as u32;
+                } else if d == 0xff as i32 as u32 {
+                    flg = 1 as i32 as u32;
                     continue;
                 }
             }
-            w = w << 8 as cty::c_int | d;
-            wbit = wbit.wrapping_add(8 as cty::c_int as cty::c_uint);
+            w = w << 8 as i32 | d;
+            wbit = wbit.wrapping_add(8 as i32 as u32);
         }
         (*jd).dctr = dc;
         let ref mut fresh22 = (*jd).dptr;
         *fresh22 = dp;
         (*jd).wreg = w;
-        d = w >> wbit.wrapping_sub(10 as cty::c_int as cty::c_uint);
+        d = w >> wbit.wrapping_sub(10 as i32 as u32);
         if cls != 0 {
-            d = *((*jd).hufflut_ac[id as usize]).offset(d as isize) as cty::c_uint;
-            if d != 0xffff as cty::c_int as cty::c_uint {
-                (*jd).dbit = wbit.wrapping_sub(d >> 8 as cty::c_int) as uint8_t;
-                return (d & 0xff as cty::c_int as cty::c_uint) as cty::c_int;
+            d = *((*jd).hufflut_ac[id as usize]).offset(d as isize) as u32;
+            if d != 0xffff as i32 as u32 {
+                (*jd).dbit = wbit.wrapping_sub(d >> 8 as i32) as u8;
+                return (d & 0xff as i32 as u32) as i32;
             }
         } else {
-            d = *((*jd).hufflut_dc[id as usize]).offset(d as isize) as cty::c_uint;
-            if d != 0xff as cty::c_int as cty::c_uint {
-                (*jd).dbit = wbit.wrapping_sub(d >> 4 as cty::c_int) as uint8_t;
-                return (d & 0xf as cty::c_int as cty::c_uint) as cty::c_int;
+            d = *((*jd).hufflut_dc[id as usize]).offset(d as isize) as u32;
+            if d != 0xff as i32 as u32 {
+                (*jd).dbit = wbit.wrapping_sub(d >> 4 as i32) as u8;
+                return (d & 0xf as i32 as u32) as i32;
             }
         }
-        hb = ((*jd).huffbits[id as usize][cls as usize]).offset(10 as cty::c_int as isize);
+        hb = ((*jd).huffbits[id as usize][cls as usize]).offset(10 as i32 as isize);
         hc = ((*jd).huffcode[id as usize][cls as usize])
-            .offset((*jd).longofs[id as usize][cls as usize] as cty::c_int as isize);
+            .offset((*jd).longofs[id as usize][cls as usize] as i32 as isize);
         hd = ((*jd).huffdata[id as usize][cls as usize])
-            .offset((*jd).longofs[id as usize][cls as usize] as cty::c_int as isize);
-        bl = (10 as cty::c_int + 1 as cty::c_int) as cty::c_uint;
-        while bl <= 16 as cty::c_int as cty::c_uint {
+            .offset((*jd).longofs[id as usize][cls as usize] as i32 as isize);
+        bl = (10 as i32 + 1 as i32) as u32;
+        while bl <= 16 as i32 as u32 {
             let fresh23 = hb;
             hb = hb.offset(1);
-            nc = *fresh23 as cty::c_uint;
+            nc = *fresh23 as u32;
             if nc != 0 {
                 d = w >> wbit.wrapping_sub(bl);
                 loop {
                     let fresh24 = hc;
                     hc = hc.offset(1);
-                    if d == *fresh24 as cty::c_uint {
-                        (*jd).dbit = wbit.wrapping_sub(bl) as uint8_t;
-                        return *hd as cty::c_int;
+                    if d == *fresh24 as u32 {
+                        (*jd).dbit = wbit.wrapping_sub(bl) as u8;
+                        return *hd as i32;
                     }
                     hd = hd.offset(1);
                     nc = nc.wrapping_sub(1);
@@ -548,88 +543,88 @@ unsafe extern "C" fn huffext(
             }
             bl = bl.wrapping_add(1);
         }
-        return 0 as cty::c_int - JDR_FMT1 as cty::c_int;
+        return 0 as i32 - JDR_FMT1 as i32;
     }
 }
-unsafe extern "C" fn bitext(mut jd: *mut JDEC, mut nbit: cty::c_uint) -> cty::c_int {
+unsafe extern "C" fn bitext(mut jd: *mut JDEC, mut nbit: u32) -> i32 {
     unsafe {
         let mut dc: usize = (*jd).dctr;
-        let mut dp: *mut uint8_t = (*jd).dptr;
-        let mut d: cty::c_uint = 0;
-        let mut flg: cty::c_uint = 0 as cty::c_int as cty::c_uint;
-        let mut wbit: cty::c_uint = ((*jd).dbit as cty::c_int % 32 as cty::c_int)
-            as cty::c_uint;
-        let mut w: uint32_t = ((*jd).wreg as cty::c_ulong
-            & ((1 as cty::c_ulong) << wbit).wrapping_sub(1 as cty::c_int as cty::c_ulong))
-            as uint32_t;
+        let mut dp: *mut u8 = (*jd).dptr;
+        let mut d: u32 = 0;
+        let mut flg: u32 = 0 as i32 as u32;
+        let mut wbit: u32 = ((*jd).dbit as i32 % 32 as i32)
+            as u32;
+        let mut w: u32 = ((*jd).wreg as cty::c_ulong
+            & ((1 as cty::c_ulong) << wbit).wrapping_sub(1 as i32 as cty::c_ulong))
+            as u32;
         while wbit < nbit {
             if (*jd).marker != 0 {
-                d = 0xff as cty::c_int as cty::c_uint;
+                d = 0xff as i32 as u32;
             } else {
                 if dc == 0 {
                     dp = (*jd).inbuf;
                     dc = ((*jd).infunc)
                         .expect(
                             "non-null function pointer",
-                        )(jd, dp, 512 as cty::c_int as usize);
+                        )(jd, dp, 512 as i32 as usize);
                     if dc == 0 {
-                        return 0 as cty::c_int - JDR_INP as cty::c_int;
+                        return 0 as i32 - JDR_INP as i32;
                     }
                 }
                 let fresh25 = dp;
                 dp = dp.offset(1);
-                d = *fresh25 as cty::c_uint;
+                d = *fresh25 as u32;
                 dc = dc.wrapping_sub(1);
                 if flg != 0 {
-                    flg = 0 as cty::c_int as cty::c_uint;
-                    if d != 0 as cty::c_int as cty::c_uint {
-                        (*jd).marker = d as uint8_t;
+                    flg = 0 as i32 as u32;
+                    if d != 0 as i32 as u32 {
+                        (*jd).marker = d as u8;
                     }
-                    d = 0xff as cty::c_int as cty::c_uint;
-                } else if d == 0xff as cty::c_int as cty::c_uint {
-                    flg = 1 as cty::c_int as cty::c_uint;
+                    d = 0xff as i32 as u32;
+                } else if d == 0xff as i32 as u32 {
+                    flg = 1 as i32 as u32;
                     continue;
                 }
             }
-            w = w << 8 as cty::c_int | d;
-            wbit = wbit.wrapping_add(8 as cty::c_int as cty::c_uint);
+            w = w << 8 as i32 | d;
+            wbit = wbit.wrapping_add(8 as i32 as u32);
         }
         (*jd).wreg = w;
-        (*jd).dbit = wbit.wrapping_sub(nbit) as uint8_t;
+        (*jd).dbit = wbit.wrapping_sub(nbit) as u8;
         (*jd).dctr = dc;
         let ref mut fresh26 = (*jd).dptr;
         *fresh26 = dp;
-        return (w >> wbit.wrapping_sub(nbit).wrapping_rem(32 as cty::c_int as cty::c_uint))
-            as cty::c_int;
+        return (w >> wbit.wrapping_sub(nbit).wrapping_rem(32 as i32 as u32))
+            as i32;
     }
 }
-unsafe extern "C" fn restart(mut jd: *mut JDEC, mut rstn: uint16_t) -> JRESULT {
+unsafe extern "C" fn restart(mut jd: *mut JDEC, mut rstn: u16) -> JRESULT {
     unsafe {
-        let mut i: cty::c_uint = 0;
-        let mut dp: *mut uint8_t = (*jd).dptr;
+        let mut i: u32 = 0;
+        let mut dp: *mut u8 = (*jd).dptr;
         let mut dc: usize = (*jd).dctr;
-        let mut marker: uint16_t = 0;
+        let mut marker: u16 = 0;
         if (*jd).marker != 0 {
-            marker = (0xff00 as cty::c_int | (*jd).marker as cty::c_int) as uint16_t;
-            (*jd).marker = 0 as cty::c_int as uint8_t;
+            marker = (0xff00 as i32 | (*jd).marker as i32) as u16;
+            (*jd).marker = 0 as i32 as u8;
         } else {
-            marker = 0 as cty::c_int as uint16_t;
-            i = 0 as cty::c_int as cty::c_uint;
-            while i < 2 as cty::c_int as cty::c_uint {
+            marker = 0 as i32 as u16;
+            i = 0 as i32 as u32;
+            while i < 2 as i32 as u32 {
                 if dc == 0 {
                     dp = (*jd).inbuf;
                     dc = ((*jd).infunc)
                         .expect(
                             "non-null function pointer",
-                        )(jd, dp, 512 as cty::c_int as usize);
+                        )(jd, dp, 512 as i32 as usize);
                     if dc == 0 {
                         return JDR_INP;
                     }
                 }
                 let fresh27 = dp;
                 dp = dp.offset(1);
-                marker = ((marker as cty::c_int) << 8 as cty::c_int
-                    | *fresh27 as cty::c_int) as uint16_t;
+                marker = ((marker as i32) << 8 as i32
+                    | *fresh27 as i32) as u16;
                 dc = dc.wrapping_sub(1);
                 i = i.wrapping_add(1);
             }
@@ -637,280 +632,280 @@ unsafe extern "C" fn restart(mut jd: *mut JDEC, mut rstn: uint16_t) -> JRESULT {
             *fresh28 = dp;
             (*jd).dctr = dc;
         }
-        if marker as cty::c_int & 0xffd8 as cty::c_int != 0xffd0 as cty::c_int
-            || marker as cty::c_int & 7 as cty::c_int
-            != rstn as cty::c_int & 7 as cty::c_int
+        if marker as i32 & 0xffd8 as i32 != 0xffd0 as i32
+            || marker as i32 & 7 as i32
+            != rstn as i32 & 7 as i32
         {
             return JDR_FMT1;
         }
-        (*jd).dbit = 0 as cty::c_int as uint8_t;
-        let ref mut fresh29 = (*jd).dcv[0 as cty::c_int as usize];
-        *fresh29 = 0 as cty::c_int as int16_t;
-        let ref mut fresh30 = (*jd).dcv[1 as cty::c_int as usize];
+        (*jd).dbit = 0 as i32 as u8;
+        let ref mut fresh29 = (*jd).dcv[0 as i32 as usize];
+        *fresh29 = 0 as i32 as i16;
+        let ref mut fresh30 = (*jd).dcv[1 as i32 as usize];
         *fresh30 = *fresh29;
-        (*jd).dcv[2 as cty::c_int as usize] = *fresh30;
+        (*jd).dcv[2 as i32 as usize] = *fresh30;
         return JDR_OK;
     }
 }
-unsafe extern "C" fn block_idct(mut src: *mut int32_t, mut dst: *mut jd_yuv_t) {
+unsafe extern "C" fn block_idct(mut src: *mut i32, mut dst: *mut i16) {
     unsafe {
-        let M13: int32_t = (1.41421f64 * 4096 as cty::c_int as cty::c_double) as int32_t;
-        let M2: int32_t = (1.08239f64 * 4096 as cty::c_int as cty::c_double) as int32_t;
-        let M4: int32_t = (2.61313f64 * 4096 as cty::c_int as cty::c_double) as int32_t;
-        let M5: int32_t = (1.84776f64 * 4096 as cty::c_int as cty::c_double) as int32_t;
-        let mut v0: int32_t = 0;
-        let mut v1: int32_t = 0;
-        let mut v2: int32_t = 0;
-        let mut v3: int32_t = 0;
-        let mut v4: int32_t = 0;
-        let mut v5: int32_t = 0;
-        let mut v6: int32_t = 0;
-        let mut v7: int32_t = 0;
-        let mut t10: int32_t = 0;
-        let mut t11: int32_t = 0;
-        let mut t12: int32_t = 0;
-        let mut t13: int32_t = 0;
-        let mut i: cty::c_int = 0;
-        i = 0 as cty::c_int;
-        while i < 8 as cty::c_int {
-            v0 = *src.offset((8 as cty::c_int * 0 as cty::c_int) as isize);
-            v1 = *src.offset((8 as cty::c_int * 2 as cty::c_int) as isize);
-            v2 = *src.offset((8 as cty::c_int * 4 as cty::c_int) as isize);
-            v3 = *src.offset((8 as cty::c_int * 6 as cty::c_int) as isize);
+        let M13: i32 = (1.41421f64 * 4096 as i32 as f64) as i32;
+        let M2: i32 = (1.08239f64 * 4096 as i32 as f64) as i32;
+        let M4: i32 = (2.61313f64 * 4096 as i32 as f64) as i32;
+        let M5: i32 = (1.84776f64 * 4096 as i32 as f64) as i32;
+        let mut v0: i32 = 0;
+        let mut v1: i32 = 0;
+        let mut v2: i32 = 0;
+        let mut v3: i32 = 0;
+        let mut v4: i32 = 0;
+        let mut v5: i32 = 0;
+        let mut v6: i32 = 0;
+        let mut v7: i32 = 0;
+        let mut t10: i32 = 0;
+        let mut t11: i32 = 0;
+        let mut t12: i32 = 0;
+        let mut t13: i32 = 0;
+        let mut i: i32 = 0;
+        i = 0 as i32;
+        while i < 8 as i32 {
+            v0 = *src.offset((8 as i32 * 0 as i32) as isize);
+            v1 = *src.offset((8 as i32 * 2 as i32) as isize);
+            v2 = *src.offset((8 as i32 * 4 as i32) as isize);
+            v3 = *src.offset((8 as i32 * 6 as i32) as isize);
             t10 = v0 + v2;
             t12 = v0 - v2;
-            t11 = (v1 - v3) * M13 >> 12 as cty::c_int;
+            t11 = (v1 - v3) * M13 >> 12 as i32;
             v3 += v1;
             t11 -= v3;
             v0 = t10 + v3;
             v3 = t10 - v3;
             v1 = t11 + t12;
             v2 = t12 - t11;
-            v4 = *src.offset((8 as cty::c_int * 7 as cty::c_int) as isize);
-            v5 = *src.offset((8 as cty::c_int * 1 as cty::c_int) as isize);
-            v6 = *src.offset((8 as cty::c_int * 5 as cty::c_int) as isize);
-            v7 = *src.offset((8 as cty::c_int * 3 as cty::c_int) as isize);
+            v4 = *src.offset((8 as i32 * 7 as i32) as isize);
+            v5 = *src.offset((8 as i32 * 1 as i32) as isize);
+            v6 = *src.offset((8 as i32 * 5 as i32) as isize);
+            v7 = *src.offset((8 as i32 * 3 as i32) as isize);
             t10 = v5 - v4;
             t11 = v5 + v4;
             t12 = v6 - v7;
             v7 += v6;
-            v5 = (t11 - v7) * M13 >> 12 as cty::c_int;
+            v5 = (t11 - v7) * M13 >> 12 as i32;
             v7 += t11;
-            t13 = (t10 + t12) * M5 >> 12 as cty::c_int;
-            v4 = t13 - (t10 * M2 >> 12 as cty::c_int);
-            v6 = t13 - (t12 * M4 >> 12 as cty::c_int) - v7;
+            t13 = (t10 + t12) * M5 >> 12 as i32;
+            v4 = t13 - (t10 * M2 >> 12 as i32);
+            v6 = t13 - (t12 * M4 >> 12 as i32) - v7;
             v5 -= v6;
             v4 -= v5;
-            *src.offset((8 as cty::c_int * 0 as cty::c_int) as isize) = v0 + v7;
-            *src.offset((8 as cty::c_int * 7 as cty::c_int) as isize) = v0 - v7;
-            *src.offset((8 as cty::c_int * 1 as cty::c_int) as isize) = v1 + v6;
-            *src.offset((8 as cty::c_int * 6 as cty::c_int) as isize) = v1 - v6;
-            *src.offset((8 as cty::c_int * 2 as cty::c_int) as isize) = v2 + v5;
-            *src.offset((8 as cty::c_int * 5 as cty::c_int) as isize) = v2 - v5;
-            *src.offset((8 as cty::c_int * 3 as cty::c_int) as isize) = v3 + v4;
-            *src.offset((8 as cty::c_int * 4 as cty::c_int) as isize) = v3 - v4;
+            *src.offset((8 as i32 * 0 as i32) as isize) = v0 + v7;
+            *src.offset((8 as i32 * 7 as i32) as isize) = v0 - v7;
+            *src.offset((8 as i32 * 1 as i32) as isize) = v1 + v6;
+            *src.offset((8 as i32 * 6 as i32) as isize) = v1 - v6;
+            *src.offset((8 as i32 * 2 as i32) as isize) = v2 + v5;
+            *src.offset((8 as i32 * 5 as i32) as isize) = v2 - v5;
+            *src.offset((8 as i32 * 3 as i32) as isize) = v3 + v4;
+            *src.offset((8 as i32 * 4 as i32) as isize) = v3 - v4;
             src = src.offset(1);
             i += 1;
         }
-        src = src.offset(-(8 as cty::c_int as isize));
-        i = 0 as cty::c_int;
-        while i < 8 as cty::c_int {
-            v0 = (*src.offset(0 as cty::c_int as isize) as cty::c_long
-                + ((128 as cty::c_long) << 8 as cty::c_int)) as int32_t;
-            v1 = *src.offset(2 as cty::c_int as isize);
-            v2 = *src.offset(4 as cty::c_int as isize);
-            v3 = *src.offset(6 as cty::c_int as isize);
+        src = src.offset(-(8 as i32 as isize));
+        i = 0 as i32;
+        while i < 8 as i32 {
+            v0 = (*src.offset(0 as i32 as isize) as cty::c_long
+                + ((128 as cty::c_long) << 8 as i32)) as i32;
+            v1 = *src.offset(2 as i32 as isize);
+            v2 = *src.offset(4 as i32 as isize);
+            v3 = *src.offset(6 as i32 as isize);
             t10 = v0 + v2;
             t12 = v0 - v2;
-            t11 = (v1 - v3) * M13 >> 12 as cty::c_int;
+            t11 = (v1 - v3) * M13 >> 12 as i32;
             v3 += v1;
             t11 -= v3;
             v0 = t10 + v3;
             v3 = t10 - v3;
             v1 = t11 + t12;
             v2 = t12 - t11;
-            v4 = *src.offset(7 as cty::c_int as isize);
-            v5 = *src.offset(1 as cty::c_int as isize);
-            v6 = *src.offset(5 as cty::c_int as isize);
-            v7 = *src.offset(3 as cty::c_int as isize);
+            v4 = *src.offset(7 as i32 as isize);
+            v5 = *src.offset(1 as i32 as isize);
+            v6 = *src.offset(5 as i32 as isize);
+            v7 = *src.offset(3 as i32 as isize);
             t10 = v5 - v4;
             t11 = v5 + v4;
             t12 = v6 - v7;
             v7 += v6;
-            v5 = (t11 - v7) * M13 >> 12 as cty::c_int;
+            v5 = (t11 - v7) * M13 >> 12 as i32;
             v7 += t11;
-            t13 = (t10 + t12) * M5 >> 12 as cty::c_int;
-            v4 = t13 - (t10 * M2 >> 12 as cty::c_int);
-            v6 = t13 - (t12 * M4 >> 12 as cty::c_int) - v7;
+            t13 = (t10 + t12) * M5 >> 12 as i32;
+            v4 = t13 - (t10 * M2 >> 12 as i32);
+            v6 = t13 - (t12 * M4 >> 12 as i32) - v7;
             v5 -= v6;
             v4 -= v5;
             *dst
                 .offset(
-                    0 as cty::c_int as isize,
-                ) = (v0 + v7 >> 8 as cty::c_int) as int16_t;
+                    0 as i32 as isize,
+                ) = (v0 + v7 >> 8 as i32) as i16;
             *dst
                 .offset(
-                    7 as cty::c_int as isize,
-                ) = (v0 - v7 >> 8 as cty::c_int) as int16_t;
+                    7 as i32 as isize,
+                ) = (v0 - v7 >> 8 as i32) as i16;
             *dst
                 .offset(
-                    1 as cty::c_int as isize,
-                ) = (v1 + v6 >> 8 as cty::c_int) as int16_t;
+                    1 as i32 as isize,
+                ) = (v1 + v6 >> 8 as i32) as i16;
             *dst
                 .offset(
-                    6 as cty::c_int as isize,
-                ) = (v1 - v6 >> 8 as cty::c_int) as int16_t;
+                    6 as i32 as isize,
+                ) = (v1 - v6 >> 8 as i32) as i16;
             *dst
                 .offset(
-                    2 as cty::c_int as isize,
-                ) = (v2 + v5 >> 8 as cty::c_int) as int16_t;
+                    2 as i32 as isize,
+                ) = (v2 + v5 >> 8 as i32) as i16;
             *dst
                 .offset(
-                    5 as cty::c_int as isize,
-                ) = (v2 - v5 >> 8 as cty::c_int) as int16_t;
+                    5 as i32 as isize,
+                ) = (v2 - v5 >> 8 as i32) as i16;
             *dst
                 .offset(
-                    3 as cty::c_int as isize,
-                ) = (v3 + v4 >> 8 as cty::c_int) as int16_t;
+                    3 as i32 as isize,
+                ) = (v3 + v4 >> 8 as i32) as i16;
             *dst
                 .offset(
-                    4 as cty::c_int as isize,
-                ) = (v3 - v4 >> 8 as cty::c_int) as int16_t;
-            dst = dst.offset(8 as cty::c_int as isize);
-            src = src.offset(8 as cty::c_int as isize);
+                    4 as i32 as isize,
+                ) = (v3 - v4 >> 8 as i32) as i16;
+            dst = dst.offset(8 as i32 as isize);
+            src = src.offset(8 as i32 as isize);
             i += 1;
         }
     }
 }
 unsafe extern "C" fn mcu_load(mut jd: *mut JDEC) -> JRESULT {
     unsafe {
-        let mut tmp: *mut int32_t = (*jd).workbuf as *mut int32_t;
-        let mut d: cty::c_int = 0;
-        let mut e: cty::c_int = 0;
-        let mut blk: cty::c_uint = 0;
-        let mut nby: cty::c_uint = 0;
-        let mut i: cty::c_uint = 0;
-        let mut bc: cty::c_uint = 0;
-        let mut z: cty::c_uint = 0;
-        let mut id: cty::c_uint = 0;
-        let mut cmp: cty::c_uint = 0;
-        let mut bp: *mut jd_yuv_t = 0 as *mut jd_yuv_t;
-        let mut dqf: *const int32_t = 0 as *const int32_t;
-        nby = ((*jd).msx as cty::c_int * (*jd).msy as cty::c_int) as cty::c_uint;
+        let mut tmp: *mut i32 = (*jd).workbuf as *mut i32;
+        let mut d: i32 = 0;
+        let mut e: i32 = 0;
+        let mut blk: u32 = 0;
+        let mut nby: u32 = 0;
+        let mut i: u32 = 0;
+        let mut bc: u32 = 0;
+        let mut z: u32 = 0;
+        let mut id: u32 = 0;
+        let mut cmp: u32 = 0;
+        let mut bp: *mut i16 = 0 as *mut i16;
+        let mut dqf: *const i32 = 0 as *const i32;
+        nby = ((*jd).msx as i32 * (*jd).msy as i32) as u32;
         bp = (*jd).mcubuf;
-        blk = 0 as cty::c_int as cty::c_uint;
-        while blk < nby.wrapping_add(2 as cty::c_int as cty::c_uint) {
+        blk = 0 as i32 as u32;
+        while blk < nby.wrapping_add(2 as i32 as u32) {
             cmp = if blk < nby {
-                0 as cty::c_int as cty::c_uint
+                0 as i32 as u32
             } else {
-                blk.wrapping_sub(nby).wrapping_add(1 as cty::c_int as cty::c_uint)
+                blk.wrapping_sub(nby).wrapping_add(1 as i32 as u32)
             };
-            if cmp != 0 && (*jd).ncomp as cty::c_int != 3 as cty::c_int {
-                i = 0 as cty::c_int as cty::c_uint;
-                while i < 64 as cty::c_int as cty::c_uint {
+            if cmp != 0 && (*jd).ncomp as i32 != 3 as i32 {
+                i = 0 as i32 as u32;
+                while i < 64 as i32 as u32 {
                     let fresh31 = i;
                     i = i.wrapping_add(1);
-                    *bp.offset(fresh31 as isize) = 128 as cty::c_int as jd_yuv_t;
+                    *bp.offset(fresh31 as isize) = 128 as i32 as i16;
                 }
             } else {
-                id = (if cmp != 0 { 1 as cty::c_int } else { 0 as cty::c_int })
-                    as cty::c_uint;
-                d = huffext(jd, id, 0 as cty::c_int as cty::c_uint);
-                if d < 0 as cty::c_int {
-                    return (0 as cty::c_int - d) as JRESULT;
+                id = (if cmp != 0 { 1 as i32 } else { 0 as i32 })
+                    as u32;
+                d = huffext(jd, id, 0 as i32 as u32);
+                if d < 0 as i32 {
+                    return (0 as i32 - d) as JRESULT;
                 }
-                bc = d as cty::c_uint;
-                d = (*jd).dcv[cmp as usize] as cty::c_int;
+                bc = d as u32;
+                d = (*jd).dcv[cmp as usize] as i32;
                 if bc != 0 {
                     e = bitext(jd, bc);
-                    if e < 0 as cty::c_int {
-                        return (0 as cty::c_int - e) as JRESULT;
+                    if e < 0 as i32 {
+                        return (0 as i32 - e) as JRESULT;
                     }
-                    bc = ((1 as cty::c_int)
-                        << bc.wrapping_sub(1 as cty::c_int as cty::c_uint))
-                        as cty::c_uint;
-                    if e as cty::c_uint & bc == 0 {
-                        e = (e as cty::c_uint)
+                    bc = ((1 as i32)
+                        << bc.wrapping_sub(1 as i32 as u32))
+                        as u32;
+                    if e as u32 & bc == 0 {
+                        e = (e as u32)
                             .wrapping_sub(
-                                (bc << 1 as cty::c_int)
-                                    .wrapping_sub(1 as cty::c_int as cty::c_uint),
-                            ) as cty::c_int as cty::c_int;
+                                (bc << 1 as i32)
+                                    .wrapping_sub(1 as i32 as u32),
+                            ) as i32 as i32;
                     }
                     d += e;
-                    (*jd).dcv[cmp as usize] = d as int16_t;
+                    (*jd).dcv[cmp as usize] = d as i16;
                 }
                 dqf = (*jd).qttbl[(*jd).qtid[cmp as usize] as usize];
                 *tmp
                     .offset(
-                        0 as cty::c_int as isize,
-                    ) = d * *dqf.offset(0 as cty::c_int as isize) >> 8 as cty::c_int;
+                        0 as i32 as isize,
+                    ) = d * *dqf.offset(0 as i32 as isize) >> 8 as i32;
                 memset(
-                    &mut *tmp.offset(1 as cty::c_int as isize) as *mut int32_t
+                    &mut *tmp.offset(1 as i32 as isize) as *mut i32
                         as *mut cty::c_void,
-                    0 as cty::c_int,
-                    (63 as cty::c_int as cty::c_ulong)
-                        .wrapping_mul(::core::mem::size_of::<int32_t>() as cty::c_ulong),
+                    0 as i32,
+                    (63 as i32 as cty::c_ulong)
+                        .wrapping_mul(::core::mem::size_of::<i32>() as cty::c_ulong),
                 );
-                z = 1 as cty::c_int as cty::c_uint;
+                z = 1 as i32 as u32;
                 loop {
-                    d = huffext(jd, id, 1 as cty::c_int as cty::c_uint);
-                    if d == 0 as cty::c_int {
+                    d = huffext(jd, id, 1 as i32 as u32);
+                    if d == 0 as i32 {
                         break;
                     }
-                    if d < 0 as cty::c_int {
-                        return (0 as cty::c_int - d) as JRESULT;
+                    if d < 0 as i32 {
+                        return (0 as i32 - d) as JRESULT;
                     }
-                    bc = d as cty::c_uint;
-                    z = z.wrapping_add(bc >> 4 as cty::c_int);
-                    if z >= 64 as cty::c_int as cty::c_uint {
+                    bc = d as u32;
+                    z = z.wrapping_add(bc >> 4 as i32);
+                    if z >= 64 as i32 as u32 {
                         return JDR_FMT1;
                     }
-                    bc &= 0xf as cty::c_int as cty::c_uint;
+                    bc &= 0xf as i32 as u32;
                     if bc != 0 {
                         d = bitext(jd, bc);
-                        if d < 0 as cty::c_int {
-                            return (0 as cty::c_int - d) as JRESULT;
+                        if d < 0 as i32 {
+                            return (0 as i32 - d) as JRESULT;
                         }
-                        bc = ((1 as cty::c_int)
-                            << bc.wrapping_sub(1 as cty::c_int as cty::c_uint))
-                            as cty::c_uint;
-                        if d as cty::c_uint & bc == 0 {
-                            d = (d as cty::c_uint)
+                        bc = ((1 as i32)
+                            << bc.wrapping_sub(1 as i32 as u32))
+                            as u32;
+                        if d as u32 & bc == 0 {
+                            d = (d as u32)
                                 .wrapping_sub(
-                                    (bc << 1 as cty::c_int)
-                                        .wrapping_sub(1 as cty::c_int as cty::c_uint),
-                                ) as cty::c_int as cty::c_int;
+                                    (bc << 1 as i32)
+                                        .wrapping_sub(1 as i32 as u32),
+                                ) as i32 as i32;
                         }
-                        i = Zig[z as usize] as cty::c_uint;
+                        i = Zig[z as usize] as u32;
                         *tmp
                             .offset(
                                 i as isize,
-                            ) = d * *dqf.offset(i as isize) >> 8 as cty::c_int;
+                            ) = d * *dqf.offset(i as isize) >> 8 as i32;
                     }
                     z = z.wrapping_add(1);
-                    if !(z < 64 as cty::c_int as cty::c_uint) {
+                    if !(z < 64 as i32 as u32) {
                         break;
                     }
                 }
-                if 1 as cty::c_int != 2 as cty::c_int || cmp == 0 {
-                    if z == 1 as cty::c_int as cty::c_uint
-                        || 0 as cty::c_int != 0
-                        && (*jd).scale as cty::c_int == 3 as cty::c_int
+                if 1 as i32 != 2 as i32 || cmp == 0 {
+                    if z == 1 as i32 as u32
+                        || 0 as i32 != 0
+                        && (*jd).scale as i32 == 3 as i32
                     {
-                        d = (*tmp / 256 as cty::c_int + 128 as cty::c_int) as jd_yuv_t
-                            as cty::c_int;
-                        if 2 as cty::c_int >= 1 as cty::c_int {
-                            i = 0 as cty::c_int as cty::c_uint;
-                            while i < 64 as cty::c_int as cty::c_uint {
+                        d = (*tmp / 256 as i32 + 128 as i32) as i16
+                            as i32;
+                        if 2 as i32 >= 1 as i32 {
+                            i = 0 as i32 as u32;
+                            while i < 64 as i32 as u32 {
                                 let fresh32 = i;
                                 i = i.wrapping_add(1);
-                                *bp.offset(fresh32 as isize) = d as jd_yuv_t;
+                                *bp.offset(fresh32 as isize) = d as i16;
                             }
                         } else {
                             memset(
                                 bp as *mut cty::c_void,
                                 d,
-                                64 as cty::c_int as cty::c_ulong,
+                                64 as i32 as cty::c_ulong,
                             );
                         }
                     } else {
@@ -918,7 +913,7 @@ unsafe extern "C" fn mcu_load(mut jd: *mut JDEC) -> JRESULT {
                     }
                 }
             }
-            bp = bp.offset(64 as cty::c_int as isize);
+            bp = bp.offset(64 as i32 as isize);
             blk = blk.wrapping_add(1);
         }
         return JDR_OK;
@@ -927,126 +922,126 @@ unsafe extern "C" fn mcu_load(mut jd: *mut JDEC) -> JRESULT {
 unsafe extern "C" fn mcu_output(
     mut jd: *mut JDEC,
     mut outfunc: Option::<
-        unsafe extern "C" fn(*mut JDEC, *mut cty::c_void, *mut JRECT) -> cty::c_int,
+        unsafe extern "C" fn(*mut JDEC, *mut cty::c_void, *mut JRECT) -> i32,
     >,
-    mut x: cty::c_uint,
-    mut y: cty::c_uint,
+    mut x: u32,
+    mut y: u32,
 ) -> JRESULT {
     unsafe {
-        let CVACC: cty::c_int = if ::core::mem::size_of::<cty::c_int>() as cty::c_ulong
-            > 2 as cty::c_int as cty::c_ulong
+        let CVACC: i32 = if ::core::mem::size_of::<i32>() as cty::c_ulong
+            > 2 as i32 as cty::c_ulong
         {
-            1024 as cty::c_int
+            1024 as i32
         } else {
-            128 as cty::c_int
+            128 as i32
         };
-        let mut ix: cty::c_uint = 0;
-        let mut iy: cty::c_uint = 0;
-        let mut mx: cty::c_uint = 0;
-        let mut my: cty::c_uint = 0;
-        let mut rx: cty::c_uint = 0;
-        let mut ry: cty::c_uint = 0;
-        let mut yy: cty::c_int = 0;
-        let mut cb: cty::c_int = 0;
-        let mut cr: cty::c_int = 0;
-        let mut py: *mut jd_yuv_t = 0 as *mut jd_yuv_t;
-        let mut pc: *mut jd_yuv_t = 0 as *mut jd_yuv_t;
-        let mut pix: *mut uint8_t = 0 as *mut uint8_t;
+        let mut ix: u32 = 0;
+        let mut iy: u32 = 0;
+        let mut mx: u32 = 0;
+        let mut my: u32 = 0;
+        let mut rx: u32 = 0;
+        let mut ry: u32 = 0;
+        let mut yy: i32 = 0;
+        let mut cb: i32 = 0;
+        let mut cr: i32 = 0;
+        let mut py: *mut i16 = 0 as *mut i16;
+        let mut pc: *mut i16 = 0 as *mut i16;
+        let mut pix: *mut u8 = 0 as *mut u8;
         let mut rect: JRECT = JRECT {
             left: 0,
             right: 0,
             top: 0,
             bottom: 0,
         };
-        mx = ((*jd).msx as cty::c_int * 8 as cty::c_int) as cty::c_uint;
-        my = ((*jd).msy as cty::c_int * 8 as cty::c_int) as cty::c_uint;
-        rx = if x.wrapping_add(mx) <= (*jd).width as cty::c_uint {
+        mx = ((*jd).msx as i32 * 8 as i32) as u32;
+        my = ((*jd).msy as i32 * 8 as i32) as u32;
+        rx = if x.wrapping_add(mx) <= (*jd).width as u32 {
             mx
         } else {
-            ((*jd).width as cty::c_uint).wrapping_sub(x)
+            ((*jd).width as u32).wrapping_sub(x)
         };
-        ry = if y.wrapping_add(my) <= (*jd).height as cty::c_uint {
+        ry = if y.wrapping_add(my) <= (*jd).height as u32 {
             my
         } else {
-            ((*jd).height as cty::c_uint).wrapping_sub(y)
+            ((*jd).height as u32).wrapping_sub(y)
         };
-        rect.left = x as uint16_t;
+        rect.left = x as u16;
         rect
-            .right = x.wrapping_add(rx).wrapping_sub(1 as cty::c_int as cty::c_uint)
-            as uint16_t;
-        rect.top = y as uint16_t;
+            .right = x.wrapping_add(rx).wrapping_sub(1 as i32 as u32)
+            as u16;
+        rect.top = y as u16;
         rect
-            .bottom = y.wrapping_add(ry).wrapping_sub(1 as cty::c_int as cty::c_uint)
-            as uint16_t;
-        if 0 as cty::c_int == 0 || (*jd).scale as cty::c_int != 3 as cty::c_int {
-            pix = (*jd).workbuf as *mut uint8_t;
-            if 1 as cty::c_int != 2 as cty::c_int {
-                iy = 0 as cty::c_int as cty::c_uint;
+            .bottom = y.wrapping_add(ry).wrapping_sub(1 as i32 as u32)
+            as u16;
+        if 0 as i32 == 0 || (*jd).scale as i32 != 3 as i32 {
+            pix = (*jd).workbuf as *mut u8;
+            if 1 as i32 != 2 as i32 {
+                iy = 0 as i32 as u32;
                 while iy < my {
                     py = (*jd).mcubuf;
                     pc = py;
-                    if my == 16 as cty::c_int as cty::c_uint {
+                    if my == 16 as i32 as u32 {
                         pc = pc
                             .offset(
-                                ((64 as cty::c_int * 4 as cty::c_int) as cty::c_uint)
+                                ((64 as i32 * 4 as i32) as u32)
                                     .wrapping_add(
-                                        (iy >> 1 as cty::c_int)
-                                            .wrapping_mul(8 as cty::c_int as cty::c_uint),
+                                        (iy >> 1 as i32)
+                                            .wrapping_mul(8 as i32 as u32),
                                     ) as isize,
                             );
-                        if iy >= 8 as cty::c_int as cty::c_uint {
-                            py = py.offset(64 as cty::c_int as isize);
+                        if iy >= 8 as i32 as u32 {
+                            py = py.offset(64 as i32 as isize);
                         }
                     } else {
                         pc = pc
                             .offset(
                                 mx
-                                    .wrapping_mul(8 as cty::c_int as cty::c_uint)
+                                    .wrapping_mul(8 as i32 as u32)
                                     .wrapping_add(
-                                        iy.wrapping_mul(8 as cty::c_int as cty::c_uint),
+                                        iy.wrapping_mul(8 as i32 as u32),
                                     ) as isize,
                             );
                     }
                     py = py
-                        .offset(iy.wrapping_mul(8 as cty::c_int as cty::c_uint) as isize);
-                    ix = 0 as cty::c_int as cty::c_uint;
+                        .offset(iy.wrapping_mul(8 as i32 as u32) as isize);
+                    ix = 0 as i32 as u32;
                     while ix < mx {
-                        cb = *pc.offset(0 as cty::c_int as isize) as cty::c_int
-                            - 128 as cty::c_int;
-                        cr = *pc.offset(64 as cty::c_int as isize) as cty::c_int
-                            - 128 as cty::c_int;
-                        if mx == 16 as cty::c_int as cty::c_uint {
-                            if ix == 8 as cty::c_int as cty::c_uint {
+                        cb = *pc.offset(0 as i32 as isize) as i32
+                            - 128 as i32;
+                        cr = *pc.offset(64 as i32 as isize) as i32
+                            - 128 as i32;
+                        if mx == 16 as i32 as u32 {
+                            if ix == 8 as i32 as u32 {
                                 py = py
-                                    .offset((64 as cty::c_int - 8 as cty::c_int) as isize);
+                                    .offset((64 as i32 - 8 as i32) as isize);
                             }
-                            pc = pc.offset((ix & 1 as cty::c_int as cty::c_uint) as isize);
+                            pc = pc.offset((ix & 1 as i32 as u32) as isize);
                         } else {
                             pc = pc.offset(1);
                         }
                         let fresh33 = py;
                         py = py.offset(1);
-                        yy = *fresh33 as cty::c_int;
+                        yy = *fresh33 as i32;
                         let fresh34 = pix;
                         pix = pix.offset(1);
                         *fresh34 = BYTECLIP(
                             yy
-                                + (1.402f64 * CVACC as cty::c_double) as cty::c_int * cr
+                                + (1.402f64 * CVACC as f64) as i32 * cr
                                 / CVACC,
                         );
                         let fresh35 = pix;
                         pix = pix.offset(1);
                         *fresh35 = BYTECLIP(
                             yy
-                                - ((0.344f64 * CVACC as cty::c_double) as cty::c_int * cb
-                                + (0.714f64 * CVACC as cty::c_double) as cty::c_int * cr)
+                                - ((0.344f64 * CVACC as f64) as i32 * cb
+                                + (0.714f64 * CVACC as f64) as i32 * cr)
                                 / CVACC,
                         );
                         let fresh36 = pix;
                         pix = pix.offset(1);
                         *fresh36 = BYTECLIP(
                             yy
-                                + (1.772f64 * CVACC as cty::c_double) as cty::c_int * cb
+                                + (1.772f64 * CVACC as f64) as i32 * cb
                                 / CVACC,
                         );
                         ix = ix.wrapping_add(1);
@@ -1054,89 +1049,89 @@ unsafe extern "C" fn mcu_output(
                     iy = iy.wrapping_add(1);
                 }
             } else {
-                iy = 0 as cty::c_int as cty::c_uint;
+                iy = 0 as i32 as u32;
                 while iy < my {
                     py = ((*jd).mcubuf)
-                        .offset(iy.wrapping_mul(8 as cty::c_int as cty::c_uint) as isize);
-                    if my == 16 as cty::c_int as cty::c_uint {
-                        if iy >= 8 as cty::c_int as cty::c_uint {
-                            py = py.offset(64 as cty::c_int as isize);
+                        .offset(iy.wrapping_mul(8 as i32 as u32) as isize);
+                    if my == 16 as i32 as u32 {
+                        if iy >= 8 as i32 as u32 {
+                            py = py.offset(64 as i32 as isize);
                         }
                     }
-                    ix = 0 as cty::c_int as cty::c_uint;
+                    ix = 0 as i32 as u32;
                     while ix < mx {
-                        if mx == 16 as cty::c_int as cty::c_uint {
-                            if ix == 8 as cty::c_int as cty::c_uint {
+                        if mx == 16 as i32 as u32 {
+                            if ix == 8 as i32 as u32 {
                                 py = py
-                                    .offset((64 as cty::c_int - 8 as cty::c_int) as isize);
+                                    .offset((64 as i32 - 8 as i32) as isize);
                             }
                         }
                         let fresh37 = py;
                         py = py.offset(1);
                         let fresh38 = pix;
                         pix = pix.offset(1);
-                        *fresh38 = *fresh37 as uint8_t;
+                        *fresh38 = *fresh37 as u8;
                         ix = ix.wrapping_add(1);
                     }
                     iy = iy.wrapping_add(1);
                 }
             }
-            if 0 as cty::c_int != 0 && (*jd).scale as cty::c_int != 0 {
-                let mut x_0: cty::c_uint = 0;
-                let mut y_0: cty::c_uint = 0;
-                let mut r: cty::c_uint = 0;
-                let mut g: cty::c_uint = 0;
-                let mut b: cty::c_uint = 0;
-                let mut s: cty::c_uint = 0;
-                let mut w: cty::c_uint = 0;
-                let mut a: cty::c_uint = 0;
-                let mut op: *mut uint8_t = 0 as *mut uint8_t;
-                s = ((*jd).scale as cty::c_int * 2 as cty::c_int) as cty::c_uint;
-                w = ((1 as cty::c_int) << (*jd).scale as cty::c_int) as cty::c_uint;
+            if 0 as i32 != 0 && (*jd).scale as i32 != 0 {
+                let mut x_0: u32 = 0;
+                let mut y_0: u32 = 0;
+                let mut r: u32 = 0;
+                let mut g: u32 = 0;
+                let mut b: u32 = 0;
+                let mut s: u32 = 0;
+                let mut w: u32 = 0;
+                let mut a: u32 = 0;
+                let mut op: *mut u8 = 0 as *mut u8;
+                s = ((*jd).scale as i32 * 2 as i32) as u32;
+                w = ((1 as i32) << (*jd).scale as i32) as u32;
                 a = mx
                     .wrapping_sub(w)
                     .wrapping_mul(
-                        (if 1 as cty::c_int != 2 as cty::c_int {
-                            3 as cty::c_int
+                        (if 1 as i32 != 2 as i32 {
+                            3 as i32
                         } else {
-                            1 as cty::c_int
-                        }) as cty::c_uint,
+                            1 as i32
+                        }) as u32,
                     );
-                op = (*jd).workbuf as *mut uint8_t;
-                iy = 0 as cty::c_int as cty::c_uint;
+                op = (*jd).workbuf as *mut u8;
+                iy = 0 as i32 as u32;
                 while iy < my {
-                    ix = 0 as cty::c_int as cty::c_uint;
+                    ix = 0 as i32 as u32;
                     while ix < mx {
-                        pix = ((*jd).workbuf as *mut uint8_t)
+                        pix = ((*jd).workbuf as *mut u8)
                             .offset(
                                 iy
                                     .wrapping_mul(mx)
                                     .wrapping_add(ix)
                                     .wrapping_mul(
-                                        (if 1 as cty::c_int != 2 as cty::c_int {
-                                            3 as cty::c_int
+                                        (if 1 as i32 != 2 as i32 {
+                                            3 as i32
                                         } else {
-                                            1 as cty::c_int
-                                        }) as cty::c_uint,
+                                            1 as i32
+                                        }) as u32,
                                     ) as isize,
                             );
-                        b = 0 as cty::c_int as cty::c_uint;
+                        b = 0 as i32 as u32;
                         g = b;
                         r = g;
-                        y_0 = 0 as cty::c_int as cty::c_uint;
+                        y_0 = 0 as i32 as u32;
                         while y_0 < w {
-                            x_0 = 0 as cty::c_int as cty::c_uint;
+                            x_0 = 0 as i32 as u32;
                             while x_0 < w {
                                 let fresh39 = pix;
                                 pix = pix.offset(1);
-                                r = r.wrapping_add(*fresh39 as cty::c_uint);
-                                if 1 as cty::c_int != 2 as cty::c_int {
+                                r = r.wrapping_add(*fresh39 as u32);
+                                if 1 as i32 != 2 as i32 {
                                     let fresh40 = pix;
                                     pix = pix.offset(1);
-                                    g = g.wrapping_add(*fresh40 as cty::c_uint);
+                                    g = g.wrapping_add(*fresh40 as u32);
                                     let fresh41 = pix;
                                     pix = pix.offset(1);
-                                    b = b.wrapping_add(*fresh41 as cty::c_uint);
+                                    b = b.wrapping_add(*fresh41 as u32);
                                 }
                                 x_0 = x_0.wrapping_add(1);
                             }
@@ -1145,14 +1140,14 @@ unsafe extern "C" fn mcu_output(
                         }
                         let fresh42 = op;
                         op = op.offset(1);
-                        *fresh42 = (r >> s) as uint8_t;
-                        if 1 as cty::c_int != 2 as cty::c_int {
+                        *fresh42 = (r >> s) as u8;
+                        if 1 as i32 != 2 as i32 {
                             let fresh43 = op;
                             op = op.offset(1);
-                            *fresh43 = (g >> s) as uint8_t;
+                            *fresh43 = (g >> s) as u8;
                             let fresh44 = op;
                             op = op.offset(1);
-                            *fresh44 = (b >> s) as uint8_t;
+                            *fresh44 = (b >> s) as u8;
                         }
                         ix = ix.wrapping_add(w);
                     }
@@ -1160,71 +1155,71 @@ unsafe extern "C" fn mcu_output(
                 }
             }
         } else {
-            pix = (*jd).workbuf as *mut uint8_t;
+            pix = (*jd).workbuf as *mut u8;
             pc = ((*jd).mcubuf).offset(mx.wrapping_mul(my) as isize);
-            cb = *pc.offset(0 as cty::c_int as isize) as cty::c_int - 128 as cty::c_int;
-            cr = *pc.offset(64 as cty::c_int as isize) as cty::c_int - 128 as cty::c_int;
-            iy = 0 as cty::c_int as cty::c_uint;
+            cb = *pc.offset(0 as i32 as isize) as i32 - 128 as i32;
+            cr = *pc.offset(64 as i32 as isize) as i32 - 128 as i32;
+            iy = 0 as i32 as u32;
             while iy < my {
                 py = (*jd).mcubuf;
-                if iy == 8 as cty::c_int as cty::c_uint {
-                    py = py.offset((64 as cty::c_int * 2 as cty::c_int) as isize);
+                if iy == 8 as i32 as u32 {
+                    py = py.offset((64 as i32 * 2 as i32) as isize);
                 }
-                ix = 0 as cty::c_int as cty::c_uint;
+                ix = 0 as i32 as u32;
                 while ix < mx {
-                    yy = *py as cty::c_int;
-                    py = py.offset(64 as cty::c_int as isize);
-                    if 1 as cty::c_int != 2 as cty::c_int {
+                    yy = *py as i32;
+                    py = py.offset(64 as i32 as isize);
+                    if 1 as i32 != 2 as i32 {
                         let fresh45 = pix;
                         pix = pix.offset(1);
                         *fresh45 = BYTECLIP(
                             yy
-                                + (1.402f64 * CVACC as cty::c_double) as cty::c_int * cr
+                                + (1.402f64 * CVACC as f64) as i32 * cr
                                 / CVACC,
                         );
                         let fresh46 = pix;
                         pix = pix.offset(1);
                         *fresh46 = BYTECLIP(
                             yy
-                                - ((0.344f64 * CVACC as cty::c_double) as cty::c_int * cb
-                                + (0.714f64 * CVACC as cty::c_double) as cty::c_int * cr)
+                                - ((0.344f64 * CVACC as f64) as i32 * cb
+                                + (0.714f64 * CVACC as f64) as i32 * cr)
                                 / CVACC,
                         );
                         let fresh47 = pix;
                         pix = pix.offset(1);
                         *fresh47 = BYTECLIP(
                             yy
-                                + (1.772f64 * CVACC as cty::c_double) as cty::c_int * cb
+                                + (1.772f64 * CVACC as f64) as i32 * cb
                                 / CVACC,
                         );
                     } else {
                         let fresh48 = pix;
                         pix = pix.offset(1);
-                        *fresh48 = yy as uint8_t;
+                        *fresh48 = yy as u8;
                     }
-                    ix = ix.wrapping_add(8 as cty::c_int as cty::c_uint);
+                    ix = ix.wrapping_add(8 as i32 as u32);
                 }
-                iy = iy.wrapping_add(8 as cty::c_int as cty::c_uint);
+                iy = iy.wrapping_add(8 as i32 as u32);
             }
         }
-        mx >>= (*jd).scale as cty::c_int;
+        mx >>= (*jd).scale as i32;
         if rx < mx {
-            let mut s_0: *mut uint8_t = 0 as *mut uint8_t;
-            let mut d: *mut uint8_t = 0 as *mut uint8_t;
-            let mut x_1: cty::c_uint = 0;
-            let mut y_1: cty::c_uint = 0;
-            d = (*jd).workbuf as *mut uint8_t;
+            let mut s_0: *mut u8 = 0 as *mut u8;
+            let mut d: *mut u8 = 0 as *mut u8;
+            let mut x_1: u32 = 0;
+            let mut y_1: u32 = 0;
+            d = (*jd).workbuf as *mut u8;
             s_0 = d;
-            y_1 = 0 as cty::c_int as cty::c_uint;
+            y_1 = 0 as i32 as u32;
             while y_1 < ry {
-                x_1 = 0 as cty::c_int as cty::c_uint;
+                x_1 = 0 as i32 as u32;
                 while x_1 < rx {
                     let fresh49 = s_0;
                     s_0 = s_0.offset(1);
                     let fresh50 = d;
                     d = d.offset(1);
                     *fresh50 = *fresh49;
-                    if 1 as cty::c_int != 2 as cty::c_int {
+                    if 1 as i32 != 2 as i32 {
                         let fresh51 = s_0;
                         s_0 = s_0.offset(1);
                         let fresh52 = d;
@@ -1243,35 +1238,35 @@ unsafe extern "C" fn mcu_output(
                         mx
                             .wrapping_sub(rx)
                             .wrapping_mul(
-                                (if 1 as cty::c_int != 2 as cty::c_int {
-                                    3 as cty::c_int
+                                (if 1 as i32 != 2 as i32 {
+                                    3 as i32
                                 } else {
-                                    1 as cty::c_int
-                                }) as cty::c_uint,
+                                    1 as i32
+                                }) as u32,
                             ) as isize,
                     );
                 y_1 = y_1.wrapping_add(1);
             }
         }
-        if 1 as cty::c_int == 1 as cty::c_int {
-            let mut s_1: *mut uint8_t = (*jd).workbuf as *mut uint8_t;
-            let mut w_0: uint16_t = 0;
-            let mut d_0: *mut uint16_t = s_1 as *mut uint16_t;
-            let mut n: cty::c_uint = rx.wrapping_mul(ry);
+        if 1 as i32 == 1 as i32 {
+            let mut s_1: *mut u8 = (*jd).workbuf as *mut u8;
+            let mut w_0: u16 = 0;
+            let mut d_0: *mut u16 = s_1 as *mut u16;
+            let mut n: u32 = rx.wrapping_mul(ry);
             loop {
                 let fresh55 = s_1;
                 s_1 = s_1.offset(1);
-                w_0 = ((*fresh55 as cty::c_int & 0xf8 as cty::c_int) << 8 as cty::c_int)
-                    as uint16_t;
+                w_0 = ((*fresh55 as i32 & 0xf8 as i32) << 8 as i32)
+                    as u16;
                 let fresh56 = s_1;
                 s_1 = s_1.offset(1);
-                w_0 = (w_0 as cty::c_int
-                    | (*fresh56 as cty::c_int & 0xfc as cty::c_int) << 3 as cty::c_int)
-                    as uint16_t;
+                w_0 = (w_0 as i32
+                    | (*fresh56 as i32 & 0xfc as i32) << 3 as i32)
+                    as u16;
                 let fresh57 = s_1;
                 s_1 = s_1.offset(1);
-                w_0 = (w_0 as cty::c_int | *fresh57 as cty::c_int >> 3 as cty::c_int)
-                    as uint16_t;
+                w_0 = (w_0 as i32 | *fresh57 as i32 >> 3 as i32)
+                    as u16;
                 let fresh58 = d_0;
                 d_0 = d_0.offset(1);
                 *fresh58 = w_0;
@@ -1284,9 +1279,9 @@ unsafe extern "C" fn mcu_output(
         return (if outfunc.expect("non-null function pointer")(jd, (*jd).workbuf, &mut rect)
             != 0
         {
-            JDR_OK as cty::c_int
+            JDR_OK as i32
         } else {
-            JDR_INTR as cty::c_int
+            JDR_INTR as i32
         }) as JRESULT;
     }
 }
@@ -1294,24 +1289,24 @@ unsafe extern "C" fn mcu_output(
 pub unsafe extern "C" fn jd_prepare(
     mut jd: *mut JDEC,
     mut infunc: Option::<
-        unsafe extern "C" fn(*mut JDEC, *mut uint8_t, usize) -> usize,
+        unsafe extern "C" fn(*mut JDEC, *mut u8, usize) -> usize,
     >,
     mut pool: *mut cty::c_void,
     mut sz_pool: usize,
     mut dev: *mut cty::c_void,
 ) -> JRESULT {
     unsafe {
-        let mut seg: *mut uint8_t = 0 as *mut uint8_t;
-        let mut b: uint8_t = 0;
-        let mut marker: uint16_t = 0;
-        let mut n: cty::c_uint = 0;
-        let mut i: cty::c_uint = 0;
-        let mut ofs: cty::c_uint = 0;
+        let mut seg: *mut u8 = 0 as *mut u8;
+        let mut b: u8 = 0;
+        let mut marker: u16 = 0;
+        let mut n: u32 = 0;
+        let mut i: u32 = 0;
+        let mut ofs: u32 = 0;
         let mut len: usize = 0;
         let mut rc: JRESULT = JDR_OK;
         memset(
             jd as *mut cty::c_void,
-            0 as cty::c_int,
+            0 as i32,
             ::core::mem::size_of::<JDEC>() as cty::c_ulong,
         );
         let ref mut fresh59 = (*jd).pool;
@@ -1321,32 +1316,32 @@ pub unsafe extern "C" fn jd_prepare(
         *fresh60 = infunc;
         let ref mut fresh61 = (*jd).device;
         *fresh61 = dev;
-        let ref mut fresh62 = (*jd).dcv[0 as cty::c_int as usize];
-        *fresh62 = 0 as cty::c_int as int16_t;
-        let ref mut fresh63 = (*jd).dcv[1 as cty::c_int as usize];
+        let ref mut fresh62 = (*jd).dcv[0 as i32 as usize];
+        *fresh62 = 0 as i32 as i16;
+        let ref mut fresh63 = (*jd).dcv[1 as i32 as usize];
         *fresh63 = *fresh62;
-        (*jd).dcv[2 as cty::c_int as usize] = *fresh63;
-        (*jd).rsc = 0 as cty::c_int as uint16_t;
-        (*jd).rst = 0 as cty::c_int as uint16_t;
-        seg = alloc_pool(jd, 512 as cty::c_int as usize) as *mut uint8_t;
+        (*jd).dcv[2 as i32 as usize] = *fresh63;
+        (*jd).rsc = 0 as i32 as u16;
+        (*jd).rst = 0 as i32 as u16;
+        seg = alloc_pool(jd, 512 as i32 as usize) as *mut u8;
         let ref mut fresh64 = (*jd).inbuf;
         *fresh64 = seg;
         if seg.is_null() {
             return JDR_MEM1;
         }
-        marker = 0 as cty::c_int as uint16_t;
-        ofs = marker as cty::c_uint;
+        marker = 0 as i32 as u16;
+        ofs = marker as u32;
         loop {
             if ((*jd).infunc)
-                .expect("non-null function pointer")(jd, seg, 1 as cty::c_int as usize)
+                .expect("non-null function pointer")(jd, seg, 1 as i32 as usize)
                 != 1
             {
                 return JDR_INP;
             }
             ofs = ofs.wrapping_add(1);
-            marker = ((marker as cty::c_int) << 8 as cty::c_int
-                | *seg.offset(0 as cty::c_int as isize) as cty::c_int) as uint16_t;
-            if !(marker as cty::c_int != 0xffd8 as cty::c_int) {
+            marker = ((marker as i32) << 8 as i32
+                | *seg.offset(0 as i32 as isize) as i32) as u16;
+            if !(marker as i32 != 0xffd8 as i32) {
                 break;
             }
         }
@@ -1357,23 +1352,23 @@ pub unsafe extern "C" fn jd_prepare(
             {
                 return JDR_INP;
             }
-            marker = ((*seg as uint16_t as cty::c_int) << 8 as cty::c_int
-                | *seg.offset(1 as cty::c_int as isize) as uint16_t as cty::c_int)
-                as uint16_t;
-            len = ((*seg.offset(2 as cty::c_int as isize) as uint16_t as cty::c_int)
-                << 8 as cty::c_int
-                | *seg.offset(2 as cty::c_int as isize).offset(1 as cty::c_int as isize)
-                as uint16_t as cty::c_int) as uint16_t as usize;
+            marker = ((*seg as u16 as i32) << 8 as i32
+                | *seg.offset(1 as i32 as isize) as u16 as i32)
+                as u16;
+            len = ((*seg.offset(2 as i32 as isize) as u16 as i32)
+                << 8 as i32
+                | *seg.offset(2 as i32 as isize).offset(1 as i32 as isize)
+                as u16 as i32) as u16 as usize;
             if len <= 2
-                || marker as cty::c_int >> 8 as cty::c_int != 0xff as cty::c_int
+                || marker as i32 >> 8 as i32 != 0xff as i32
             {
                 return JDR_FMT1;
             }
             len = len.wrapping_sub(2);
-            ofs = (ofs as usize).wrapping_add(4+len) as cty::c_uint;
+            ofs = (ofs as usize).wrapping_add(4+len) as u32;
             's_526: {
                 let mut current_block_111: u64;
-                match marker as cty::c_int & 0xff as cty::c_int {
+                match marker as i32 & 0xff as i32 {
                     192 => {
                         if len > 512 {
                             return JDR_MEM2;
@@ -1384,56 +1379,56 @@ pub unsafe extern "C" fn jd_prepare(
                             return JDR_INP;
                         }
                         (*jd)
-                            .width = ((*(&mut *seg.offset(3 as cty::c_int as isize)
-                            as *mut uint8_t) as uint16_t as cty::c_int) << 8 as cty::c_int
-                            | *(&mut *seg.offset(3 as cty::c_int as isize) as *mut uint8_t)
-                            .offset(1 as cty::c_int as isize) as uint16_t
-                            as cty::c_int) as uint16_t;
+                            .width = ((*(&mut *seg.offset(3 as i32 as isize)
+                            as *mut u8) as u16 as i32) << 8 as i32
+                            | *(&mut *seg.offset(3 as i32 as isize) as *mut u8)
+                            .offset(1 as i32 as isize) as u16
+                            as i32) as u16;
                         (*jd)
-                            .height = ((*(&mut *seg.offset(1 as cty::c_int as isize)
-                            as *mut uint8_t) as uint16_t as cty::c_int) << 8 as cty::c_int
-                            | *(&mut *seg.offset(1 as cty::c_int as isize) as *mut uint8_t)
-                            .offset(1 as cty::c_int as isize) as uint16_t
-                            as cty::c_int) as uint16_t;
-                        (*jd).ncomp = *seg.offset(5 as cty::c_int as isize);
-                        if (*jd).ncomp as cty::c_int != 3 as cty::c_int
-                            && (*jd).ncomp as cty::c_int != 1 as cty::c_int
+                            .height = ((*(&mut *seg.offset(1 as i32 as isize)
+                            as *mut u8) as u16 as i32) << 8 as i32
+                            | *(&mut *seg.offset(1 as i32 as isize) as *mut u8)
+                            .offset(1 as i32 as isize) as u16
+                            as i32) as u16;
+                        (*jd).ncomp = *seg.offset(5 as i32 as isize);
+                        if (*jd).ncomp as i32 != 3 as i32
+                            && (*jd).ncomp as i32 != 1 as i32
                         {
                             return JDR_FMT3;
                         }
-                        i = 0 as cty::c_int as cty::c_uint;
-                        while i < (*jd).ncomp as cty::c_uint {
+                        i = 0 as i32 as u32;
+                        while i < (*jd).ncomp as u32 {
                             b = *seg
                                 .offset(
-                                    (7 as cty::c_int as cty::c_uint)
+                                    (7 as i32 as u32)
                                         .wrapping_add(
-                                            (3 as cty::c_int as cty::c_uint).wrapping_mul(i),
+                                            (3 as i32 as u32).wrapping_mul(i),
                                         ) as isize,
                                 );
-                            if i == 0 as cty::c_int as cty::c_uint {
-                                if b as cty::c_int != 0x11 as cty::c_int
-                                    && b as cty::c_int != 0x22 as cty::c_int
-                                    && b as cty::c_int != 0x21 as cty::c_int
+                            if i == 0 as i32 as u32 {
+                                if b as i32 != 0x11 as i32
+                                    && b as i32 != 0x22 as i32
+                                    && b as i32 != 0x21 as i32
                                 {
                                     return JDR_FMT3;
                                 }
                                 (*jd)
-                                    .msx = (b as cty::c_int >> 4 as cty::c_int) as uint8_t;
+                                    .msx = (b as i32 >> 4 as i32) as u8;
                                 (*jd)
-                                    .msy = (b as cty::c_int & 15 as cty::c_int) as uint8_t;
-                            } else if b as cty::c_int != 0x11 as cty::c_int {
+                                    .msy = (b as i32 & 15 as i32) as u8;
+                            } else if b as i32 != 0x11 as i32 {
                                 return JDR_FMT3
                             }
                             (*jd)
                                 .qtid[i
                                 as usize] = *seg
                                 .offset(
-                                    (8 as cty::c_int as cty::c_uint)
+                                    (8 as i32 as u32)
                                         .wrapping_add(
-                                            (3 as cty::c_int as cty::c_uint).wrapping_mul(i),
+                                            (3 as i32 as u32).wrapping_mul(i),
                                         ) as isize,
                                 );
-                            if (*jd).qtid[i as usize] as cty::c_int > 3 as cty::c_int {
+                            if (*jd).qtid[i as usize] as i32 > 3 as i32 {
                                 return JDR_FMT3;
                             }
                             i = i.wrapping_add(1);
@@ -1450,9 +1445,9 @@ pub unsafe extern "C" fn jd_prepare(
                             return JDR_INP;
                         }
                         (*jd)
-                            .nrst = ((*seg as uint16_t as cty::c_int) << 8 as cty::c_int
-                            | *seg.offset(1 as cty::c_int as isize) as uint16_t
-                            as cty::c_int) as uint16_t;
+                            .nrst = ((*seg as u16 as i32) << 8 as i32
+                            | *seg.offset(1 as i32 as isize) as u16
+                            as i32) as u16;
                         current_block_111 = 5265702136860997526;
                     }
                     196 => {
@@ -1497,30 +1492,30 @@ pub unsafe extern "C" fn jd_prepare(
                         if (*jd).width == 0 || (*jd).height == 0 {
                             return JDR_FMT1;
                         }
-                        if *seg.offset(0 as cty::c_int as isize) as cty::c_int
-                            != (*jd).ncomp as cty::c_int
+                        if *seg.offset(0 as i32 as isize) as i32
+                            != (*jd).ncomp as i32
                         {
                             return JDR_FMT3;
                         }
-                        i = 0 as cty::c_int as cty::c_uint;
-                        while i < (*jd).ncomp as cty::c_uint {
+                        i = 0 as i32 as u32;
+                        while i < (*jd).ncomp as u32 {
                             b = *seg
                                 .offset(
-                                    (2 as cty::c_int as cty::c_uint)
+                                    (2 as i32 as u32)
                                         .wrapping_add(
-                                            (2 as cty::c_int as cty::c_uint).wrapping_mul(i),
+                                            (2 as i32 as u32).wrapping_mul(i),
                                         ) as isize,
                                 );
-                            if b as cty::c_int != 0 as cty::c_int
-                                && b as cty::c_int != 0x11 as cty::c_int
+                            if b as i32 != 0 as i32
+                                && b as i32 != 0x11 as i32
                             {
                                 return JDR_FMT3;
                             }
-                            n = (if i != 0 { 1 as cty::c_int } else { 0 as cty::c_int })
-                                as cty::c_uint;
-                            if ((*jd).huffbits[n as usize][0 as cty::c_int as usize])
+                            n = (if i != 0 { 1 as i32 } else { 0 as i32 })
+                                as u32;
+                            if ((*jd).huffbits[n as usize][0 as i32 as usize])
                                 .is_null()
-                                || ((*jd).huffbits[n as usize][1 as cty::c_int as usize])
+                                || ((*jd).huffbits[n as usize][1 as i32 as usize])
                                 .is_null()
                             {
                                 return JDR_FMT1;
@@ -1530,15 +1525,15 @@ pub unsafe extern "C" fn jd_prepare(
                             }
                             i = i.wrapping_add(1);
                         }
-                        n = ((*jd).msy as cty::c_int * (*jd).msx as cty::c_int)
-                            as cty::c_uint;
+                        n = ((*jd).msy as i32 * (*jd).msx as i32)
+                            as u32;
                         if n == 0 {
                             return JDR_FMT1;
                         }
                         len = n
-                            .wrapping_mul(64 as cty::c_int as cty::c_uint)
-                            .wrapping_mul(2 as cty::c_int as cty::c_uint)
-                            .wrapping_add(64 as cty::c_int as cty::c_uint) as usize;
+                            .wrapping_mul(64 as i32 as u32)
+                            .wrapping_mul(2 as i32 as u32)
+                            .wrapping_add(64 as i32 as u32) as usize;
                         if len < 256 {
                             len = 256;
                         }
@@ -1555,13 +1550,13 @@ pub unsafe extern "C" fn jd_prepare(
                                 .wrapping_mul(64)
                                 as usize)
                                 .wrapping_mul(
-                                    ::core::mem::size_of::<jd_yuv_t>() as usize,
+                                    ::core::mem::size_of::<i16>() as usize,
                                 )
-                        ) as *mut jd_yuv_t;
+                        ) as *mut i16;
                         if ((*jd).mcubuf).is_null() {
                             return JDR_MEM1;
                         }
-                        ofs = ofs.wrapping_rem(512 as cty::c_int as cty::c_uint);
+                        ofs = ofs.wrapping_rem(512 as i32 as u32);
                         if ofs != 0 {
                             (*jd)
                                 .dctr = ((*jd).infunc)
@@ -1570,7 +1565,7 @@ pub unsafe extern "C" fn jd_prepare(
                                 )(
                                 jd,
                                 seg.offset(ofs as isize),
-                                (512 as cty::c_int as cty::c_uint).wrapping_sub(ofs)
+                                (512 as i32 as u32).wrapping_sub(ofs)
                                     as usize,
                             );
                         }
@@ -1578,10 +1573,10 @@ pub unsafe extern "C" fn jd_prepare(
                         *fresh67 = seg
                             .offset(ofs as isize)
                             .offset(
-                                -((if 2 as cty::c_int != 0 {
-                                    0 as cty::c_int
+                                -((if 2 as i32 != 0 {
+                                    0 as i32
                                 } else {
-                                    1 as cty::c_int
+                                    1 as i32
                                 }) as isize),
                             );
                         return JDR_OK;
@@ -1624,7 +1619,7 @@ pub unsafe extern "C" fn jd_prepare(
                     }
                     _ => {
                         if ((*jd).infunc)
-                            .expect("non-null function pointer")(jd, 0 as *mut uint8_t, len)
+                            .expect("non-null function pointer")(jd, 0 as *mut u8, len)
                             != len
                         {
                             return JDR_INP;
@@ -1696,52 +1691,52 @@ pub unsafe extern "C" fn jd_prepare(
 pub unsafe extern "C" fn jd_decomp(
     mut jd: *mut JDEC,
     mut outfunc: Option::<
-        unsafe extern "C" fn(*mut JDEC, *mut cty::c_void, *mut JRECT) -> cty::c_int,
+        unsafe extern "C" fn(*mut JDEC, *mut cty::c_void, *mut JRECT) -> i32,
     >,
-    mut scale: uint8_t,
+    mut scale: u8,
 ) -> JRESULT {
     unsafe {
-        let mut x: cty::c_uint = 0;
-        let mut y: cty::c_uint = 0;
-        let mut mx: cty::c_uint = 0;
-        let mut my: cty::c_uint = 0;
+        let mut x: u32 = 0;
+        let mut y: u32 = 0;
+        let mut mx: u32 = 0;
+        let mut my: u32 = 0;
         let mut rc: JRESULT = JDR_OK;
-        if scale as cty::c_int
-            > (if 0 as cty::c_int != 0 { 3 as cty::c_int } else { 0 as cty::c_int })
+        if scale as i32
+            > (if 0 as i32 != 0 { 3 as i32 } else { 0 as i32 })
         {
             return JDR_PAR;
         }
         (*jd).scale = scale;
-        mx = ((*jd).msx as cty::c_int * 8 as cty::c_int) as cty::c_uint;
-        my = ((*jd).msy as cty::c_int * 8 as cty::c_int) as cty::c_uint;
+        mx = ((*jd).msx as i32 * 8 as i32) as u32;
+        my = ((*jd).msy as i32 * 8 as i32) as u32;
         rc = JDR_OK;
-        y = 0 as cty::c_int as cty::c_uint;
-        while y < (*jd).height as cty::c_uint {
-            x = 0 as cty::c_int as cty::c_uint;
-            while x < (*jd).width as cty::c_uint {
-                if (*jd).nrst as cty::c_int != 0
+        y = 0 as i32 as u32;
+        while y < (*jd).height as u32 {
+            x = 0 as i32 as u32;
+            while x < (*jd).width as u32 {
+                if (*jd).nrst as i32 != 0
                     && {
                     let ref mut fresh68 = (*jd).rst;
                     let fresh69 = *fresh68;
                     *fresh68 = (*fresh68).wrapping_add(1);
-                    fresh69 as cty::c_int == (*jd).nrst as cty::c_int
+                    fresh69 as i32 == (*jd).nrst as i32
                 }
                 {
                     let ref mut fresh70 = (*jd).rsc;
                     let fresh71 = *fresh70;
                     *fresh70 = (*fresh70).wrapping_add(1);
                     rc = restart(jd, fresh71);
-                    if rc as cty::c_uint != JDR_OK as cty::c_int as cty::c_uint {
+                    if rc as u32 != JDR_OK as i32 as u32 {
                         return rc;
                     }
-                    (*jd).rst = 1 as cty::c_int as uint16_t;
+                    (*jd).rst = 1 as i32 as u16;
                 }
                 rc = mcu_load(jd);
-                if rc as cty::c_uint != JDR_OK as cty::c_int as cty::c_uint {
+                if rc as u32 != JDR_OK as i32 as u32 {
                     return rc;
                 }
                 rc = mcu_output(jd, outfunc, x, y);
-                if rc as cty::c_uint != JDR_OK as cty::c_int as cty::c_uint {
+                if rc as u32 != JDR_OK as i32 as u32 {
                     return rc;
                 }
                 x = x.wrapping_add(mx);

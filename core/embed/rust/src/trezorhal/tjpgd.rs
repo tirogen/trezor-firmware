@@ -3,7 +3,7 @@ use core::{mem::MaybeUninit, ptr::NonNull, slice};
 
 use crate::trezorhal::buffers::{ get_jpeg_buffer, get_jpeg_work_buffer};
 pub use ffi::{buffer_jpeg_t as BufferJpeg};
-use crate::trezorhal::tjpgdlib::{jd_decomp, jd_prepare, JDEC, JDR_OK, JRECT, uint8_t};
+use crate::trezorhal::tjpgdlib::{jd_decomp, jd_prepare, JDEC, JDR_OK, JRECT};
 
 impl Default for JDEC {
     fn default() -> Self {
@@ -28,7 +28,7 @@ pub struct JpegContext<'a> {
     buffer: &'a mut [u16],
 }
 
-unsafe extern "C" fn jpeg_in_buffer(jd: *mut JDEC, buff: *mut uint8_t, n_data: usize) -> usize {
+unsafe extern "C" fn jpeg_in_buffer(jd: *mut JDEC, buff: *mut u8, n_data: usize) -> usize {
     let context = unsafe { NonNull::new_unchecked((*jd).device as *mut JpegContext).as_mut() };
     let n_data = n_data as usize;
     if !buff.is_null() {
