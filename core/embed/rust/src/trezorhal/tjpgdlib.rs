@@ -162,11 +162,7 @@ unsafe fn alloc_pool(mut jd: *mut JDEC, mut ndata: usize) -> *mut cty::c_void {
         return rp as *mut cty::c_void;
     }
 }
-unsafe fn create_qt_tbl(
-    mut jd: *mut JDEC,
-    mut data: *const u8,
-    mut ndata: usize,
-) -> JRESULT {
+unsafe fn create_qt_tbl(mut jd: *mut JDEC, mut data: *const u8, mut ndata: usize) -> JRESULT {
     unsafe {
         let mut i: u32 = 0;
         let mut zi: u32 = 0;
@@ -204,11 +200,7 @@ unsafe fn create_qt_tbl(
         return JDR_OK;
     }
 }
-unsafe fn create_huffman_tbl(
-    mut jd: *mut JDEC,
-    mut data: *const u8,
-    mut ndata: usize,
-) -> JRESULT {
+unsafe fn create_huffman_tbl(mut jd: *mut JDEC, mut data: *const u8, mut ndata: usize) -> JRESULT {
     unsafe {
         let mut i: u32 = 0;
         let mut j: u32 = 0;
@@ -1075,7 +1067,7 @@ unsafe fn mcu_output(
         }) as JRESULT;
     }
 }
-#[no_mangle]
+
 pub unsafe fn jd_prepare(
     mut jd: *mut JDEC,
     mut infunc: Option<unsafe fn(*mut JDEC, *mut u8, usize) -> usize>,
@@ -1396,7 +1388,7 @@ pub unsafe fn jd_prepare(
         }
     }
 }
-#[no_mangle]
+
 pub unsafe fn jd_decomp(
     mut jd: *mut JDEC,
     mut outfunc: Option<unsafe fn(*mut JDEC, *mut cty::c_void, *mut JRECT) -> i32>,
