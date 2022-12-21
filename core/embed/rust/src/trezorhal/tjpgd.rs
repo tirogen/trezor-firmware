@@ -1,9 +1,11 @@
 use super::ffi;
 use core::{mem::MaybeUninit, ptr::NonNull, slice};
 
-use crate::trezorhal::buffers::{ get_jpeg_buffer, get_jpeg_work_buffer};
-pub use ffi::{buffer_jpeg_t as BufferJpeg};
-use crate::trezorhal::tjpgdlib::{jd_decomp, jd_prepare, JDEC, JDR_OK, JRECT};
+use crate::trezorhal::{
+    buffers::{get_jpeg_buffer, get_jpeg_work_buffer},
+    tjpgdlib::{jd_decomp, jd_prepare, JDEC, JDR_OK, JRECT},
+};
+pub use ffi::buffer_jpeg_t as BufferJpeg;
 
 impl Default for JDEC {
     fn default() -> Self {
