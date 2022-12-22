@@ -10,10 +10,6 @@
 
 use core::{mem, slice};
 
-extern "C" {
-    fn memset(_: *mut cty::c_void, _: i32, _: cty::c_ulong) -> *mut
-cty::c_void; }
-
 const JD_FORMAT: u32 = 1;
 
 const HUFF_BIT: u32 = 10;
@@ -1064,11 +1060,7 @@ pub unsafe fn jd_prepare(
         let mut ofs: u32 = 0;
         let mut len: usize = 0;
         let mut rc: JRESULT = JDR_OK;
-        memset(
-            jd as *mut cty::c_void,
-            0 as i32,
-            ::core::mem::size_of::<JDEC>() as cty::c_ulong,
-        );
+
         let ref mut fresh59 = (*jd).pool;
         *fresh59 = pool;
         (*jd).sz_pool = sz_pool;
