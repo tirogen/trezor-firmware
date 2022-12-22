@@ -53,7 +53,7 @@ pub struct JDEC {
     pub huffbits: [[*mut u8; 2]; 2],
     pub huffcode: [[*mut u16; 2]; 2],
     pub huffdata: [[*mut u8; 2]; 2],
-    pub qttbl: [*mut i32; 4],
+    pub qttbl: [Option<&'static mut [i32]>; 4],
     pub wreg: u32,
     pub marker: u8,
     pub longofs: [[u8; 2]; 2],
@@ -185,7 +185,6 @@ unsafe fn create_qt_tbl(mut jd: *mut JDEC, mut data: *const u8, mut ndata: usize
         let mut i: u32 = 0;
         let mut zi: u32 = 0;
         let mut d: u8 = 0;
-        let mut pb: *mut i32 = 0 as *mut i32;
         while ndata != 0 {
             if ndata < 65 {
                 return JDR_FMT1;
@@ -199,20 +198,21 @@ unsafe fn create_qt_tbl(mut jd: *mut JDEC, mut data: *const u8, mut ndata: usize
                 return JDR_FMT1;
             }
             i = (d as i32 & 3) as u32;
-            pb = alloc_pool(jd, 64 * ::core::mem::size_of::<i32>()) as *mut i32;
-            if pb.is_null() {
+
+            let pb = alloc_pool_slice(jd, 64);
+            if pb.is_err() {
                 return JDR_MEM1;
             }
-            let ref mut fresh3 = (*jd).qttbl[i as usize];
-            *fresh3 = pb;
-            i = 0;
-            while i < 64 {
-                zi = Zig[i as usize] as u32;
+            (*jd).qttbl[i as usize] = Some(unwrap!(pb));
+            let mut j: u32 = 0;
+            while j < 64 {
+                zi = Zig[j as usize] as u32;
                 let fresh4 = data;
                 data = data.offset(1);
-                *pb.offset(zi as isize) =
+
+                unwrap!((*jd).qttbl[i as usize].as_mut())[zi as usize] =
                     (*fresh4 as u32).wrapping_mul(Ipsf[zi as usize] as u32) as i32;
-                i = i.wrapping_add(1);
+                j = j.wrapping_add(1);
             }
         }
         return JDR_OK;
@@ -667,10 +667,9 @@ unsafe fn mcu_load(mut jd: *mut JDEC) -> JRESULT {
         let mut z: u32 = 0;
         let mut id: u32 = 0;
         let mut cmp: u32 = 0;
-        let mut dqf: *const i32 = 0 as *const i32;
         nby = ((*jd).msx as i32 * (*jd).msy as i32) as u32;
         let mut mcu_buf_idx = 0;
-        blk = 0 as i32 as u32;
+        blk = 0;
         while blk < nby.wrapping_add(2) {
             cmp = if blk < nby {
                 0
@@ -684,7 +683,7 @@ unsafe fn mcu_load(mut jd: *mut JDEC) -> JRESULT {
                     i += 1;
                 }
             } else {
-                id = (if cmp != 0 { 1 } else { 0 }) as u32;
+                id = if cmp != 0 { 1 } else { 0 };
                 d = huffext(jd, id, 0);
                 if d < 0 {
                     return (0 - d) as JRESULT;
@@ -693,8 +692,8 @@ unsafe fn mcu_load(mut jd: *mut JDEC) -> JRESULT {
                 d = (*jd).dcv[cmp as usize] as i32;
                 if bc != 0 {
                     e = bitext(jd, bc);
-                    if e < 0 as i32 {
-                        return (0 as i32 - e) as JRESULT;
+                    if e < 0 {
+                        return (0 - e) as JRESULT;
                     }
                     bc = ((1) << bc.wrapping_sub(1)) as u32;
                     if e as u32 & bc == 0 {
@@ -703,15 +702,15 @@ unsafe fn mcu_load(mut jd: *mut JDEC) -> JRESULT {
                     d += e;
                     (*jd).dcv[cmp as usize] = d as i16;
                 }
-                dqf = (*jd).qttbl[(*jd).qtid[cmp as usize] as usize];
-                *tmp.offset(0) = d * *dqf.offset(0) >> 8 as i32;
+                let dfq = unwrap!((*jd).qttbl[(*jd).qtid[cmp as usize] as usize].as_ref());
+                *tmp.offset(0) = d * dfq[0] >> 8;
                 memset(
                     &mut *tmp.offset(1) as *mut i32 as *mut cty::c_void,
-                    0 as i32,
-                    (63 as i32 as cty::c_ulong)
+                    0,
+                    (63 as cty::c_ulong)
                         .wrapping_mul(::core::mem::size_of::<i32>() as cty::c_ulong),
                 );
-                z = 1 as i32 as u32;
+                z = 1;
                 loop {
                     d = huffext(jd, id, 1);
                     if d == 0 {
@@ -736,7 +735,7 @@ unsafe fn mcu_load(mut jd: *mut JDEC) -> JRESULT {
                             d = (d as u32).wrapping_sub((bc << 1 as i32).wrapping_sub(1)) as i32;
                         }
                         i = Zig[z as usize] as u32;
-                        *tmp.offset(i as isize) = d * *dqf.offset(i as isize) >> 8 as i32;
+                        *tmp.offset(i as isize) = d * dfq[i as usize] >> 8 as i32;
                     }
                     z = z.wrapping_add(1);
                     if !(z < 64) {
@@ -746,7 +745,7 @@ unsafe fn mcu_load(mut jd: *mut JDEC) -> JRESULT {
                 if 1 != 2 || cmp == 0 {
                     if z == 1 || 0 != 0 && (*jd).scale == 3 {
                         d = (*tmp / 256 + 128) as i32;
-                        if 2 as i32 >= 1 as i32 {
+                        if 2 >= 1 {
                             i = 0;
                             while i < 64 {
                                 unwrap!((*jd).mcubuf.as_mut())[mcu_buf_idx + i as usize] = d as i16;
@@ -1220,7 +1219,7 @@ pub unsafe fn jd_prepare(
                         if *seg.offset(0) as i32 != (*jd).ncomp as i32 {
                             return JDR_FMT3;
                         }
-                        i = 0 as i32 as u32;
+                        i = 0;
                         while i < (*jd).ncomp as u32 {
                             b = *seg.offset(
                                 (2 as u32).wrapping_add((2 as u32).wrapping_mul(i)) as isize
@@ -1234,7 +1233,7 @@ pub unsafe fn jd_prepare(
                             {
                                 return JDR_FMT1;
                             }
-                            if ((*jd).qttbl[(*jd).qtid[i as usize] as usize]).is_null() {
+                            if ((*jd).qttbl[(*jd).qtid[i as usize] as usize]).is_none() {
                                 return JDR_FMT1;
                             }
                             i = i.wrapping_add(1);
