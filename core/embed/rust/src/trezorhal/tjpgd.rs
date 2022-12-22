@@ -1,9 +1,9 @@
 use super::ffi;
-use core::{mem::MaybeUninit, ptr::NonNull, slice};
+use core::{mem::MaybeUninit};
 
 use crate::trezorhal::{
     buffers::{get_jpeg_buffer, get_jpeg_work_buffer},
-    tjpgdlib::{jd_decomp, jd_prepare, JDEC, JDR_OK, JRECT},
+    tjpgdlib::{jd_decomp, jd_prepare, JDEC, JDR_OK},
 };
 pub use ffi::buffer_jpeg_t as BufferJpeg;
 
@@ -30,69 +30,6 @@ pub struct JpegContext<'a> {
     buffer: &'a mut [u16],
 }
 
-unsafe fn jpeg_in_buffer(jd: *mut JDEC, buff: Option<&mut &mut [u8]>, n_data: usize) -> usize {
-    let context = unsafe { NonNull::new_unchecked((*jd).device as *mut JpegContext).as_mut() };
-    let n_data = n_data as usize;
-    if let Some(buff) = buff {
-        if (context.data_read + n_data) <= context.data_len {
-            let _ = &buff[0..n_data]
-                .copy_from_slice(&context.data[context.data_read..context.data_read + n_data]);
-        } else {
-            let rest = context.data_len - context.data_read;
-
-            if rest > 0 {
-                let _ = &buff[0..rest]
-                    .copy_from_slice(&context.data[context.data_read..context.data_read + rest]);
-            } else {
-                // error - no data
-                return 0;
-            }
-        }
-    }
-
-    context.data_read += n_data;
-    n_data as _
-}
-
-unsafe fn jpeg_out_buffer(jd: *mut JDEC, bitmap_raw: &&mut [i32], rect: *mut JRECT) -> cty::c_int {
-    let jd = unsafe { NonNull::new_unchecked(jd as *mut JDEC).as_mut() };
-    let context = unsafe { NonNull::new_unchecked(jd.device as *mut JpegContext).as_mut() };
-    let rect = unsafe { NonNull::new_unchecked(rect as *mut JRECT).as_mut() };
-
-    let w = (rect.right - rect.left + 1) as i16;
-    let h = (rect.bottom - rect.top + 1) as i16;
-    let x = rect.left as i16;
-
-    let bitmap =
-        unsafe { slice::from_raw_parts(bitmap_raw.as_ptr() as *const u16, (w * h) as usize) };
-
-    if h > context.buffer_height {
-        // unsupported height, call and let know
-        return 1;
-    }
-
-    let buffer_len = (context.buffer_width * context.buffer_height) as usize;
-
-    for i in 0..h {
-        for j in 0..w {
-            let buffer_pos = ((x + j) + (i * context.buffer_width)) as usize;
-            if buffer_pos < buffer_len {
-                context.buffer[buffer_pos] = bitmap[(i * w + j) as usize];
-            }
-        }
-    }
-
-    context.current_line_pix += w;
-
-    if context.current_line_pix >= context.buffer_width {
-        context.current_line_pix = 0;
-        context.current_line += (jd.msy * 8) as i16;
-        // finished line, abort and continue later
-        return 0;
-    }
-
-    1
-}
 
 pub fn jpeg_get_context<'a>(
     data: &'a [u8],
@@ -116,7 +53,6 @@ pub fn jpeg_buffer_prepare<'a>(jd: &mut JDEC, context: &'a mut JpegContext<'a>) 
     unsafe {
         jd_prepare(
             jd as *mut _,
-            Some(jpeg_in_buffer),
             work_buffer,
             context as *mut JpegContext as *mut _,
         );
@@ -125,7 +61,7 @@ pub fn jpeg_buffer_prepare<'a>(jd: &mut JDEC, context: &'a mut JpegContext<'a>) 
 
 pub fn jpeg_buffer_decomp(jd: &mut JDEC) {
     unsafe {
-        jd_decomp(jd as _, Some(jpeg_out_buffer), 0);
+        jd_decomp(jd as _,  0);
     }
 }
 
@@ -138,7 +74,6 @@ pub fn jpeg_info(data: &[u8]) -> Result<JpegInfo, ()> {
     let res = unsafe {
         jd_prepare(
             &mut jd as *mut _,
-            Some(jpeg_in_buffer),
             work_buffer,
             &mut context as *mut JpegContext as *mut _,
         )

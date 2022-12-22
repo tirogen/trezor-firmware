@@ -9,6 +9,7 @@
 )]
 
 use core::{mem, slice};
+use core::ptr::NonNull;
 
 const JD_FORMAT: u32 = 1;
 
@@ -62,9 +63,22 @@ pub struct JDEC {
     pub pool: Option<&'static mut [u8]>,
     pub sz_pool: usize,
     pub pool_start: usize,
-    pub infunc: Option<unsafe fn(*mut JDEC, Option<&mut &mut [u8]>, usize) -> usize>,
     pub device: *mut cty::c_void,
 }
+
+
+pub struct JpegContext<'a> {
+    data_read: usize,
+    data_len: usize,
+    buffer_width: i16,
+    buffer_height: i16,
+    current_line: i16,
+    current_line_pix: i16,
+    data: &'a [u8],
+    buffer: &'a mut [u16],
+}
+
+
 static mut Zig: [u8; 64] = [
     0, 1, 8, 16, 9, 2, 3, 10, 17, 24, 32, 25, 18, 11, 4, 5, 12, 19, 26, 33, 40, 48, 41, 34, 27, 20,
     13, 6, 7, 14, 21, 28, 35, 42, 49, 56, 57, 50, 43, 36, 29, 22, 15, 23, 30, 37, 44, 51, 58, 59,
@@ -372,7 +386,7 @@ unsafe fn huffext(mut jd: *mut JDEC, mut id: u32, mut cls: u32) -> i32 {
             } else {
                 if dc == 0 {
                     dp = 0;
-                    dc = ((*jd).infunc).expect("non-null function pointer")(
+                    dc = jpeg_in_buffer(
                         jd,
                         Some(unwrap!((*jd).inbuf.as_mut())),
                         512,
@@ -470,7 +484,7 @@ unsafe fn bitext(mut jd: *mut JDEC, mut nbit: u32) -> i32 {
             } else {
                 if dc == 0 {
                     dp = 0;
-                    dc = ((*jd).infunc).expect("non-null function pointer")(
+                    dc = jpeg_in_buffer(
                         jd,
                         Some(unwrap!((*jd).inbuf.as_mut())),
                         512,
@@ -519,7 +533,7 @@ unsafe fn restart(mut jd: *mut JDEC, mut rstn: u16) -> JRESULT {
             while i < 2 {
                 if dc == 0 {
                     dp = 0;
-                    dc = ((*jd).infunc).expect("non-null function pointer")(
+                    dc = jpeg_in_buffer(
                         jd,
                         Some(unwrap!((*jd).inbuf.as_mut())),
                         512,
@@ -766,7 +780,6 @@ unsafe fn mcu_load(mut jd: *mut JDEC) -> JRESULT {
 }
 unsafe fn mcu_output(
     mut jd: *mut JDEC,
-    mut outfunc: Option<unsafe fn(*mut JDEC, &&mut [i32], *mut JRECT) -> i32>,
     mut x: u32,
     mut y: u32,
 ) -> JRESULT {
@@ -1023,7 +1036,7 @@ unsafe fn mcu_output(
                 }
             }
         }
-        return (if outfunc.expect("non-null function pointer")(
+        return (if jpeg_out_buffer(
             jd,
             unwrap!((*jd).workbuf.as_ref()),
             &mut rect,
@@ -1038,7 +1051,6 @@ unsafe fn mcu_output(
 
 pub unsafe fn jd_prepare(
     mut jd: *mut JDEC,
-    mut infunc: Option<unsafe fn(*mut JDEC, Option<&mut &mut [u8]>, usize) -> usize>,
     mut pool: &'static mut [u8],
     mut dev: *mut cty::c_void,
 ) -> JRESULT {
@@ -1055,8 +1067,7 @@ pub unsafe fn jd_prepare(
 
         let ref mut fresh59 = (*jd).pool;
         *fresh59 = Some(pool);
-        let ref mut fresh60 = (*jd).infunc;
-        *fresh60 = infunc;
+
         let ref mut fresh61 = (*jd).device;
         *fresh61 = dev;
         let ref mut fresh62 = (*jd).dcv[0];
@@ -1075,7 +1086,7 @@ pub unsafe fn jd_prepare(
         marker = 0;
         ofs = marker as u32;
         loop {
-            if ((*jd).infunc).expect("non-null function pointer")(
+            if jpeg_in_buffer(
                 jd,
                 Some(unwrap!((*jd).inbuf.as_mut())),
                 1,
@@ -1090,7 +1101,7 @@ pub unsafe fn jd_prepare(
             }
         }
         loop {
-            if ((*jd).infunc).expect("non-null function pointer")(
+            if jpeg_in_buffer(
                 jd,
                 Some(unwrap!((*jd).inbuf.as_mut())),
                 4,
@@ -1114,7 +1125,7 @@ pub unsafe fn jd_prepare(
                         if len > 512 {
                             return JDR_MEM2;
                         }
-                        if ((*jd).infunc).expect("non-null function pointer")(
+                        if jpeg_in_buffer(
                             jd,
                             Some(unwrap!((*jd).inbuf.as_mut())),
                             len,
@@ -1158,7 +1169,7 @@ pub unsafe fn jd_prepare(
                         if len > 512 {
                             return JDR_MEM2;
                         }
-                        if ((*jd).infunc).expect("non-null function pointer")(
+                        if jpeg_in_buffer(
                             jd,
                             Some(unwrap!((*jd).inbuf.as_mut())),
                             len,
@@ -1175,7 +1186,7 @@ pub unsafe fn jd_prepare(
                         if len > 512 {
                             return JDR_MEM2;
                         }
-                        if ((*jd).infunc).expect("non-null function pointer")(
+                        if jpeg_in_buffer(
                             jd,
                             Some(unwrap!((*jd).inbuf.as_mut())),
                             len,
@@ -1193,7 +1204,7 @@ pub unsafe fn jd_prepare(
                         if len > 512 {
                             return JDR_MEM2;
                         }
-                        if ((*jd).infunc).expect("non-null function pointer")(
+                        if jpeg_in_buffer(
                             jd,
                             Some(unwrap!((*jd).inbuf.as_mut())),
                             len,
@@ -1211,7 +1222,7 @@ pub unsafe fn jd_prepare(
                         if len > 512 {
                             return JDR_MEM2;
                         }
-                        if ((*jd).infunc).expect("non-null function pointer")(
+                        if jpeg_in_buffer(
                             jd,
                             Some(unwrap!((*jd).inbuf.as_mut())),
                             len,
@@ -1265,7 +1276,7 @@ pub unsafe fn jd_prepare(
 
                         ofs = ofs.wrapping_rem(512);
                         if ofs != 0 {
-                            (*jd).dctr = ((*jd).infunc).expect("non-null function pointer")(
+                            (*jd).dctr = jpeg_in_buffer(
                                 jd,
                                 Some(&mut &mut unwrap!((*jd).inbuf.as_mut())[(ofs as usize)..]),
                                 (512 as u32).wrapping_sub(ofs) as usize,
@@ -1311,7 +1322,7 @@ pub unsafe fn jd_prepare(
                         current_block_111 = 13359995684220628626;
                     }
                     _ => {
-                        if ((*jd).infunc).expect("non-null function pointer")(jd, None, len) != len
+                        if jpeg_in_buffer(jd, None, len) != len
                         {
                             return JDR_INP;
                         }
@@ -1381,7 +1392,6 @@ pub unsafe fn jd_prepare(
 
 pub unsafe fn jd_decomp(
     mut jd: *mut JDEC,
-    mut outfunc: Option<unsafe fn(*mut JDEC, &&mut [i32], *mut JRECT) -> i32>,
     mut scale: u8,
 ) -> JRESULT {
     unsafe {
@@ -1420,7 +1430,7 @@ pub unsafe fn jd_decomp(
                 if rc as u32 != JDR_OK as u32 {
                     return rc;
                 }
-                rc = mcu_output(jd, outfunc, x, y);
+                rc = mcu_output(jd,  x, y);
                 if rc as u32 != JDR_OK as u32 {
                     return rc;
                 }
@@ -1430,4 +1440,70 @@ pub unsafe fn jd_decomp(
         }
         return rc;
     }
+}
+
+
+
+unsafe fn jpeg_in_buffer(jd: *mut JDEC, buff: Option<&mut &mut [u8]>, n_data: usize) -> usize {
+    let context = unsafe { NonNull::new_unchecked((*jd).device as *mut JpegContext).as_mut() };
+    let n_data = n_data as usize;
+    if let Some(buff) = buff {
+        if (context.data_read + n_data) <= context.data_len {
+            let _ = &buff[0..n_data]
+                .copy_from_slice(&context.data[context.data_read..context.data_read + n_data]);
+        } else {
+            let rest = context.data_len - context.data_read;
+
+            if rest > 0 {
+                let _ = &buff[0..rest]
+                    .copy_from_slice(&context.data[context.data_read..context.data_read + rest]);
+            } else {
+                // error - no data
+                return 0;
+            }
+        }
+    }
+
+    context.data_read += n_data;
+    n_data as _
+}
+
+unsafe fn jpeg_out_buffer(jd: *mut JDEC, bitmap_raw: &&mut [i32], rect: *mut JRECT) -> cty::c_int {
+    let jd = unsafe { NonNull::new_unchecked(jd as *mut JDEC).as_mut() };
+    let context = unsafe { NonNull::new_unchecked(jd.device as *mut JpegContext).as_mut() };
+    let rect = unsafe { NonNull::new_unchecked(rect as *mut JRECT).as_mut() };
+
+    let w = (rect.right - rect.left + 1) as i16;
+    let h = (rect.bottom - rect.top + 1) as i16;
+    let x = rect.left as i16;
+
+    let bitmap =
+        unsafe { slice::from_raw_parts(bitmap_raw.as_ptr() as *const u16, (w * h) as usize) };
+
+    if h > context.buffer_height {
+        // unsupported height, call and let know
+        return 1;
+    }
+
+    let buffer_len = (context.buffer_width * context.buffer_height) as usize;
+
+    for i in 0..h {
+        for j in 0..w {
+            let buffer_pos = ((x + j) + (i * context.buffer_width)) as usize;
+            if buffer_pos < buffer_len {
+                context.buffer[buffer_pos] = bitmap[(i * w + j) as usize];
+            }
+        }
+    }
+
+    context.current_line_pix += w;
+
+    if context.current_line_pix >= context.buffer_width {
+        context.current_line_pix = 0;
+        context.current_line += (jd.msy * 8) as i16;
+        // finished line, abort and continue later
+        return 0;
+    }
+
+    1
 }
