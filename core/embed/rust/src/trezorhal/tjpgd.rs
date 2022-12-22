@@ -112,13 +112,12 @@ pub fn jpeg_get_context<'a>(
 }
 
 pub fn jpeg_buffer_prepare<'a>(jd: &mut JDEC, context: &'a mut JpegContext<'a>) {
-    let work_buffer = unsafe { &get_jpeg_work_buffer(0, true).buffer };
+    let work_buffer = unsafe { &mut get_jpeg_work_buffer(0, true).buffer };
     unsafe {
         jd_prepare(
             jd as *mut _,
             Some(jpeg_in_buffer),
-            work_buffer.as_ptr() as *mut _,
-            work_buffer.len() as _,
+            work_buffer,
             context as *mut JpegContext as *mut _,
         );
     }
@@ -133,15 +132,14 @@ pub fn jpeg_buffer_decomp(jd: &mut JDEC) {
 pub fn jpeg_info(data: &[u8]) -> Result<JpegInfo, ()> {
     let mut jd = JDEC::default();
 
-    let work_buffer = unsafe { &get_jpeg_work_buffer(0, true).buffer };
+    let work_buffer = unsafe { &mut get_jpeg_work_buffer(0, true).buffer };
     let mut context = jpeg_get_context(data, unsafe { get_jpeg_buffer(0, false) }, 0);
 
     let res = unsafe {
         jd_prepare(
             &mut jd as *mut _,
             Some(jpeg_in_buffer),
-            work_buffer.as_ptr() as *mut _,
-            work_buffer.len() as _,
+            work_buffer,
             &mut context as *mut JpegContext as *mut _,
         )
     };

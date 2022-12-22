@@ -59,8 +59,9 @@ pub struct JDEC {
     pub hufflut_dc: [Option<&'static mut [u8]>; 2],
     pub workbuf: Option<&'static mut [i32]>,
     pub mcubuf: Option<&'static mut [i16]>,
-    pub pool: *mut cty::c_void,
+    pub pool: Option<&'static mut [u8]>,
     pub sz_pool: usize,
+    pub pool_start: usize,
     pub infunc: Option<unsafe fn(*mut JDEC, Option<&mut &mut [u8]>, usize) -> usize>,
     pub device: *mut cty::c_void,
 }
@@ -146,33 +147,17 @@ fn BYTECLIP(mut val: i32) -> u8 {
     return val as u8;
 }
 
-unsafe fn alloc_pool(mut jd: *mut JDEC, mut ndata: usize) -> *mut cty::c_void {
-    unsafe {
-        let mut rp: *mut cty::c_char = 0 as *mut cty::c_char;
-        ndata = (ndata + 3) & !3;
-        if (*jd).sz_pool >= ndata {
-            let ref mut fresh0 = (*jd).sz_pool;
-            *fresh0 = *fresh0 - ndata;
-            rp = (*jd).pool as *mut cty::c_char;
-            let ref mut fresh1 = (*jd).pool;
-            *fresh1 = rp.offset(ndata as isize) as *mut cty::c_void;
-        }
-        return rp as *mut cty::c_void;
-    }
-}
-
 unsafe fn alloc_pool_slice<T>(mut jd: *mut JDEC, mut ndata: usize) -> Result<&'static mut [T], ()> {
     unsafe {
-        let mut rp: *mut cty::c_char = 0 as *mut cty::c_char;
-        let ndata_bytes = ndata * core::mem::size_of::<T>();
+        let ndata_bytes = ndata * mem::size_of::<T>();
         let ndata_aligned = (ndata_bytes + 3) & !3;
         if (*jd).sz_pool >= ndata_aligned {
-            let ref mut fresh0 = (*jd).sz_pool;
-            *fresh0 = *fresh0 - ndata_aligned;
-            rp = (*jd).pool as *mut cty::c_char;
-            let ref mut fresh1 = (*jd).pool;
-            *fresh1 = rp.offset(ndata_aligned as isize) as *mut cty::c_void;
-            return Ok(slice::from_raw_parts_mut(rp as *mut T, ndata));
+            let start = (*jd).pool_start;
+            let end = (*jd).pool_start + ndata_aligned;
+            let data = &mut unwrap!((*jd).pool.as_mut())[start..end];
+            (*jd).pool_start = end;
+            (*jd).sz_pool = (*jd).sz_pool - ndata_aligned;
+            return Ok(slice::from_raw_parts_mut(data.as_ptr() as *mut T, ndata));
         }
         Err(())
     }
@@ -1054,8 +1039,7 @@ unsafe fn mcu_output(
 pub unsafe fn jd_prepare(
     mut jd: *mut JDEC,
     mut infunc: Option<unsafe fn(*mut JDEC, Option<&mut &mut [u8]>, usize) -> usize>,
-    mut pool: *mut cty::c_void,
-    mut sz_pool: usize,
+    mut pool: &'static mut [u8],
     mut dev: *mut cty::c_void,
 ) -> JRESULT {
     unsafe {
@@ -1067,9 +1051,10 @@ pub unsafe fn jd_prepare(
         let mut len: usize = 0;
         let mut rc: JRESULT = JDR_OK;
 
+        (*jd).sz_pool = pool.len();
+
         let ref mut fresh59 = (*jd).pool;
-        *fresh59 = pool;
-        (*jd).sz_pool = sz_pool;
+        *fresh59 = Some(pool);
         let ref mut fresh60 = (*jd).infunc;
         *fresh60 = infunc;
         let ref mut fresh61 = (*jd).device;
