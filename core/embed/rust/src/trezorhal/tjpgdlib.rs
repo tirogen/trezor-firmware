@@ -60,7 +60,7 @@ pub struct JDEC {
     pub hufflut_ac: [Option<&'static mut [u16]>; 2],
     pub hufflut_dc: [Option<&'static mut [u8]>; 2],
     pub workbuf: *mut cty::c_void,
-    pub mcubuf: *mut i16,
+    pub mcubuf: Option<&'static mut [i16]>,
     pub pool: *mut cty::c_void,
     pub sz_pool: usize,
     pub infunc: Option<unsafe fn(*mut JDEC, *mut u8, usize) -> usize>,
@@ -669,7 +669,7 @@ unsafe fn mcu_load(mut jd: *mut JDEC) -> JRESULT {
         let mut bp: *mut i16 = 0 as *mut i16;
         let mut dqf: *const i32 = 0 as *const i32;
         nby = ((*jd).msx as i32 * (*jd).msy as i32) as u32;
-        bp = (*jd).mcubuf;
+        let mut mcu_buf_idx = 0;
         blk = 0 as i32 as u32;
         while blk < nby.wrapping_add(2) {
             cmp = if blk < nby {
@@ -680,9 +680,8 @@ unsafe fn mcu_load(mut jd: *mut JDEC) -> JRESULT {
             if cmp != 0 && (*jd).ncomp as i32 != 3 {
                 i = 0;
                 while i < 64 {
-                    let fresh31 = i;
-                    i = i.wrapping_add(1);
-                    *bp.offset(fresh31 as isize) = 128;
+                    unwrap!((*jd).mcubuf.as_mut())[mcu_buf_idx + i as usize] = 128 as i16;
+                    i += 1;
                 }
             } else {
                 id = (if cmp != 0 { 1 } else { 0 }) as u32;
@@ -750,9 +749,8 @@ unsafe fn mcu_load(mut jd: *mut JDEC) -> JRESULT {
                         if 2 as i32 >= 1 as i32 {
                             i = 0;
                             while i < 64 {
-                                let fresh32 = i;
-                                i = i.wrapping_add(1);
-                                *bp.offset(fresh32 as isize) = d as i16;
+                                unwrap!((*jd).mcubuf.as_mut())[mcu_buf_idx + i as usize] = d as i16;
+                                i += 1;
                             }
                         } else {
                             memset(bp as *mut cty::c_void, d, 64 as cty::c_ulong);
@@ -762,7 +760,7 @@ unsafe fn mcu_load(mut jd: *mut JDEC) -> JRESULT {
                     }
                 }
             }
-            bp = bp.offset(64);
+            mcu_buf_idx += 64;
             blk = blk.wrapping_add(1);
         }
         return JDR_OK;
@@ -790,8 +788,8 @@ unsafe fn mcu_output(
         let mut yy: i32 = 0;
         let mut cb: i32 = 0;
         let mut cr: i32 = 0;
-        let mut py: *mut i16 = 0 as *mut i16;
-        let mut pc: *mut i16 = 0 as *mut i16;
+        let mut py_idx: usize = 0;
+        let mut pc_idx: usize = 0;
         let mut pix: *mut u8 = 0 as *mut u8;
         let mut rect: JRECT = JRECT {
             left: 0,
@@ -820,36 +818,32 @@ unsafe fn mcu_output(
             if 1 != 2 {
                 iy = 0;
                 while iy < my {
-                    py = (*jd).mcubuf;
-                    pc = py;
+                    py_idx = 0;
+                    pc_idx = 0;
                     if my == 16 {
-                        pc = pc.offset(
-                            ((64 * 4) as u32).wrapping_add((iy >> 1 as i32).wrapping_mul(8))
-                                as isize,
-                        );
+                        pc_idx += (64 * 4) + ((iy as usize >> 1) * 8);
                         if iy >= 8 {
-                            py = py.offset(64);
+                            py_idx += 64;
                         }
                     } else {
-                        pc =
-                            pc.offset(mx.wrapping_mul(8).wrapping_add(iy.wrapping_mul(8)) as isize);
+                        pc_idx += (mx * 8 + iy * 8) as usize;
                     }
-                    py = py.offset(iy.wrapping_mul(8) as isize);
-                    ix = 0 as i32 as u32;
+                    py_idx += (iy * 8) as usize;
+                    ix = 0;
                     while ix < mx {
-                        cb = *pc.offset(0) as i32 - 128;
-                        cr = *pc.offset(64) as i32 - 128;
+                        cb = unwrap!((*jd).mcubuf.as_mut())[pc_idx + 0] as i32 - 128;
+                        cr = unwrap!((*jd).mcubuf.as_mut())[pc_idx + 64] as i32 - 128;
                         if mx == 16 {
                             if ix == 8 {
-                                py = py.offset((64 - 8) as isize);
+                                py_idx += 64 - 8;
                             }
-                            pc = pc.offset((ix & 1) as isize);
+                            pc_idx += (ix & 1) as usize;
                         } else {
-                            pc = pc.offset(1);
+                            pc_idx += 1;
                         }
-                        let fresh33 = py;
-                        py = py.offset(1);
-                        yy = *fresh33 as i32;
+                        yy = unwrap!((*jd).mcubuf.as_ref())[py_idx + 0] as i32;
+                        py_idx += 1;
+
                         let fresh34 = pix;
                         pix = pix.offset(1);
                         *fresh34 = BYTECLIP(yy + (1.402f64 * CVACC as f64) as i32 * cr / CVACC);
@@ -868,26 +862,25 @@ unsafe fn mcu_output(
                     iy = iy.wrapping_add(1);
                 }
             } else {
-                iy = 0 as i32 as u32;
+                iy = 0;
                 while iy < my {
-                    py = ((*jd).mcubuf).offset(iy.wrapping_mul(8) as isize);
+                    py_idx = (iy * 8) as usize;
                     if my == 16 {
                         if iy >= 8 {
-                            py = py.offset(64);
+                            py_idx += 64;
                         }
                     }
                     ix = 0;
                     while ix < mx {
                         if mx == 16 {
                             if ix == 8 {
-                                py = py.offset((64 - 8) as isize);
+                                py_idx += 64 - 8;
                             }
                         }
-                        let fresh37 = py;
-                        py = py.offset(1);
                         let fresh38 = pix;
                         pix = pix.offset(1);
-                        *fresh38 = *fresh37 as u8;
+                        *fresh38 = unwrap!((*jd).mcubuf.as_ref())[py_idx] as u8;
+                        py_idx += 1;
                         ix = ix.wrapping_add(1);
                     }
                     iy = iy.wrapping_add(1);
@@ -905,13 +898,7 @@ unsafe fn mcu_output(
                 let mut op: *mut u8 = 0 as *mut u8;
                 s = ((*jd).scale as i32 * 2) as u32;
                 w = ((1 as i32) << (*jd).scale as i32) as u32;
-                a = mx.wrapping_sub(w).wrapping_mul(
-                    (if 1 as i32 != 2 as i32 {
-                        3 as i32
-                    } else {
-                        1 as i32
-                    }) as u32,
-                );
+                a = mx.wrapping_sub(w).wrapping_mul(if 1 != 2 { 3 } else { 1 });
                 op = (*jd).workbuf as *mut u8;
                 iy = 0;
                 while iy < my {
@@ -964,20 +951,20 @@ unsafe fn mcu_output(
             }
         } else {
             pix = (*jd).workbuf as *mut u8;
-            pc = ((*jd).mcubuf).offset(mx.wrapping_mul(my) as isize);
-            cb = *pc.offset(0) as i32 - 128 as i32;
-            cr = *pc.offset(64) as i32 - 128 as i32;
-            iy = 0 as i32 as u32;
+            pc_idx = (mx * my) as usize;
+            cb = unwrap!((*jd).mcubuf.as_ref())[pc_idx + 0] as i32 - 128;
+            cr = unwrap!((*jd).mcubuf.as_ref())[pc_idx + 64] as i32 - 128;
+            iy = 0;
             while iy < my {
-                py = (*jd).mcubuf;
+                py_idx = 0;
                 if iy == 8 {
-                    py = py.offset((64 * 2) as isize);
+                    py_idx = 64 * 2;
                 }
-                ix = 0 as i32 as u32;
+                ix = 0;
                 while ix < mx {
-                    yy = *py as i32;
-                    py = py.offset(64);
-                    if 1 as i32 != 2 as i32 {
+                    yy = unwrap!((*jd).mcubuf.as_ref())[py_idx] as i32;
+                    py_idx += 64;
+                    if 1 != 2 {
                         let fresh45 = pix;
                         pix = pix.offset(1);
                         *fresh45 = BYTECLIP(yy + (1.402f64 * CVACC as f64) as i32 * cr / CVACC);
@@ -1265,15 +1252,12 @@ pub unsafe fn jd_prepare(
                         if ((*jd).workbuf).is_null() {
                             return JDR_MEM1;
                         }
-                        let ref mut fresh66 = (*jd).mcubuf;
-                        *fresh66 = alloc_pool(
-                            jd,
-                            (n.wrapping_add(2).wrapping_mul(64) as usize)
-                                .wrapping_mul(::core::mem::size_of::<i16>() as usize),
-                        ) as *mut i16;
-                        if ((*jd).mcubuf).is_null() {
+                        let mcubuf = alloc_pool_slice(jd, (n as usize + 2) * 64);
+                        if mcubuf.is_err() {
                             return JDR_MEM1;
                         }
+                        (*jd).mcubuf = Some(unwrap!(mcubuf));
+
                         ofs = ofs.wrapping_rem(512);
                         if ofs != 0 {
                             (*jd).dctr = ((*jd).infunc).expect("non-null function pointer")(
