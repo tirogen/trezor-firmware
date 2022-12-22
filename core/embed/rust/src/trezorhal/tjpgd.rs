@@ -56,11 +56,7 @@ unsafe fn jpeg_in_buffer(jd: *mut JDEC, buff: *mut u8, n_data: usize) -> usize {
     n_data as _
 }
 
-unsafe fn jpeg_out_buffer(
-    jd: *mut JDEC,
-    bitmap_raw: *mut cty::c_void,
-    rect: *mut JRECT,
-) -> cty::c_int {
+unsafe fn jpeg_out_buffer(jd: *mut JDEC, bitmap_raw: &&mut [i32], rect: *mut JRECT) -> cty::c_int {
     let jd = unsafe { NonNull::new_unchecked(jd as *mut JDEC).as_mut() };
     let context = unsafe { NonNull::new_unchecked(jd.device as *mut JpegContext).as_mut() };
     let rect = unsafe { NonNull::new_unchecked(rect as *mut JRECT).as_mut() };
@@ -69,7 +65,8 @@ unsafe fn jpeg_out_buffer(
     let h = (rect.bottom - rect.top + 1) as i16;
     let x = rect.left as i16;
 
-    let bitmap = unsafe { slice::from_raw_parts(bitmap_raw as *const u16, (w * h) as usize) };
+    let bitmap =
+        unsafe { slice::from_raw_parts(bitmap_raw.as_ptr() as *const u16, (w * h) as usize) };
 
     if h > context.buffer_height {
         // unsupported height, call and let know

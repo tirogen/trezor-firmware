@@ -8,11 +8,13 @@
     unused_mut
 )]
 
-use core::slice;
+use core::{mem, slice};
 
 extern "C" {
-    fn memset(_: *mut cty::c_void, _: i32, _: cty::c_ulong) -> *mut cty::c_void;
-}
+    fn memset(_: *mut cty::c_void, _: i32, _: cty::c_ulong) -> *mut
+cty::c_void; }
+
+const JD_FORMAT: u32 = 1;
 
 const HUFF_BIT: u32 = 10;
 
@@ -59,7 +61,7 @@ pub struct JDEC {
     pub longofs: [[u8; 2]; 2],
     pub hufflut_ac: [Option<&'static mut [u16]>; 2],
     pub hufflut_dc: [Option<&'static mut [u8]>; 2],
-    pub workbuf: *mut cty::c_void,
+    pub workbuf: Option<&'static mut [i32]>,
     pub mcubuf: Option<&'static mut [i16]>,
     pub pool: *mut cty::c_void,
     pub sz_pool: usize,
@@ -178,6 +180,13 @@ unsafe fn alloc_pool_slice<T>(mut jd: *mut JDEC, mut ndata: usize) -> Result<&'s
         }
         Err(())
     }
+}
+
+unsafe fn i32_slice_to_u8(data: &'static mut [i32]) -> &'static mut [u8] {
+    let len = data.len() * 4;
+    let ptr = data.as_mut_ptr() as *mut u8;
+    mem::forget(data);
+    unsafe { slice::from_raw_parts_mut(ptr, len) }
 }
 
 unsafe fn create_qt_tbl(mut jd: *mut JDEC, mut data: *const u8, mut ndata: usize) -> JRESULT {
@@ -552,115 +561,114 @@ unsafe fn restart(mut jd: *mut JDEC, mut rstn: u16) -> JRESULT {
         return JDR_OK;
     }
 }
-unsafe fn block_idct(mut src: *mut i32, mut dst: &mut [i16]) {
-    unsafe {
-        let M13: i32 = (1.41421f64 * 4096_f64) as i32;
-        let M2: i32 = (1.08239f64 * 4096_f64) as i32;
-        let M4: i32 = (2.61313f64 * 4096_f64) as i32;
-        let M5: i32 = (1.84776f64 * 4096_f64) as i32;
-        let mut v0: i32 = 0;
-        let mut v1: i32 = 0;
-        let mut v2: i32 = 0;
-        let mut v3: i32 = 0;
-        let mut v4: i32 = 0;
-        let mut v5: i32 = 0;
-        let mut v6: i32 = 0;
-        let mut v7: i32 = 0;
-        let mut t10: i32 = 0;
-        let mut t11: i32 = 0;
-        let mut t12: i32 = 0;
-        let mut t13: i32 = 0;
-        let mut i: i32 = 0;
-        let mut dst_idx = 0;
-        i = 0;
-        while i < 8 {
-            v0 = *src.offset((8 * 0) as isize);
-            v1 = *src.offset((8 * 2) as isize);
-            v2 = *src.offset((8 * 4) as isize);
-            v3 = *src.offset((8 * 6) as isize);
-            t10 = v0 + v2;
-            t12 = v0 - v2;
-            t11 = (v1 - v3) * M13 >> 12 as i32;
-            v3 += v1;
-            t11 -= v3;
-            v0 = t10 + v3;
-            v3 = t10 - v3;
-            v1 = t11 + t12;
-            v2 = t12 - t11;
-            v4 = *src.offset((8 * 7) as isize);
-            v5 = *src.offset((8 * 1) as isize);
-            v6 = *src.offset((8 * 5) as isize);
-            v7 = *src.offset((8 * 3) as isize);
-            t10 = v5 - v4;
-            t11 = v5 + v4;
-            t12 = v6 - v7;
-            v7 += v6;
-            v5 = (t11 - v7) * M13 >> 12;
-            v7 += t11;
-            t13 = (t10 + t12) * M5 >> 12;
-            v4 = t13 - (t10 * M2 >> 12);
-            v6 = t13 - (t12 * M4 >> 12) - v7;
-            v5 -= v6;
-            v4 -= v5;
-            *src.offset((8 * 0) as isize) = v0 + v7;
-            *src.offset((8 * 7) as isize) = v0 - v7;
-            *src.offset((8 * 1) as isize) = v1 + v6;
-            *src.offset((8 * 6) as isize) = v1 - v6;
-            *src.offset((8 * 2) as isize) = v2 + v5;
-            *src.offset((8 * 5) as isize) = v2 - v5;
-            *src.offset((8 * 3) as isize) = v3 + v4;
-            *src.offset((8 * 4) as isize) = v3 - v4;
-            src = src.offset(1);
-            i += 1;
-        }
-        src = src.offset(-(8));
-        i = 0;
-        while i < 8 {
-            v0 = (*src.offset(0) as cty::c_long + ((128 as cty::c_long) << 8)) as i32;
-            v1 = *src.offset(2);
-            v2 = *src.offset(4);
-            v3 = *src.offset(6);
-            t10 = v0 + v2;
-            t12 = v0 - v2;
-            t11 = (v1 - v3) * M13 >> 12;
-            v3 += v1;
-            t11 -= v3;
-            v0 = t10 + v3;
-            v3 = t10 - v3;
-            v1 = t11 + t12;
-            v2 = t12 - t11;
-            v4 = *src.offset(7);
-            v5 = *src.offset(1);
-            v6 = *src.offset(5);
-            v7 = *src.offset(3);
-            t10 = v5 - v4;
-            t11 = v5 + v4;
-            t12 = v6 - v7;
-            v7 += v6;
-            v5 = (t11 - v7) * M13 >> 12;
-            v7 += t11;
-            t13 = (t10 + t12) * M5 >> 12;
-            v4 = t13 - (t10 * M2 >> 12);
-            v6 = t13 - (t12 * M4 >> 12) - v7;
-            v5 -= v6;
-            v4 -= v5;
-            dst[dst_idx + 0] = (v0 + v7 >> 8) as i16;
-            dst[dst_idx + 7] = (v0 - v7 >> 8) as i16;
-            dst[dst_idx + 1] = (v1 + v6 >> 8) as i16;
-            dst[dst_idx + 6] = (v1 - v6 >> 8) as i16;
-            dst[dst_idx + 2] = (v2 + v5 >> 8) as i16;
-            dst[dst_idx + 5] = (v2 - v5 >> 8) as i16;
-            dst[dst_idx + 3] = (v3 + v4 >> 8) as i16;
-            dst[dst_idx + 4] = (v3 - v4 >> 8) as i16;
-            dst_idx += 8;
-            src = src.offset(8);
-            i += 1;
-        }
+fn block_idct(src: &mut &mut [i32], mut dst: &mut [i16]) {
+    let M13: i32 = (1.41421f64 * 4096_f64) as i32;
+    let M2: i32 = (1.08239f64 * 4096_f64) as i32;
+    let M4: i32 = (2.61313f64 * 4096_f64) as i32;
+    let M5: i32 = (1.84776f64 * 4096_f64) as i32;
+    let mut v0: i32 = 0;
+    let mut v1: i32 = 0;
+    let mut v2: i32 = 0;
+    let mut v3: i32 = 0;
+    let mut v4: i32 = 0;
+    let mut v5: i32 = 0;
+    let mut v6: i32 = 0;
+    let mut v7: i32 = 0;
+    let mut t10: i32 = 0;
+    let mut t11: i32 = 0;
+    let mut t12: i32 = 0;
+    let mut t13: i32 = 0;
+    let mut i: i32 = 0;
+    let mut dst_idx = 0;
+    let mut src_idx = 0;
+    i = 0;
+    while i < 8 {
+        v0 = src[src_idx + 8 * 0];
+        v1 = src[src_idx + 8 * 2];
+        v2 = src[src_idx + 8 * 4];
+        v3 = src[src_idx + 8 * 6];
+        t10 = v0 + v2;
+        t12 = v0 - v2;
+        t11 = (v1 - v3) * M13 >> 12 as i32;
+        v3 += v1;
+        t11 -= v3;
+        v0 = t10 + v3;
+        v3 = t10 - v3;
+        v1 = t11 + t12;
+        v2 = t12 - t11;
+        v4 = src[src_idx + 8 * 7];
+        v5 = src[src_idx + 8 * 1];
+        v6 = src[src_idx + 8 * 5];
+        v7 = src[src_idx + 8 * 3];
+        t10 = v5 - v4;
+        t11 = v5 + v4;
+        t12 = v6 - v7;
+        v7 += v6;
+        v5 = (t11 - v7) * M13 >> 12;
+        v7 += t11;
+        t13 = (t10 + t12) * M5 >> 12;
+        v4 = t13 - (t10 * M2 >> 12);
+        v6 = t13 - (t12 * M4 >> 12) - v7;
+        v5 -= v6;
+        v4 -= v5;
+        src[src_idx + 8 * 0] = v0 + v7;
+        src[src_idx + 8 * 7] = v0 - v7;
+        src[src_idx + 8 * 1] = v1 + v6;
+        src[src_idx + 8 * 6] = v1 - v6;
+        src[src_idx + 8 * 2] = v2 + v5;
+        src[src_idx + 8 * 5] = v2 - v5;
+        src[src_idx + 8 * 3] = v3 + v4;
+        src[src_idx + 8 * 4] = v3 - v4;
+        src_idx += 1;
+        i += 1;
+    }
+    src_idx -= 8;
+    i = 0;
+    while i < 8 {
+        v0 = src[src_idx + 0] + (128 << 8);
+        v1 = src[src_idx + 2];
+        v2 = src[src_idx + 4];
+        v3 = src[src_idx + 6];
+        t10 = v0 + v2;
+        t12 = v0 - v2;
+        t11 = (v1 - v3) * M13 >> 12;
+        v3 += v1;
+        t11 -= v3;
+        v0 = t10 + v3;
+        v3 = t10 - v3;
+        v1 = t11 + t12;
+        v2 = t12 - t11;
+        v4 = src[src_idx + 7];
+        v5 = src[src_idx + 1];
+        v6 = src[src_idx + 5];
+        v7 = src[src_idx + 3];
+        t10 = v5 - v4;
+        t11 = v5 + v4;
+        t12 = v6 - v7;
+        v7 += v6;
+        v5 = (t11 - v7) * M13 >> 12;
+        v7 += t11;
+        t13 = (t10 + t12) * M5 >> 12;
+        v4 = t13 - (t10 * M2 >> 12);
+        v6 = t13 - (t12 * M4 >> 12) - v7;
+        v5 -= v6;
+        v4 -= v5;
+        dst[dst_idx + 0] = (v0 + v7 >> 8) as i16;
+        dst[dst_idx + 7] = (v0 - v7 >> 8) as i16;
+        dst[dst_idx + 1] = (v1 + v6 >> 8) as i16;
+        dst[dst_idx + 6] = (v1 - v6 >> 8) as i16;
+        dst[dst_idx + 2] = (v2 + v5 >> 8) as i16;
+        dst[dst_idx + 5] = (v2 - v5 >> 8) as i16;
+        dst[dst_idx + 3] = (v3 + v4 >> 8) as i16;
+        dst[dst_idx + 4] = (v3 - v4 >> 8) as i16;
+        dst_idx += 8;
+        src_idx += 8;
+        i += 1;
     }
 }
+
 unsafe fn mcu_load(mut jd: *mut JDEC) -> JRESULT {
     unsafe {
-        let mut tmp: *mut i32 = (*jd).workbuf as *mut i32;
         let mut d: i32 = 0;
         let mut e: i32 = 0;
         let mut blk: u32 = 0;
@@ -706,13 +714,8 @@ unsafe fn mcu_load(mut jd: *mut JDEC) -> JRESULT {
                     (*jd).dcv[cmp as usize] = d as i16;
                 }
                 let dfq = unwrap!((*jd).qttbl[(*jd).qtid[cmp as usize] as usize].as_ref());
-                *tmp.offset(0) = d * dfq[0] >> 8;
-                memset(
-                    &mut *tmp.offset(1) as *mut i32 as *mut cty::c_void,
-                    0,
-                    (63 as cty::c_ulong)
-                        .wrapping_mul(::core::mem::size_of::<i32>() as cty::c_ulong),
-                );
+                unwrap!((*jd).workbuf.as_mut())[0] = d * dfq[0] >> 8;
+                unwrap!((*jd).workbuf.as_mut())[1..63].fill(0);
                 z = 1;
                 loop {
                     d = huffext(jd, id, 1);
@@ -738,7 +741,9 @@ unsafe fn mcu_load(mut jd: *mut JDEC) -> JRESULT {
                             d = (d as u32).wrapping_sub((bc << 1 as i32).wrapping_sub(1)) as i32;
                         }
                         i = Zig[z as usize] as u32;
-                        *tmp.offset(i as isize) = d * dfq[i as usize] >> 8 as i32;
+
+                        unwrap!((*jd).workbuf.as_mut())[i as usize] =
+                            d * dfq[i as usize] >> 8 as i32;
                     }
                     z = z.wrapping_add(1);
                     if !(z < 64) {
@@ -747,7 +752,7 @@ unsafe fn mcu_load(mut jd: *mut JDEC) -> JRESULT {
                 }
                 if 1 != 2 || cmp == 0 {
                     if z == 1 || 0 != 0 && (*jd).scale == 3 {
-                        d = (*tmp / 256 + 128) as i32;
+                        d = (unwrap!((*jd).workbuf.as_ref())[0] / 256 + 128) as i32;
                         if 2 >= 1 {
                             i = 0;
                             while i < 64 {
@@ -758,7 +763,10 @@ unsafe fn mcu_load(mut jd: *mut JDEC) -> JRESULT {
                             unwrap!((*jd).mcubuf.as_mut())[..64].fill(d as i16);
                         }
                     } else {
-                        block_idct(tmp, &mut unwrap!((*jd).mcubuf.as_mut())[mcu_buf_idx..]);
+                        block_idct(
+                            unwrap!((*jd).workbuf.as_mut()),
+                            &mut unwrap!((*jd).mcubuf.as_mut())[mcu_buf_idx..],
+                        );
                     }
                 }
             }
@@ -770,7 +778,7 @@ unsafe fn mcu_load(mut jd: *mut JDEC) -> JRESULT {
 }
 unsafe fn mcu_output(
     mut jd: *mut JDEC,
-    mut outfunc: Option<unsafe fn(*mut JDEC, *mut cty::c_void, *mut JRECT) -> i32>,
+    mut outfunc: Option<unsafe fn(*mut JDEC, &&mut [i32], *mut JRECT) -> i32>,
     mut x: u32,
     mut y: u32,
 ) -> JRESULT {
@@ -792,7 +800,6 @@ unsafe fn mcu_output(
         let mut cr: i32 = 0;
         let mut py_idx: usize = 0;
         let mut pc_idx: usize = 0;
-        let mut pix: *mut u8 = 0 as *mut u8;
         let mut rect: JRECT = JRECT {
             left: 0,
             right: 0,
@@ -815,8 +822,11 @@ unsafe fn mcu_output(
         rect.right = x.wrapping_add(rx).wrapping_sub(1) as u16;
         rect.top = y as u16;
         rect.bottom = y.wrapping_add(ry).wrapping_sub(1) as u16;
+        let workbuf = i32_slice_to_u8(unwrap!((*jd).workbuf.as_mut()));
+        let mut pix_idx: usize = 0;
+        let mut op_idx: usize = 0;
+
         if 0 == 0 || (*jd).scale != 3 {
-            pix = (*jd).workbuf as *mut u8;
             if 1 != 2 {
                 iy = 0;
                 while iy < my {
@@ -846,19 +856,18 @@ unsafe fn mcu_output(
                         yy = unwrap!((*jd).mcubuf.as_ref())[py_idx + 0] as i32;
                         py_idx += 1;
 
-                        let fresh34 = pix;
-                        pix = pix.offset(1);
-                        *fresh34 = BYTECLIP(yy + (1.402f64 * CVACC as f64) as i32 * cr / CVACC);
-                        let fresh35 = pix;
-                        pix = pix.offset(1);
-                        *fresh35 = BYTECLIP(
+                        workbuf[pix_idx] =
+                            BYTECLIP(yy + (1.402f64 * CVACC as f64) as i32 * cr / CVACC);
+                        pix_idx += 1;
+                        workbuf[pix_idx] = BYTECLIP(
                             yy - ((0.344f64 * CVACC as f64) as i32 * cb
                                 + (0.714f64 * CVACC as f64) as i32 * cr)
                                 / CVACC,
                         );
-                        let fresh36 = pix;
-                        pix = pix.offset(1);
-                        *fresh36 = BYTECLIP(yy + (1.772f64 * CVACC as f64) as i32 * cb / CVACC);
+                        pix_idx += 1;
+                        workbuf[pix_idx] =
+                            BYTECLIP(yy + (1.772f64 * CVACC as f64) as i32 * cb / CVACC);
+                        pix_idx += 1;
                         ix = ix.wrapping_add(1);
                     }
                     iy = iy.wrapping_add(1);
@@ -879,9 +888,8 @@ unsafe fn mcu_output(
                                 py_idx += 64 - 8;
                             }
                         }
-                        let fresh38 = pix;
-                        pix = pix.offset(1);
-                        *fresh38 = unwrap!((*jd).mcubuf.as_ref())[py_idx] as u8;
+                        workbuf[pix_idx] = unwrap!((*jd).mcubuf.as_ref())[py_idx] as u8;
+                        pix_idx += 1;
                         py_idx += 1;
                         ix = ix.wrapping_add(1);
                     }
@@ -897,21 +905,15 @@ unsafe fn mcu_output(
                 let mut s: u32 = 0;
                 let mut w: u32 = 0;
                 let mut a: u32 = 0;
-                let mut op: *mut u8 = 0 as *mut u8;
                 s = ((*jd).scale as i32 * 2) as u32;
                 w = ((1 as i32) << (*jd).scale as i32) as u32;
                 a = mx.wrapping_sub(w).wrapping_mul(if 1 != 2 { 3 } else { 1 });
-                op = (*jd).workbuf as *mut u8;
+                op_idx = 0;
                 iy = 0;
                 while iy < my {
                     ix = 0;
                     while ix < mx {
-                        pix = ((*jd).workbuf as *mut u8).offset(
-                            iy.wrapping_mul(mx)
-                                .wrapping_add(ix)
-                                .wrapping_mul((if 1 != 2 { 3 } else { 1 }) as u32)
-                                as isize,
-                        );
+                        pix_idx = ((iy * mx + ix) * (if JD_FORMAT != 2 { 3 } else { 1 })) as usize;
                         b = 0;
                         g = b;
                         r = g;
@@ -919,32 +921,26 @@ unsafe fn mcu_output(
                         while y_0 < w {
                             x_0 = 0;
                             while x_0 < w {
-                                let fresh39 = pix;
-                                pix = pix.offset(1);
-                                r = r.wrapping_add(*fresh39 as u32);
-                                if 1 as i32 != 2 as i32 {
-                                    let fresh40 = pix;
-                                    pix = pix.offset(1);
-                                    g = g.wrapping_add(*fresh40 as u32);
-                                    let fresh41 = pix;
-                                    pix = pix.offset(1);
-                                    b = b.wrapping_add(*fresh41 as u32);
+                                r = r.wrapping_add(workbuf[pix_idx] as u32);
+                                pix_idx += 1;
+                                if JD_FORMAT != 2 {
+                                    g = g.wrapping_add(workbuf[pix_idx] as u32);
+                                    pix_idx += 1;
+                                    b = b.wrapping_add(workbuf[pix_idx] as u32);
+                                    pix_idx += 1;
                                 }
                                 x_0 = x_0.wrapping_add(1);
                             }
-                            pix = pix.offset(a as isize);
+                            pix_idx += a as usize;
                             y_0 = y_0.wrapping_add(1);
                         }
-                        let fresh42 = op;
-                        op = op.offset(1);
-                        *fresh42 = (r >> s) as u8;
-                        if 1 as i32 != 2 as i32 {
-                            let fresh43 = op;
-                            op = op.offset(1);
-                            *fresh43 = (g >> s) as u8;
-                            let fresh44 = op;
-                            op = op.offset(1);
-                            *fresh44 = (b >> s) as u8;
+                        workbuf[op_idx] = (r >> s) as u8;
+                        op_idx += 1;
+                        if JD_FORMAT != 2 {
+                            workbuf[op_idx] = (g >> s) as u8;
+                            op_idx += 1;
+                            workbuf[op_idx] = (b >> s) as u8;
+                            op_idx += 1;
                         }
                         ix = ix.wrapping_add(w);
                     }
@@ -952,7 +948,7 @@ unsafe fn mcu_output(
                 }
             }
         } else {
-            pix = (*jd).workbuf as *mut u8;
+            pix_idx = 0;
             pc_idx = (mx * my) as usize;
             cb = unwrap!((*jd).mcubuf.as_ref())[pc_idx + 0] as i32 - 128;
             cr = unwrap!((*jd).mcubuf.as_ref())[pc_idx + 64] as i32 - 128;
@@ -966,24 +962,22 @@ unsafe fn mcu_output(
                 while ix < mx {
                     yy = unwrap!((*jd).mcubuf.as_ref())[py_idx] as i32;
                     py_idx += 64;
-                    if 1 != 2 {
-                        let fresh45 = pix;
-                        pix = pix.offset(1);
-                        *fresh45 = BYTECLIP(yy + (1.402f64 * CVACC as f64) as i32 * cr / CVACC);
-                        let fresh46 = pix;
-                        pix = pix.offset(1);
-                        *fresh46 = BYTECLIP(
+                    if JD_FORMAT != 2 {
+                        workbuf[pix_idx] =
+                            BYTECLIP(yy + (1.402f64 * CVACC as f64) as i32 * cr / CVACC);
+                        pix_idx += 1;
+                        workbuf[pix_idx] = BYTECLIP(
                             yy - ((0.344f64 * CVACC as f64) as i32 * cb
                                 + (0.714f64 * CVACC as f64) as i32 * cr)
                                 / CVACC,
                         );
-                        let fresh47 = pix;
-                        pix = pix.offset(1);
-                        *fresh47 = BYTECLIP(yy + (1.772f64 * CVACC as f64) as i32 * cb / CVACC);
+                        pix_idx += 1;
+                        workbuf[pix_idx] =
+                            BYTECLIP(yy + (1.772f64 * CVACC as f64) as i32 * cb / CVACC);
+                        pix_idx += 1;
                     } else {
-                        let fresh48 = pix;
-                        pix = pix.offset(1);
-                        *fresh48 = yy as u8;
+                        workbuf[pix_idx] = yy as u8;
+                        pix_idx += 1;
                     }
                     ix = ix.wrapping_add(8);
                 }
@@ -992,70 +986,61 @@ unsafe fn mcu_output(
         }
         mx >>= (*jd).scale as i32;
         if rx < mx {
-            let mut s_0: *mut u8 = 0 as *mut u8;
-            let mut d: *mut u8 = 0 as *mut u8;
+            let mut s_0_idx = 0;
+            let mut d_idx = 0;
             let mut x_1: u32 = 0;
             let mut y_1: u32 = 0;
-            d = (*jd).workbuf as *mut u8;
-            s_0 = d;
-            y_1 = 0 as i32 as u32;
+            y_1 = 0;
             while y_1 < ry {
-                x_1 = 0 as i32 as u32;
+                x_1 = 0;
                 while x_1 < rx {
-                    let fresh49 = s_0;
-                    s_0 = s_0.offset(1);
-                    let fresh50 = d;
-                    d = d.offset(1);
-                    *fresh50 = *fresh49;
-                    if 1 as i32 != 2 as i32 {
-                        let fresh51 = s_0;
-                        s_0 = s_0.offset(1);
-                        let fresh52 = d;
-                        d = d.offset(1);
-                        *fresh52 = *fresh51;
-                        let fresh53 = s_0;
-                        s_0 = s_0.offset(1);
-                        let fresh54 = d;
-                        d = d.offset(1);
-                        *fresh54 = *fresh53;
+                    workbuf[d_idx] = workbuf[s_0_idx];
+                    s_0_idx += 1;
+                    d_idx += 1;
+                    if JD_FORMAT != 2 {
+                        workbuf[d_idx] = workbuf[s_0_idx];
+                        s_0_idx += 1;
+                        d_idx += 1;
+                        workbuf[d_idx] = workbuf[s_0_idx];
+                        s_0_idx += 1;
+                        d_idx += 1;
                     }
                     x_1 = x_1.wrapping_add(1);
                 }
-                s_0 = s_0.offset(mx.wrapping_sub(rx).wrapping_mul(
-                    (if 1 as i32 != 2 as i32 {
-                        3 as i32
-                    } else {
-                        1 as i32
-                    }) as u32,
-                ) as isize);
+                s_0_idx += ((mx - rx) * (if JD_FORMAT != 2 { 3 } else { 1 })) as usize;
+
                 y_1 = y_1.wrapping_add(1);
             }
         }
-        if 1 as i32 == 1 as i32 {
-            let mut s_1: *mut u8 = (*jd).workbuf as *mut u8;
+        if JD_FORMAT == 1 {
+            let mut s_1_idx = 0;
+            let mut d_0_idx = 0;
             let mut w_0: u16 = 0;
-            let mut d_0: *mut u16 = s_1 as *mut u16;
             let mut n: u32 = rx.wrapping_mul(ry);
             loop {
-                let fresh55 = s_1;
-                s_1 = s_1.offset(1);
-                w_0 = ((*fresh55 as i32 & 0xf8 as i32) << 8 as i32) as u16;
-                let fresh56 = s_1;
-                s_1 = s_1.offset(1);
-                w_0 = (w_0 as i32 | (*fresh56 as i32 & 0xfc as i32) << 3 as i32) as u16;
-                let fresh57 = s_1;
-                s_1 = s_1.offset(1);
-                w_0 = (w_0 as i32 | *fresh57 as i32 >> 3 as i32) as u16;
-                let fresh58 = d_0;
-                d_0 = d_0.offset(1);
-                *fresh58 = w_0;
+                w_0 = ((workbuf[s_1_idx] as i32 & 0xf8) << 8) as u16;
+                s_1_idx += 1;
+                w_0 = (w_0 as i32 | (workbuf[s_1_idx] as i32 & 0xfc) << 3) as u16;
+                s_1_idx += 1;
+                w_0 = (w_0 as i32 | workbuf[s_1_idx] as i32 >> 3) as u16;
+                s_1_idx += 1;
+
+                workbuf[d_0_idx] = (w_0 & 0xFF) as u8;
+                workbuf[d_0_idx + 1] = (w_0 >> 8) as u8;
+                d_0_idx += 2;
+
                 n = n.wrapping_sub(1);
                 if !(n != 0) {
                     break;
                 }
             }
         }
-        return (if outfunc.expect("non-null function pointer")(jd, (*jd).workbuf, &mut rect) != 0 {
+        return (if outfunc.expect("non-null function pointer")(
+            jd,
+            unwrap!((*jd).workbuf.as_ref()),
+            &mut rect,
+        ) != 0
+        {
             JDR_OK as i32
         } else {
             JDR_INTR as i32
@@ -1249,11 +1234,12 @@ pub unsafe fn jd_prepare(
                         if len < 256 {
                             len = 256;
                         }
-                        let ref mut fresh65 = (*jd).workbuf;
-                        *fresh65 = alloc_pool(jd, len);
-                        if ((*jd).workbuf).is_null() {
+                        let mem = alloc_pool_slice(jd, len / 4);
+                        if mem.is_err() {
                             return JDR_MEM1;
                         }
+                        (*jd).workbuf = Some(unwrap!(mem));
+
                         let mcubuf = alloc_pool_slice(jd, (n as usize + 2) * 64);
                         if mcubuf.is_err() {
                             return JDR_MEM1;
@@ -1382,7 +1368,7 @@ pub unsafe fn jd_prepare(
 
 pub unsafe fn jd_decomp(
     mut jd: *mut JDEC,
-    mut outfunc: Option<unsafe fn(*mut JDEC, *mut cty::c_void, *mut JRECT) -> i32>,
+    mut outfunc: Option<unsafe fn(*mut JDEC, &&mut [i32], *mut JRECT) -> i32>,
     mut scale: u8,
 ) -> JRESULT {
     unsafe {
