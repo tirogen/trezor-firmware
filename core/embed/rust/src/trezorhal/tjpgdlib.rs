@@ -715,7 +715,7 @@ unsafe fn mcu_load(mut jd: *mut JDEC) -> JRESULT {
                 }
                 let dfq = unwrap!((*jd).qttbl[(*jd).qtid[cmp as usize] as usize].as_ref());
                 unwrap!((*jd).workbuf.as_mut())[0] = d * dfq[0] >> 8;
-                unwrap!((*jd).workbuf.as_mut())[1..63].fill(0);
+                unwrap!((*jd).workbuf.as_mut())[1..64].fill(0);
                 z = 1;
                 loop {
                     d = huffext(jd, id, 1);
