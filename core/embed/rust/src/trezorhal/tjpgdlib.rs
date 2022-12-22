@@ -549,7 +549,7 @@ unsafe fn restart(mut jd: *mut JDEC, mut rstn: u16) -> JRESULT {
         return JDR_OK;
     }
 }
-unsafe fn block_idct(mut src: *mut i32, mut dst: *mut i16) {
+unsafe fn block_idct(mut src: *mut i32, mut dst: &mut [i16]) {
     unsafe {
         let M13: i32 = (1.41421f64 * 4096_f64) as i32;
         let M2: i32 = (1.08239f64 * 4096_f64) as i32;
@@ -568,6 +568,7 @@ unsafe fn block_idct(mut src: *mut i32, mut dst: *mut i16) {
         let mut t12: i32 = 0;
         let mut t13: i32 = 0;
         let mut i: i32 = 0;
+        let mut dst_idx = 0;
         i = 0;
         while i < 8 {
             v0 = *src.offset((8 * 0) as isize);
@@ -610,8 +611,8 @@ unsafe fn block_idct(mut src: *mut i32, mut dst: *mut i16) {
             i += 1;
         }
         src = src.offset(-(8));
-        i = 0 as i32;
-        while i < 8 as i32 {
+        i = 0;
+        while i < 8 {
             v0 = (*src.offset(0) as cty::c_long + ((128 as cty::c_long) << 8)) as i32;
             v1 = *src.offset(2);
             v2 = *src.offset(4);
@@ -640,15 +641,15 @@ unsafe fn block_idct(mut src: *mut i32, mut dst: *mut i16) {
             v6 = t13 - (t12 * M4 >> 12) - v7;
             v5 -= v6;
             v4 -= v5;
-            *dst.offset(0) = (v0 + v7 >> 8) as i16;
-            *dst.offset(7) = (v0 - v7 >> 8) as i16;
-            *dst.offset(1) = (v1 + v6 >> 8) as i16;
-            *dst.offset(6) = (v1 - v6 >> 8) as i16;
-            *dst.offset(2) = (v2 + v5 >> 8) as i16;
-            *dst.offset(5) = (v2 - v5 >> 8) as i16;
-            *dst.offset(3) = (v3 + v4 >> 8) as i16;
-            *dst.offset(4) = (v3 - v4 >> 8) as i16;
-            dst = dst.offset(8);
+            dst[dst_idx + 0] = (v0 + v7 >> 8) as i16;
+            dst[dst_idx + 7] = (v0 - v7 >> 8) as i16;
+            dst[dst_idx + 1] = (v1 + v6 >> 8) as i16;
+            dst[dst_idx + 6] = (v1 - v6 >> 8) as i16;
+            dst[dst_idx + 2] = (v2 + v5 >> 8) as i16;
+            dst[dst_idx + 5] = (v2 - v5 >> 8) as i16;
+            dst[dst_idx + 3] = (v3 + v4 >> 8) as i16;
+            dst[dst_idx + 4] = (v3 - v4 >> 8) as i16;
+            dst_idx += 8;
             src = src.offset(8);
             i += 1;
         }
@@ -666,7 +667,6 @@ unsafe fn mcu_load(mut jd: *mut JDEC) -> JRESULT {
         let mut z: u32 = 0;
         let mut id: u32 = 0;
         let mut cmp: u32 = 0;
-        let mut bp: *mut i16 = 0 as *mut i16;
         let mut dqf: *const i32 = 0 as *const i32;
         nby = ((*jd).msx as i32 * (*jd).msy as i32) as u32;
         let mut mcu_buf_idx = 0;
@@ -753,10 +753,10 @@ unsafe fn mcu_load(mut jd: *mut JDEC) -> JRESULT {
                                 i += 1;
                             }
                         } else {
-                            memset(bp as *mut cty::c_void, d, 64 as cty::c_ulong);
+                            unwrap!((*jd).mcubuf.as_mut())[..64].fill(d as i16);
                         }
                     } else {
-                        block_idct(tmp, bp);
+                        block_idct(tmp, &mut unwrap!((*jd).mcubuf.as_mut())[mcu_buf_idx..]);
                     }
                 }
             }
