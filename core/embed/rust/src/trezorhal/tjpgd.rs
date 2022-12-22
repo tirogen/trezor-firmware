@@ -49,15 +49,11 @@ pub fn jpeg_get_context<'a>(
 
 pub fn jpeg_buffer_prepare<'a>(jd: &mut JDEC, context: &'a mut JpegContext<'a>) {
     let work_buffer = unsafe { &mut get_jpeg_work_buffer(0, true).buffer };
-    unsafe {
-        jd_prepare(jd, work_buffer, context as *mut JpegContext as *mut _);
-    }
+    jd_prepare(jd, work_buffer, context as *mut JpegContext as *mut _);
 }
 
 pub fn jpeg_buffer_decomp(jd: &mut JDEC) {
-    unsafe {
-        jd_decomp(jd, 0);
-    }
+    jd_decomp(jd, 0);
 }
 
 pub fn jpeg_info(data: &[u8]) -> Result<JpegInfo, ()> {
@@ -66,13 +62,11 @@ pub fn jpeg_info(data: &[u8]) -> Result<JpegInfo, ()> {
     let work_buffer = unsafe { &mut get_jpeg_work_buffer(0, true).buffer };
     let mut context = jpeg_get_context(data, unsafe { get_jpeg_buffer(0, false) }, 0);
 
-    let res = unsafe {
-        jd_prepare(
-            &mut jd,
-            work_buffer,
-            &mut context as *mut JpegContext as *mut _,
-        )
-    };
+    let res = jd_prepare(
+        &mut jd,
+        work_buffer,
+        &mut context as *mut JpegContext as *mut _,
+    );
 
     let info = JpegInfo {
         width: jd.width,

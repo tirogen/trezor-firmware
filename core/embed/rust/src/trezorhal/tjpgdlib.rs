@@ -76,12 +76,12 @@ pub struct JpegContext<'a> {
     buffer: &'a mut [u16],
 }
 
-static mut Zig: [u8; 64] = [
+static Zig: [u8; 64] = [
     0, 1, 8, 16, 9, 2, 3, 10, 17, 24, 32, 25, 18, 11, 4, 5, 12, 19, 26, 33, 40, 48, 41, 34, 27, 20,
     13, 6, 7, 14, 21, 28, 35, 42, 49, 56, 57, 50, 43, 36, 29, 22, 15, 23, 30, 37, 44, 51, 58, 59,
     52, 45, 38, 31, 39, 46, 53, 60, 61, 54, 47, 55, 62, 63,
 ];
-static mut Ipsf: [u16; 64] = [
+static Ipsf: [u16; 64] = [
     (1.00000f64 * 8192_f64) as u16,
     (1.38704f64 * 8192_f64) as u16,
     (1.30656f64 * 8192_f64) as u16,
@@ -174,376 +174,366 @@ unsafe fn alloc_pool_slice<T>(mut jd: &mut JDEC, mut ndata: usize) -> Result<&'s
     }
 }
 
-unsafe fn i32_slice_to_u8(data: &'static mut [i32]) -> &'static mut [u8] {
-    let len = data.len() * 4;
-    let ptr = data.as_mut_ptr() as *mut u8;
-    mem::forget(data);
-    unsafe { slice::from_raw_parts_mut(ptr, len) }
-}
+// unsafe fn i32_slice_to_u8(data: &'static mut [i32]) -> &'static mut [u8] {
+//     let len = data.len() * 4;
+//     let ptr = data.as_mut_ptr() as *mut u8;
+//     mem::forget(data);
+//     unsafe { slice::from_raw_parts_mut(ptr, len) }
+// }
 
-unsafe fn create_qt_tbl(mut jd: &mut JDEC, mut ndata: usize) -> JRESULT {
-    unsafe {
-        let mut i: u32 = 0;
-        let mut zi: u32 = 0;
-        let mut d: u8 = 0;
-        let mut data_idx = 0;
-        while ndata != 0 {
-            if ndata < 65 {
-                return JDR_FMT1;
-            }
-            ndata -= 65;
-
-            d = unwrap!(jd.inbuf.as_ref())[data_idx];
-            data_idx += 1;
-            if d as i32 & 0xf0 != 0 {
-                return JDR_FMT1;
-            }
-            i = (d as i32 & 3) as u32;
-
-            let pb = alloc_pool_slice(jd, 64);
-            if pb.is_err() {
-                return JDR_MEM1;
-            }
-            jd.qttbl[i as usize] = Some(unwrap!(pb));
-            let mut j: u32 = 0;
-            while j < 64 {
-                zi = Zig[j as usize] as u32;
-
-                unwrap!(jd.qttbl[i as usize].as_mut())[zi as usize] =
-                    (unwrap!(jd.inbuf.as_ref())[data_idx] as u32)
-                        .wrapping_mul(Ipsf[zi as usize] as u32) as i32;
-                j = j.wrapping_add(1);
-                data_idx += 1;
-            }
-        }
-        return JDR_OK;
-    }
-}
-unsafe fn create_huffman_tbl(mut jd: &mut JDEC, mut ndata: usize) -> JRESULT {
-    unsafe {
-        let mut i: u32 = 0;
-        let mut j: u32 = 0;
-        let mut b: u32 = 0;
-        let mut cls: u32 = 0;
-        let mut num: u32 = 0;
-        let mut np: usize = 0;
-        let mut d: u8 = 0;
-        let mut hc: u16 = 0;
-        let mut data_idx = 0;
-        while ndata != 0 {
-            if ndata < 17 {
-                return JDR_FMT1;
-            }
-            ndata -= 17;
-            d = unwrap!(jd.inbuf.as_ref())[data_idx];
-            data_idx += 1;
-            if d & 0xee != 0 {
-                return JDR_FMT1;
-            }
-            cls = (d as i32 >> 4) as u32;
-            num = (d as i32 & 0xf) as u32;
-            let mem = alloc_pool_slice(jd, 16);
-            if mem.is_err() {
-                return JDR_MEM1;
-            }
-            jd.huffbits[num as usize][cls as usize] = Some(unwrap!(mem));
-
-            i = 0;
-            np = i as usize;
-            while i < 16 {
-                unwrap!(jd.huffbits[num as usize][cls as usize].as_mut())[i as usize] =
-                    unwrap!(jd.inbuf.as_ref())[data_idx];
-                np = (np as cty::c_ulong)
-                    .wrapping_add(unwrap!(jd.inbuf.as_ref())[data_idx] as cty::c_ulong)
-                    as usize;
-                data_idx += 1;
-                i = i.wrapping_add(1);
-            }
-            let mem = alloc_pool_slice(jd, np);
-            if mem.is_err() {
-                return JDR_MEM1;
-            }
-            jd.huffcode[num as usize][cls as usize] = Some(unwrap!(mem));
-
-            hc = 0;
-            i = 0;
-            j = i;
-            while i < 16 {
-                b = unwrap!(jd.huffbits[num as usize][cls as usize].as_ref())[i as usize] as u32;
-                loop {
-                    let fresh10 = b;
-                    b = b.wrapping_sub(1);
-                    if !(fresh10 != 0) {
-                        break;
-                    }
-                    let fresh11 = hc;
-                    hc = hc.wrapping_add(1);
-                    let fresh12 = j;
-                    j = j.wrapping_add(1);
-                    unwrap!(jd.huffcode[num as usize][cls as usize].as_mut())[fresh12 as usize] =
-                        fresh11;
-                }
-                hc = ((hc as i32) << 1) as u16;
-                i = i.wrapping_add(1);
-            }
-            if ndata < np {
-                return JDR_FMT1;
-            }
-            ndata -= np;
-            let mem = alloc_pool_slice(jd, np);
-            if mem.is_err() {
-                return JDR_MEM1;
-            }
-            jd.huffdata[num as usize][cls as usize] = Some(unwrap!(mem));
-            i = 0;
-            while i < np as u32 {
-                d = unwrap!(jd.inbuf.as_ref())[data_idx];
-                data_idx += 1;
-                if cls == 0 && d > 11 {
-                    return JDR_FMT1;
-                }
-                unwrap!(jd.huffdata[num as usize][cls as usize].as_mut())[i as usize] = d;
-                i += 1;
-            }
-            let mut span: u32 = 0;
-            let mut td: u32 = 0;
-            let mut ti: u32 = 0;
-            if cls != 0 {
-                let tbl_ac = alloc_pool_slice(jd, 1 << HUFF_BIT);
-                if tbl_ac.is_err() {
-                    return JDR_MEM1;
-                }
-                jd.hufflut_ac[num as usize] = Some(unwrap!(tbl_ac));
-                unwrap!(jd.hufflut_ac[num as usize].as_mut()).fill(0xffff);
-            } else {
-                let tbl_dc = alloc_pool_slice(jd, 1 << HUFF_BIT);
-                if tbl_dc.is_err() {
-                    return JDR_MEM1;
-                }
-                jd.hufflut_dc[num as usize] = Some(unwrap!(tbl_dc));
-                unwrap!(jd.hufflut_dc[num as usize].as_mut()).fill(0xff);
-            }
-            b = 0;
-            i = b;
-            while b < HUFF_BIT {
-                j = unwrap!(jd.huffbits[num as usize][cls as usize].as_ref())[b as usize] as u32;
-                while j != 0 {
-                    ti = (unwrap!(jd.huffcode[num as usize][cls as usize].as_ref())[i as usize]
-                        << ((HUFF_BIT - 1) as u32).wrapping_sub(b)
-                        & (1 << HUFF_BIT) - 1) as u32;
-
-                    if cls != 0 {
-                        td = unwrap!(jd.huffdata[num as usize][cls as usize].as_ref())[i as usize]
-                            as u32
-                            | b.wrapping_add(1) << 8;
-                        i += 1;
-                        span = (1 << ((HUFF_BIT - 1) as u32).wrapping_sub(b)) as u32;
-                        while span != 0 {
-                            span = span.wrapping_sub(1);
-                            let fresh18 = ti;
-                            ti = ti.wrapping_add(1);
-                            unwrap!(jd.hufflut_ac[num as usize].as_mut())[fresh18 as usize] =
-                                td as u16;
-                        }
-                    } else {
-                        td = unwrap!(jd.huffdata[num as usize][cls as usize].as_ref())[i as usize]
-                            as u32
-                            | b.wrapping_add(1) << 4 as i32;
-                        i += 1;
-                        span = ((1 as i32) << ((HUFF_BIT - 1) as u32).wrapping_sub(b)) as u32;
-                        while span != 0 {
-                            span = span.wrapping_sub(1);
-                            let fresh20 = ti;
-                            ti = ti.wrapping_add(1);
-                            unwrap!(jd.hufflut_dc[num as usize].as_mut())[fresh20 as usize] =
-                                td as u8;
-                        }
-                    }
-                    j = j.wrapping_sub(1);
-                }
-                b = b.wrapping_add(1);
-            }
-            jd.longofs[num as usize][cls as usize] = i as u8;
-        }
-        return JDR_OK;
-    }
-}
-unsafe fn huffext(mut jd: &mut JDEC, mut id: u32, mut cls: u32) -> i32 {
-    unsafe {
-        let mut dc: usize = jd.dctr;
-        let mut dp: usize = jd.dptr;
-        let mut d: u32 = 0;
-        let mut flg: u32 = 0;
-        let mut nc: u32 = 0;
-        let mut bl: u32 = 0;
-        let mut wbit: u32 = (jd.dbit as i32 % 32) as u32;
-        let mut w: u32 = (jd.wreg as cty::c_ulong
-            & ((1 as cty::c_ulong) << wbit).wrapping_sub(1 as i32 as cty::c_ulong))
-            as u32;
-        while wbit < 16 {
-            if jd.marker != 0 {
-                d = 0xff;
-            } else {
-                if dc == 0 {
-                    dp = 0;
-                    dc = jpeg_in_buffer(jd, Some(0), 512);
-                    if dc == 0 {
-                        return 0 as i32 - JDR_INP as i32;
-                    }
-                }
-                d = unwrap!(jd.inbuf.as_mut())[dp] as u32;
-                dp += 1;
-
-                dc = dc.wrapping_sub(1);
-                if flg != 0 {
-                    flg = 0;
-                    if d != 0 {
-                        jd.marker = d as u8;
-                    }
-                    d = 0xff;
-                } else if d == 0xff {
-                    flg = 1;
-                    continue;
-                }
-            }
-            w = w << 8 as i32 | d;
-            wbit = wbit.wrapping_add(8);
-        }
-        jd.dctr = dc;
-        jd.dptr = dp;
-        jd.wreg = w;
-        d = w >> wbit.wrapping_sub(HUFF_BIT);
-        if cls != 0 {
-            d = unwrap!(jd.hufflut_ac[id as usize].as_ref())[d as usize] as u32;
-            if d != 0xffff {
-                jd.dbit = wbit.wrapping_sub(d >> 8) as u8;
-                return (d & 0xff) as i32;
-            }
-        } else {
-            d = unwrap!(jd.hufflut_dc[id as usize].as_ref())[d as usize] as u32;
-            if d != 0xff {
-                jd.dbit = wbit.wrapping_sub(d >> 4) as u8;
-                return (d & 0xf) as i32;
-            }
-        }
-        let mut hb_idx = 0;
-        let mut hc_idx = 0;
-        let mut hd_idx = 0;
-
-        bl = (HUFF_BIT + 1) as u32;
-        while bl <= 16 {
-            nc = unwrap!(jd.huffbits[id as usize][cls as usize].as_ref())
-                [(hb_idx + HUFF_BIT) as usize] as u32;
-            hb_idx += 1;
-            if nc != 0 {
-                d = w >> wbit.wrapping_sub(bl);
-                loop {
-                    let fresh24 = unwrap!(jd.huffcode[id as usize][cls as usize].as_ref())
-                        [hc_idx + jd.longofs[id as usize][cls as usize] as usize];
-                    hc_idx += 1;
-                    if d == fresh24 as u32 {
-                        jd.dbit = wbit.wrapping_sub(bl) as u8;
-
-                        return unwrap!((jd.huffdata[id as usize][cls as usize]).as_ref())
-                            [hd_idx + jd.longofs[id as usize][cls as usize] as usize]
-                            as i32;
-                    }
-                    hd_idx += 1;
-                    nc = nc.wrapping_sub(1);
-                    if !(nc != 0) {
-                        break;
-                    }
-                }
-            }
-            bl = bl.wrapping_add(1);
-        }
-        return 0 - JDR_FMT1 as i32;
-    }
-}
-unsafe fn bitext(mut jd: &mut JDEC, mut nbit: u32) -> i32 {
-    unsafe {
-        let mut dc: usize = jd.dctr;
-        let mut dp: usize = jd.dptr;
-        let mut d: u32 = 0;
-        let mut flg: u32 = 0;
-        let mut wbit: u32 = (jd.dbit as i32 % 32 as i32) as u32;
-        let mut w: u32 = (jd.wreg as cty::c_ulong
-            & ((1 as cty::c_ulong) << wbit).wrapping_sub(1 as i32 as cty::c_ulong))
-            as u32;
-        while wbit < nbit {
-            if jd.marker != 0 {
-                d = 0xff;
-            } else {
-                if dc == 0 {
-                    dp = 0;
-                    dc = jpeg_in_buffer(jd, Some(0), 512);
-                    if dc == 0 {
-                        return 0 as i32 - JDR_INP as i32;
-                    }
-                }
-                d = unwrap!(jd.inbuf.as_ref())[dp] as u32;
-                dp += 1;
-                dc = dc.wrapping_sub(1);
-                if flg != 0 {
-                    flg = 0;
-                    if d != 0 {
-                        jd.marker = d as u8;
-                    }
-                    d = 0xff;
-                } else if d == 0xff {
-                    flg = 1;
-                    continue;
-                }
-            }
-            w = w << 8 as i32 | d;
-            wbit = wbit.wrapping_add(8);
-        }
-        jd.wreg = w;
-        jd.dbit = wbit.wrapping_sub(nbit) as u8;
-        jd.dctr = dc;
-        jd.dptr = dp;
-
-        return (w >> wbit.wrapping_sub(nbit).wrapping_rem(32)) as i32;
-    }
-}
-unsafe fn restart(mut jd: &mut JDEC, mut rstn: u16) -> JRESULT {
-    unsafe {
-        let mut i: u32 = 0;
-        let mut dp = jd.dptr;
-        let mut dc: usize = jd.dctr;
-        let mut marker: u16 = 0;
-        if jd.marker != 0 {
-            marker = (0xff00 as i32 | jd.marker as i32) as u16;
-            jd.marker = 0;
-        } else {
-            marker = 0;
-            i = 0;
-            while i < 2 {
-                if dc == 0 {
-                    dp = 0;
-                    dc = jpeg_in_buffer(jd, Some(0), 512);
-                    if dc == 0 {
-                        return JDR_INP;
-                    }
-                }
-                let fresh27 = unwrap!(jd.inbuf.as_ref())[dp] as u32;
-                dp += 1;
-                marker = ((marker as i32) << 8 | fresh27 as i32) as u16;
-                dc = dc.wrapping_sub(1);
-                i = i.wrapping_add(1);
-            }
-            jd.dptr = dp;
-            jd.dctr = dc;
-        }
-        if marker as i32 & 0xffd8 != 0xffd0 || marker as i32 & 7 != rstn as i32 & 7 {
+fn create_qt_tbl(mut jd: &mut JDEC, mut ndata: usize) -> JRESULT {
+    let mut i: u32 = 0;
+    let mut zi: u32 = 0;
+    let mut d: u8 = 0;
+    let mut data_idx = 0;
+    while ndata != 0 {
+        if ndata < 65 {
             return JDR_FMT1;
         }
-        jd.dbit = 0;
-        jd.dcv[0] = 0;
-        jd.dcv[1] = 0;
-        jd.dcv[2] = 0;
-        return JDR_OK;
+        ndata -= 65;
+
+        d = unwrap!(jd.inbuf.as_ref())[data_idx];
+        data_idx += 1;
+        if d as i32 & 0xf0 != 0 {
+            return JDR_FMT1;
+        }
+        i = (d as i32 & 3) as u32;
+
+        let pb = unsafe { alloc_pool_slice(jd, 64) };
+        if pb.is_err() {
+            return JDR_MEM1;
+        }
+        jd.qttbl[i as usize] = Some(unwrap!(pb));
+        let mut j: u32 = 0;
+        while j < 64 {
+            zi = Zig[j as usize] as u32;
+
+            unwrap!(jd.qttbl[i as usize].as_mut())[zi as usize] = (unwrap!(jd.inbuf.as_ref())
+                [data_idx]
+                as u32)
+                .wrapping_mul(Ipsf[zi as usize] as u32)
+                as i32;
+            j = j.wrapping_add(1);
+            data_idx += 1;
+        }
     }
+    return JDR_OK;
+}
+fn create_huffman_tbl(mut jd: &mut JDEC, mut ndata: usize) -> JRESULT {
+    let mut i: u32 = 0;
+    let mut j: u32 = 0;
+    let mut b: u32 = 0;
+    let mut cls: u32 = 0;
+    let mut num: u32 = 0;
+    let mut np: usize = 0;
+    let mut d: u8 = 0;
+    let mut hc: u16 = 0;
+    let mut data_idx = 0;
+    while ndata != 0 {
+        if ndata < 17 {
+            return JDR_FMT1;
+        }
+        ndata -= 17;
+        d = unwrap!(jd.inbuf.as_ref())[data_idx];
+        data_idx += 1;
+        if d & 0xee != 0 {
+            return JDR_FMT1;
+        }
+        cls = (d as i32 >> 4) as u32;
+        num = (d as i32 & 0xf) as u32;
+        let mem = unsafe { alloc_pool_slice(jd, 16) };
+        if mem.is_err() {
+            return JDR_MEM1;
+        }
+        jd.huffbits[num as usize][cls as usize] = Some(unwrap!(mem));
+
+        i = 0;
+        np = i as usize;
+        while i < 16 {
+            unwrap!(jd.huffbits[num as usize][cls as usize].as_mut())[i as usize] =
+                unwrap!(jd.inbuf.as_ref())[data_idx];
+            np = (np as cty::c_ulong)
+                .wrapping_add(unwrap!(jd.inbuf.as_ref())[data_idx] as cty::c_ulong)
+                as usize;
+            data_idx += 1;
+            i = i.wrapping_add(1);
+        }
+        let mem = unsafe { alloc_pool_slice(jd, np) };
+        if mem.is_err() {
+            return JDR_MEM1;
+        }
+        jd.huffcode[num as usize][cls as usize] = Some(unwrap!(mem));
+
+        hc = 0;
+        i = 0;
+        j = i;
+        while i < 16 {
+            b = unwrap!(jd.huffbits[num as usize][cls as usize].as_ref())[i as usize] as u32;
+            loop {
+                let fresh10 = b;
+                b = b.wrapping_sub(1);
+                if !(fresh10 != 0) {
+                    break;
+                }
+                let fresh11 = hc;
+                hc = hc.wrapping_add(1);
+                let fresh12 = j;
+                j = j.wrapping_add(1);
+                unwrap!(jd.huffcode[num as usize][cls as usize].as_mut())[fresh12 as usize] =
+                    fresh11;
+            }
+            hc = ((hc as i32) << 1) as u16;
+            i = i.wrapping_add(1);
+        }
+        if ndata < np {
+            return JDR_FMT1;
+        }
+        ndata -= np;
+        let mem = unsafe { alloc_pool_slice(jd, np) };
+        if mem.is_err() {
+            return JDR_MEM1;
+        }
+        jd.huffdata[num as usize][cls as usize] = Some(unwrap!(mem));
+        i = 0;
+        while i < np as u32 {
+            d = unwrap!(jd.inbuf.as_ref())[data_idx];
+            data_idx += 1;
+            if cls == 0 && d > 11 {
+                return JDR_FMT1;
+            }
+            unwrap!(jd.huffdata[num as usize][cls as usize].as_mut())[i as usize] = d;
+            i += 1;
+        }
+        let mut span: u32 = 0;
+        let mut td: u32 = 0;
+        let mut ti: u32 = 0;
+        if cls != 0 {
+            let tbl_ac = unsafe { alloc_pool_slice(jd, 1 << HUFF_BIT) };
+            if tbl_ac.is_err() {
+                return JDR_MEM1;
+            }
+            jd.hufflut_ac[num as usize] = Some(unwrap!(tbl_ac));
+            unwrap!(jd.hufflut_ac[num as usize].as_mut()).fill(0xffff);
+        } else {
+            let tbl_dc = unsafe { alloc_pool_slice(jd, 1 << HUFF_BIT) };
+            if tbl_dc.is_err() {
+                return JDR_MEM1;
+            }
+            jd.hufflut_dc[num as usize] = Some(unwrap!(tbl_dc));
+            unwrap!(jd.hufflut_dc[num as usize].as_mut()).fill(0xff);
+        }
+        b = 0;
+        i = b;
+        while b < HUFF_BIT {
+            j = unwrap!(jd.huffbits[num as usize][cls as usize].as_ref())[b as usize] as u32;
+            while j != 0 {
+                ti = (unwrap!(jd.huffcode[num as usize][cls as usize].as_ref())[i as usize]
+                    << ((HUFF_BIT - 1) as u32).wrapping_sub(b)
+                    & (1 << HUFF_BIT) - 1) as u32;
+
+                if cls != 0 {
+                    td = unwrap!(jd.huffdata[num as usize][cls as usize].as_ref())[i as usize]
+                        as u32
+                        | b.wrapping_add(1) << 8;
+                    i += 1;
+                    span = (1 << ((HUFF_BIT - 1) as u32).wrapping_sub(b)) as u32;
+                    while span != 0 {
+                        span = span.wrapping_sub(1);
+                        let fresh18 = ti;
+                        ti = ti.wrapping_add(1);
+                        unwrap!(jd.hufflut_ac[num as usize].as_mut())[fresh18 as usize] = td as u16;
+                    }
+                } else {
+                    td = unwrap!(jd.huffdata[num as usize][cls as usize].as_ref())[i as usize]
+                        as u32
+                        | b.wrapping_add(1) << 4 as i32;
+                    i += 1;
+                    span = ((1 as i32) << ((HUFF_BIT - 1) as u32).wrapping_sub(b)) as u32;
+                    while span != 0 {
+                        span = span.wrapping_sub(1);
+                        let fresh20 = ti;
+                        ti = ti.wrapping_add(1);
+                        unwrap!(jd.hufflut_dc[num as usize].as_mut())[fresh20 as usize] = td as u8;
+                    }
+                }
+                j = j.wrapping_sub(1);
+            }
+            b = b.wrapping_add(1);
+        }
+        jd.longofs[num as usize][cls as usize] = i as u8;
+    }
+    return JDR_OK;
+}
+fn huffext(mut jd: &mut JDEC, mut id: u32, mut cls: u32) -> i32 {
+    let mut dc: usize = jd.dctr;
+    let mut dp: usize = jd.dptr;
+    let mut d: u32 = 0;
+    let mut flg: u32 = 0;
+    let mut nc: u32 = 0;
+    let mut bl: u32 = 0;
+    let mut wbit: u32 = (jd.dbit as i32 % 32) as u32;
+    let mut w: u32 = (jd.wreg as cty::c_ulong
+        & ((1 as cty::c_ulong) << wbit).wrapping_sub(1 as i32 as cty::c_ulong))
+        as u32;
+    while wbit < 16 {
+        if jd.marker != 0 {
+            d = 0xff;
+        } else {
+            if dc == 0 {
+                dp = 0;
+                dc = jpeg_in_buffer(jd, Some(0), 512);
+                if dc == 0 {
+                    return 0 as i32 - JDR_INP as i32;
+                }
+            }
+            d = unwrap!(jd.inbuf.as_mut())[dp] as u32;
+            dp += 1;
+
+            dc = dc.wrapping_sub(1);
+            if flg != 0 {
+                flg = 0;
+                if d != 0 {
+                    jd.marker = d as u8;
+                }
+                d = 0xff;
+            } else if d == 0xff {
+                flg = 1;
+                continue;
+            }
+        }
+        w = w << 8 as i32 | d;
+        wbit = wbit.wrapping_add(8);
+    }
+    jd.dctr = dc;
+    jd.dptr = dp;
+    jd.wreg = w;
+    d = w >> wbit.wrapping_sub(HUFF_BIT);
+    if cls != 0 {
+        d = unwrap!(jd.hufflut_ac[id as usize].as_ref())[d as usize] as u32;
+        if d != 0xffff {
+            jd.dbit = wbit.wrapping_sub(d >> 8) as u8;
+            return (d & 0xff) as i32;
+        }
+    } else {
+        d = unwrap!(jd.hufflut_dc[id as usize].as_ref())[d as usize] as u32;
+        if d != 0xff {
+            jd.dbit = wbit.wrapping_sub(d >> 4) as u8;
+            return (d & 0xf) as i32;
+        }
+    }
+    let mut hb_idx = 0;
+    let mut hc_idx = 0;
+    let mut hd_idx = 0;
+
+    bl = (HUFF_BIT + 1) as u32;
+    while bl <= 16 {
+        nc = unwrap!(jd.huffbits[id as usize][cls as usize].as_ref())[(hb_idx + HUFF_BIT) as usize]
+            as u32;
+        hb_idx += 1;
+        if nc != 0 {
+            d = w >> wbit.wrapping_sub(bl);
+            loop {
+                let fresh24 = unwrap!(jd.huffcode[id as usize][cls as usize].as_ref())
+                    [hc_idx + jd.longofs[id as usize][cls as usize] as usize];
+                hc_idx += 1;
+                if d == fresh24 as u32 {
+                    jd.dbit = wbit.wrapping_sub(bl) as u8;
+
+                    return unwrap!((jd.huffdata[id as usize][cls as usize]).as_ref())
+                        [hd_idx + jd.longofs[id as usize][cls as usize] as usize]
+                        as i32;
+                }
+                hd_idx += 1;
+                nc = nc.wrapping_sub(1);
+                if !(nc != 0) {
+                    break;
+                }
+            }
+        }
+        bl = bl.wrapping_add(1);
+    }
+    return 0 - JDR_FMT1 as i32;
+}
+fn bitext(mut jd: &mut JDEC, mut nbit: u32) -> i32 {
+    let mut dc: usize = jd.dctr;
+    let mut dp: usize = jd.dptr;
+    let mut d: u32 = 0;
+    let mut flg: u32 = 0;
+    let mut wbit: u32 = (jd.dbit as i32 % 32 as i32) as u32;
+    let mut w: u32 = (jd.wreg as cty::c_ulong
+        & ((1 as cty::c_ulong) << wbit).wrapping_sub(1 as i32 as cty::c_ulong))
+        as u32;
+    while wbit < nbit {
+        if jd.marker != 0 {
+            d = 0xff;
+        } else {
+            if dc == 0 {
+                dp = 0;
+                dc = jpeg_in_buffer(jd, Some(0), 512);
+                if dc == 0 {
+                    return 0 as i32 - JDR_INP as i32;
+                }
+            }
+            d = unwrap!(jd.inbuf.as_ref())[dp] as u32;
+            dp += 1;
+            dc = dc.wrapping_sub(1);
+            if flg != 0 {
+                flg = 0;
+                if d != 0 {
+                    jd.marker = d as u8;
+                }
+                d = 0xff;
+            } else if d == 0xff {
+                flg = 1;
+                continue;
+            }
+        }
+        w = w << 8 as i32 | d;
+        wbit = wbit.wrapping_add(8);
+    }
+    jd.wreg = w;
+    jd.dbit = wbit.wrapping_sub(nbit) as u8;
+    jd.dctr = dc;
+    jd.dptr = dp;
+
+    return (w >> wbit.wrapping_sub(nbit).wrapping_rem(32)) as i32;
+}
+fn restart(mut jd: &mut JDEC, mut rstn: u16) -> JRESULT {
+    let mut i: u32 = 0;
+    let mut dp = jd.dptr;
+    let mut dc: usize = jd.dctr;
+    let mut marker: u16 = 0;
+    if jd.marker != 0 {
+        marker = (0xff00 as i32 | jd.marker as i32) as u16;
+        jd.marker = 0;
+    } else {
+        marker = 0;
+        i = 0;
+        while i < 2 {
+            if dc == 0 {
+                dp = 0;
+                dc = jpeg_in_buffer(jd, Some(0), 512);
+                if dc == 0 {
+                    return JDR_INP;
+                }
+            }
+            let fresh27 = unwrap!(jd.inbuf.as_ref())[dp] as u32;
+            dp += 1;
+            marker = ((marker as i32) << 8 | fresh27 as i32) as u16;
+            dc = dc.wrapping_sub(1);
+            i = i.wrapping_add(1);
+        }
+        jd.dptr = dp;
+        jd.dctr = dc;
+    }
+    if marker as i32 & 0xffd8 != 0xffd0 || marker as i32 & 7 != rstn as i32 & 7 {
+        return JDR_FMT1;
+    }
+    jd.dbit = 0;
+    jd.dcv[0] = 0;
+    jd.dcv[1] = 0;
+    jd.dcv[2] = 0;
+    return JDR_OK;
 }
 fn block_idct(src: &mut &mut [i32], mut dst: &mut [i16]) {
     let M13: i32 = (1.41421f64 * 4096_f64) as i32;
@@ -651,114 +641,112 @@ fn block_idct(src: &mut &mut [i32], mut dst: &mut [i16]) {
     }
 }
 
-unsafe fn mcu_load(mut jd: &mut JDEC) -> JRESULT {
-    unsafe {
-        let mut d: i32 = 0;
-        let mut e: i32 = 0;
-        let mut blk: u32 = 0;
-        let mut nby: u32 = 0;
-        let mut i: u32 = 0;
-        let mut bc: u32 = 0;
-        let mut z: u32 = 0;
-        let mut id: u32 = 0;
-        let mut cmp: u32 = 0;
-        nby = (jd.msx as i32 * jd.msy as i32) as u32;
-        let mut mcu_buf_idx = 0;
-        blk = 0;
-        while blk < nby.wrapping_add(2) {
-            cmp = if blk < nby {
-                0
-            } else {
-                blk.wrapping_sub(nby).wrapping_add(1)
-            };
-            if cmp != 0 && jd.ncomp as i32 != 3 {
-                i = 0;
-                while i < 64 {
-                    unwrap!(jd.mcubuf.as_mut())[mcu_buf_idx + i as usize] = 128 as i16;
-                    i += 1;
+fn mcu_load(mut jd: &mut JDEC) -> JRESULT {
+    let mut d: i32 = 0;
+    let mut e: i32 = 0;
+    let mut blk: u32 = 0;
+    let mut nby: u32 = 0;
+    let mut i: u32 = 0;
+    let mut bc: u32 = 0;
+    let mut z: u32 = 0;
+    let mut id: u32 = 0;
+    let mut cmp: u32 = 0;
+    nby = (jd.msx as i32 * jd.msy as i32) as u32;
+    let mut mcu_buf_idx = 0;
+    blk = 0;
+    while blk < nby.wrapping_add(2) {
+        cmp = if blk < nby {
+            0
+        } else {
+            blk.wrapping_sub(nby).wrapping_add(1)
+        };
+        if cmp != 0 && jd.ncomp as i32 != 3 {
+            i = 0;
+            while i < 64 {
+                unwrap!(jd.mcubuf.as_mut())[mcu_buf_idx + i as usize] = 128 as i16;
+                i += 1;
+            }
+        } else {
+            id = if cmp != 0 { 1 } else { 0 };
+            d = huffext(jd, id, 0);
+            if d < 0 {
+                return (0 - d) as JRESULT;
+            }
+            bc = d as u32;
+            d = jd.dcv[cmp as usize] as i32;
+            if bc != 0 {
+                e = bitext(jd, bc);
+                if e < 0 {
+                    return (0 - e) as JRESULT;
                 }
-            } else {
-                id = if cmp != 0 { 1 } else { 0 };
-                d = huffext(jd, id, 0);
+                bc = ((1) << bc.wrapping_sub(1)) as u32;
+                if e as u32 & bc == 0 {
+                    e = (e as u32).wrapping_sub((bc << 1).wrapping_sub(1)) as i32;
+                }
+                d += e;
+                jd.dcv[cmp as usize] = d as i16;
+            }
+            let dfq = unwrap!(jd.qttbl[jd.qtid[cmp as usize] as usize].as_ref());
+            unwrap!(jd.workbuf.as_mut())[0] = d * dfq[0] >> 8;
+            unwrap!(jd.workbuf.as_mut())[1..64].fill(0);
+            z = 1;
+            loop {
+                d = huffext(jd, id, 1);
+                if d == 0 {
+                    break;
+                }
                 if d < 0 {
                     return (0 - d) as JRESULT;
                 }
                 bc = d as u32;
-                d = jd.dcv[cmp as usize] as i32;
-                if bc != 0 {
-                    e = bitext(jd, bc);
-                    if e < 0 {
-                        return (0 - e) as JRESULT;
-                    }
-                    bc = ((1) << bc.wrapping_sub(1)) as u32;
-                    if e as u32 & bc == 0 {
-                        e = (e as u32).wrapping_sub((bc << 1).wrapping_sub(1)) as i32;
-                    }
-                    d += e;
-                    jd.dcv[cmp as usize] = d as i16;
+                z = z.wrapping_add(bc >> 4 as i32);
+                if z >= 64 {
+                    return JDR_FMT1;
                 }
-                let dfq = unwrap!(jd.qttbl[jd.qtid[cmp as usize] as usize].as_ref());
-                unwrap!(jd.workbuf.as_mut())[0] = d * dfq[0] >> 8;
-                unwrap!(jd.workbuf.as_mut())[1..64].fill(0);
-                z = 1;
-                loop {
-                    d = huffext(jd, id, 1);
-                    if d == 0 {
-                        break;
-                    }
+                bc &= 0xf;
+                if bc != 0 {
+                    d = bitext(jd, bc);
                     if d < 0 {
                         return (0 - d) as JRESULT;
                     }
-                    bc = d as u32;
-                    z = z.wrapping_add(bc >> 4 as i32);
-                    if z >= 64 {
-                        return JDR_FMT1;
+                    bc = ((1) << bc.wrapping_sub(1)) as u32;
+                    if d as u32 & bc == 0 {
+                        d = (d as u32).wrapping_sub((bc << 1 as i32).wrapping_sub(1)) as i32;
                     }
-                    bc &= 0xf;
-                    if bc != 0 {
-                        d = bitext(jd, bc);
-                        if d < 0 {
-                            return (0 - d) as JRESULT;
-                        }
-                        bc = ((1) << bc.wrapping_sub(1)) as u32;
-                        if d as u32 & bc == 0 {
-                            d = (d as u32).wrapping_sub((bc << 1 as i32).wrapping_sub(1)) as i32;
-                        }
-                        i = Zig[z as usize] as u32;
+                    i = Zig[z as usize] as u32;
 
-                        let dfq = unwrap!(jd.qttbl[jd.qtid[cmp as usize] as usize].as_ref());
-                        unwrap!(jd.workbuf.as_mut())[i as usize] = d * dfq[i as usize] >> 8 as i32;
-                    }
-                    z = z.wrapping_add(1);
-                    if !(z < 64) {
-                        break;
-                    }
+                    let dfq = unwrap!(jd.qttbl[jd.qtid[cmp as usize] as usize].as_ref());
+                    unwrap!(jd.workbuf.as_mut())[i as usize] = d * dfq[i as usize] >> 8 as i32;
                 }
-                if 1 != 2 || cmp == 0 {
-                    if z == 1 || 0 != 0 && jd.scale == 3 {
-                        d = (unwrap!(jd.workbuf.as_ref())[0] / 256 + 128) as i32;
-                        if 2 >= 1 {
-                            i = 0;
-                            while i < 64 {
-                                unwrap!(jd.mcubuf.as_mut())[mcu_buf_idx + i as usize] = d as i16;
-                                i += 1;
-                            }
-                        } else {
-                            unwrap!(jd.mcubuf.as_mut())[..64].fill(d as i16);
-                        }
-                    } else {
-                        block_idct(
-                            unwrap!(jd.workbuf.as_mut()),
-                            &mut unwrap!(jd.mcubuf.as_mut())[mcu_buf_idx..],
-                        );
-                    }
+                z = z.wrapping_add(1);
+                if !(z < 64) {
+                    break;
                 }
             }
-            mcu_buf_idx += 64;
-            blk = blk.wrapping_add(1);
+            if 1 != 2 || cmp == 0 {
+                if z == 1 || 0 != 0 && jd.scale == 3 {
+                    d = (unwrap!(jd.workbuf.as_ref())[0] / 256 + 128) as i32;
+                    if 2 >= 1 {
+                        i = 0;
+                        while i < 64 {
+                            unwrap!(jd.mcubuf.as_mut())[mcu_buf_idx + i as usize] = d as i16;
+                            i += 1;
+                        }
+                    } else {
+                        unwrap!(jd.mcubuf.as_mut())[..64].fill(d as i16);
+                    }
+                } else {
+                    block_idct(
+                        unwrap!(jd.workbuf.as_mut()),
+                        &mut unwrap!(jd.mcubuf.as_mut())[mcu_buf_idx..],
+                    );
+                }
+            }
         }
-        return JDR_OK;
+        mcu_buf_idx += 64;
+        blk = blk.wrapping_add(1);
     }
+    return JDR_OK;
 }
 fn mcu_output(mut jd: &mut JDEC, mut x: u32, mut y: u32) -> JRESULT {
     let CVACC: i32 = if ::core::mem::size_of::<i32>() as cty::c_ulong > 2 as i32 as cty::c_ulong {
@@ -1019,351 +1007,347 @@ fn mcu_output(mut jd: &mut JDEC, mut x: u32, mut y: u32) -> JRESULT {
     }) as JRESULT;
 }
 
-pub unsafe fn jd_prepare(
+pub fn jd_prepare(
     mut jd: &mut JDEC,
     mut pool: &'static mut [u8],
     mut dev: *mut cty::c_void,
 ) -> JRESULT {
-    unsafe {
-        let mut b: u8 = 0;
-        let mut marker: u16 = 0;
-        let mut n: u32 = 0;
-        let mut i: u32 = 0;
-        let mut ofs: u32 = 0;
-        let mut len: usize = 0;
-        let mut rc: JRESULT = JDR_OK;
+    let mut b: u8 = 0;
+    let mut marker: u16 = 0;
+    let mut n: u32 = 0;
+    let mut i: u32 = 0;
+    let mut ofs: u32 = 0;
+    let mut len: usize = 0;
+    let mut rc: JRESULT = JDR_OK;
 
-        jd.sz_pool = pool.len();
-        jd.pool = Some(pool);
-        jd.device = dev;
-        jd.dcv[0] = 0;
-        jd.dcv[1] = 0;
-        jd.dcv[2] = 0;
-        jd.rsc = 0;
-        jd.rst = 0;
-        let mem = alloc_pool_slice(jd, 512);
-        if mem.is_err() {
-            return JDR_MEM1;
+    jd.sz_pool = pool.len();
+    jd.pool = Some(pool);
+    jd.device = dev;
+    jd.dcv[0] = 0;
+    jd.dcv[1] = 0;
+    jd.dcv[2] = 0;
+    jd.rsc = 0;
+    jd.rst = 0;
+    let mem = unsafe { alloc_pool_slice(jd, 512) };
+    if mem.is_err() {
+        return JDR_MEM1;
+    }
+    jd.inbuf = Some(unwrap!(mem));
+
+    marker = 0;
+    ofs = marker as u32;
+    loop {
+        if jpeg_in_buffer(jd, Some(0), 1) != 1 {
+            return JDR_INP;
         }
-        jd.inbuf = Some(unwrap!(mem));
-
-        marker = 0;
-        ofs = marker as u32;
-        loop {
-            if jpeg_in_buffer(jd, Some(0), 1) != 1 {
-                return JDR_INP;
-            }
-            ofs = ofs.wrapping_add(1);
-            marker = ((marker as i32) << 8 | unwrap!(jd.inbuf.as_ref())[0] as i32) as u16;
-            if !(marker as i32 != 0xffd8) {
-                break;
-            }
-        }
-        loop {
-            if jpeg_in_buffer(jd, Some(0), 4) != 4 {
-                return JDR_INP;
-            }
-            marker = ((unwrap!(jd.inbuf.as_ref())[0] as i32) << 8
-                | unwrap!(jd.inbuf.as_ref())[1] as i32) as u16;
-            len = ((unwrap!(jd.inbuf.as_ref())[2] as i32) << 8
-                | unwrap!(jd.inbuf.as_ref())[3] as i32) as usize;
-            if len <= 2 || marker as i32 >> 8 != 0xff {
-                return JDR_FMT1;
-            }
-            len = len.wrapping_sub(2);
-            ofs = (ofs as usize).wrapping_add(4 + len) as u32;
-            's_526: {
-                let mut current_block_111: u64;
-                match marker as i32 & 0xff {
-                    192 => {
-                        if len > 512 {
-                            return JDR_MEM2;
-                        }
-                        if jpeg_in_buffer(jd, Some(0), len) != len {
-                            return JDR_INP;
-                        }
-                        jd.width = ((unwrap!(jd.inbuf.as_ref())[3] as i32) << 8
-                            | unwrap!(jd.inbuf.as_ref())[4] as i32)
-                            as u16;
-                        jd.height = ((unwrap!(jd.inbuf.as_ref())[1] as i32) << 8 as i32
-                            | unwrap!(jd.inbuf.as_ref())[2] as i32)
-                            as u16;
-                        jd.ncomp = unwrap!(jd.inbuf.as_ref())[5];
-                        if jd.ncomp != 3 && jd.ncomp != 1 {
-                            return JDR_FMT3;
-                        }
-                        i = 0;
-                        while i < jd.ncomp as u32 {
-                            b = unwrap!(jd.inbuf.as_ref())
-                                [(7 as u32).wrapping_add((3 as u32).wrapping_mul(i)) as usize];
-                            if i == 0 {
-                                if b != 0x11 && b != 0x22 && b != 0x21 {
-                                    return JDR_FMT3;
-                                }
-                                jd.msx = (b as i32 >> 4) as u8;
-                                jd.msy = (b as i32 & 15) as u8;
-                            } else if b as i32 != 0x11 {
-                                return JDR_FMT3;
-                            }
-                            jd.qtid[i as usize] = unwrap!(jd.inbuf.as_ref())
-                                [(8 as u32).wrapping_add((3 as u32).wrapping_mul(i)) as usize];
-                            if jd.qtid[i as usize] as i32 > 3 {
-                                return JDR_FMT3;
-                            }
-                            i = i.wrapping_add(1);
-                        }
-                        current_block_111 = 5265702136860997526;
-                    }
-                    221 => {
-                        if len > 512 {
-                            return JDR_MEM2;
-                        }
-                        if jpeg_in_buffer(jd, Some(0), len) != len {
-                            return JDR_INP;
-                        }
-                        jd.nrst = ((unwrap!(jd.inbuf.as_ref())[0] as i32) << 8
-                            | unwrap!(jd.inbuf.as_ref())[1] as i32)
-                            as u16;
-                        current_block_111 = 5265702136860997526;
-                    }
-                    196 => {
-                        if len > 512 {
-                            return JDR_MEM2;
-                        }
-                        if jpeg_in_buffer(jd, Some(0), len) != len {
-                            return JDR_INP;
-                        }
-                        rc = create_huffman_tbl(jd, len);
-                        if rc as u64 != 0 {
-                            return rc;
-                        }
-                        current_block_111 = 5265702136860997526;
-                    }
-                    219 => {
-                        if len > 512 {
-                            return JDR_MEM2;
-                        }
-                        if jpeg_in_buffer(jd, Some(0), len) != len {
-                            return JDR_INP;
-                        }
-                        rc = create_qt_tbl(jd, len);
-                        if rc as u64 != 0 {
-                            return rc;
-                        }
-                        current_block_111 = 5265702136860997526;
-                    }
-                    218 => {
-                        if len > 512 {
-                            return JDR_MEM2;
-                        }
-                        if jpeg_in_buffer(jd, Some(0), len) != len {
-                            return JDR_INP;
-                        }
-                        if jd.width == 0 || jd.height == 0 {
-                            return JDR_FMT1;
-                        }
-                        if unwrap!(jd.inbuf.as_ref())[0] as i32 != jd.ncomp as i32 {
-                            return JDR_FMT3;
-                        }
-                        i = 0;
-                        while i < jd.ncomp as u32 {
-                            b = unwrap!(jd.inbuf.as_ref())
-                                [(2 as u32).wrapping_add((2 as u32).wrapping_mul(i)) as usize];
-                            if b != 0 && b != 0x11 {
-                                return JDR_FMT3;
-                            }
-                            n = if i != 0 { 1 } else { 0 };
-                            if (jd.huffbits[n as usize][0]).is_none()
-                                || (jd.huffbits[n as usize][1]).is_none()
-                            {
-                                return JDR_FMT1;
-                            }
-                            if (jd.qttbl[jd.qtid[i as usize] as usize]).is_none() {
-                                return JDR_FMT1;
-                            }
-                            i = i.wrapping_add(1);
-                        }
-                        n = (jd.msy as i32 * jd.msx as i32) as u32;
-                        if n == 0 {
-                            return JDR_FMT1;
-                        }
-                        len = n.wrapping_mul(64).wrapping_mul(2).wrapping_add(64) as usize;
-                        if len < 256 {
-                            len = 256;
-                        }
-                        let mem = alloc_pool_slice(jd, len / 4);
-                        if mem.is_err() {
-                            return JDR_MEM1;
-                        }
-                        jd.workbuf = Some(unwrap!(mem));
-
-                        let mcubuf = alloc_pool_slice(jd, (n as usize + 2) * 64);
-                        if mcubuf.is_err() {
-                            return JDR_MEM1;
-                        }
-                        jd.mcubuf = Some(unwrap!(mcubuf));
-
-                        ofs = ofs.wrapping_rem(512);
-                        if ofs != 0 {
-                            jd.dctr = jpeg_in_buffer(jd, Some(ofs as usize), (512 - ofs) as usize);
-                        }
-                        jd.dptr = (ofs - (if 2 != 0 { 0 } else { 1 })) as usize;
-                        return JDR_OK;
-                    }
-                    193 => {
-                        current_block_111 = 12749676338018479376;
-                    }
-                    194 => {
-                        current_block_111 = 12749676338018479376;
-                    }
-                    195 => {
-                        current_block_111 = 7120504289787790845;
-                    }
-                    197 => {
-                        current_block_111 = 11626555135028741001;
-                    }
-                    198 => {
-                        current_block_111 = 12215488699659360936;
-                    }
-                    199 => {
-                        current_block_111 = 5192055691381141330;
-                    }
-                    201 => {
-                        current_block_111 = 1443089516996880600;
-                    }
-                    202 => {
-                        current_block_111 = 15064317190960798138;
-                    }
-                    203 => {
-                        current_block_111 = 14109165499131509865;
-                    }
-                    205 => {
-                        current_block_111 = 9711326356574826945;
-                    }
-                    207 => {
-                        current_block_111 = 13359995684220628626;
-                    }
-                    206 | 217 => {
-                        current_block_111 = 13359995684220628626;
-                    }
-                    _ => {
-                        if jpeg_in_buffer(jd, None, len) != len {
-                            return JDR_INP;
-                        }
-                        current_block_111 = 5265702136860997526;
-                    }
-                }
-                match current_block_111 {
-                    12749676338018479376 => {
-                        current_block_111 = 7120504289787790845;
-                    }
-                    5265702136860997526 => {
-                        break 's_526;
-                    }
-                    _ => {}
-                }
-                match current_block_111 {
-                    7120504289787790845 => {
-                        current_block_111 = 11626555135028741001;
-                    }
-                    _ => {}
-                }
-                match current_block_111 {
-                    11626555135028741001 => {
-                        current_block_111 = 12215488699659360936;
-                    }
-                    _ => {}
-                }
-                match current_block_111 {
-                    12215488699659360936 => {
-                        current_block_111 = 5192055691381141330;
-                    }
-                    _ => {}
-                }
-                match current_block_111 {
-                    5192055691381141330 => {
-                        current_block_111 = 1443089516996880600;
-                    }
-                    _ => {}
-                }
-                match current_block_111 {
-                    1443089516996880600 => {
-                        current_block_111 = 15064317190960798138;
-                    }
-                    _ => {}
-                }
-                match current_block_111 {
-                    15064317190960798138 => {
-                        current_block_111 = 14109165499131509865;
-                    }
-                    _ => {}
-                }
-                match current_block_111 {
-                    14109165499131509865 => {
-                        current_block_111 = 9711326356574826945;
-                    }
-                    _ => {}
-                }
-                match current_block_111 {
-                    9711326356574826945 => {}
-                    _ => {}
-                }
-                return JDR_FMT3;
-            }
+        ofs = ofs.wrapping_add(1);
+        marker = ((marker as i32) << 8 | unwrap!(jd.inbuf.as_ref())[0] as i32) as u16;
+        if !(marker as i32 != 0xffd8) {
+            break;
         }
     }
-}
-
-pub unsafe fn jd_decomp(mut jd: &mut JDEC, mut scale: u8) -> JRESULT {
-    unsafe {
-        let mut x: u32 = 0;
-        let mut y: u32 = 0;
-        let mut mx: u32 = 0;
-        let mut my: u32 = 0;
-        let mut rc: JRESULT = JDR_OK;
-        if scale > (if 0 != 0 { 3 } else { 0 }) {
-            return JDR_PAR;
+    loop {
+        if jpeg_in_buffer(jd, Some(0), 4) != 4 {
+            return JDR_INP;
         }
-        jd.scale = scale;
-        mx = (jd.msx as i32 * 8 as i32) as u32;
-        my = (jd.msy as i32 * 8 as i32) as u32;
-        rc = JDR_OK;
-        y = 0;
-        while y < jd.height as u32 {
-            x = 0;
-            while x < jd.width as u32 {
-                if jd.nrst as i32 != 0 && {
-                    let ref mut fresh68 = jd.rst;
-                    let fresh69 = *fresh68;
-                    *fresh68 = (*fresh68).wrapping_add(1);
-                    fresh69 as i32 == jd.nrst as i32
-                } {
-                    let ref mut fresh70 = jd.rsc;
-                    let fresh71 = *fresh70;
-                    *fresh70 = (*fresh70).wrapping_add(1);
-                    rc = restart(jd, fresh71);
-                    if rc as u32 != JDR_OK as u32 {
+        marker = ((unwrap!(jd.inbuf.as_ref())[0] as i32) << 8
+            | unwrap!(jd.inbuf.as_ref())[1] as i32) as u16;
+        len = ((unwrap!(jd.inbuf.as_ref())[2] as i32) << 8 | unwrap!(jd.inbuf.as_ref())[3] as i32)
+            as usize;
+        if len <= 2 || marker as i32 >> 8 != 0xff {
+            return JDR_FMT1;
+        }
+        len = len.wrapping_sub(2);
+        ofs = (ofs as usize).wrapping_add(4 + len) as u32;
+        's_526: {
+            let mut current_block_111: u64;
+            match marker as i32 & 0xff {
+                192 => {
+                    if len > 512 {
+                        return JDR_MEM2;
+                    }
+                    if jpeg_in_buffer(jd, Some(0), len) != len {
+                        return JDR_INP;
+                    }
+                    jd.width = ((unwrap!(jd.inbuf.as_ref())[3] as i32) << 8
+                        | unwrap!(jd.inbuf.as_ref())[4] as i32)
+                        as u16;
+                    jd.height = ((unwrap!(jd.inbuf.as_ref())[1] as i32) << 8 as i32
+                        | unwrap!(jd.inbuf.as_ref())[2] as i32)
+                        as u16;
+                    jd.ncomp = unwrap!(jd.inbuf.as_ref())[5];
+                    if jd.ncomp != 3 && jd.ncomp != 1 {
+                        return JDR_FMT3;
+                    }
+                    i = 0;
+                    while i < jd.ncomp as u32 {
+                        b = unwrap!(jd.inbuf.as_ref())
+                            [(7 as u32).wrapping_add((3 as u32).wrapping_mul(i)) as usize];
+                        if i == 0 {
+                            if b != 0x11 && b != 0x22 && b != 0x21 {
+                                return JDR_FMT3;
+                            }
+                            jd.msx = (b as i32 >> 4) as u8;
+                            jd.msy = (b as i32 & 15) as u8;
+                        } else if b as i32 != 0x11 {
+                            return JDR_FMT3;
+                        }
+                        jd.qtid[i as usize] = unwrap!(jd.inbuf.as_ref())
+                            [(8 as u32).wrapping_add((3 as u32).wrapping_mul(i)) as usize];
+                        if jd.qtid[i as usize] as i32 > 3 {
+                            return JDR_FMT3;
+                        }
+                        i = i.wrapping_add(1);
+                    }
+                    current_block_111 = 5265702136860997526;
+                }
+                221 => {
+                    if len > 512 {
+                        return JDR_MEM2;
+                    }
+                    if jpeg_in_buffer(jd, Some(0), len) != len {
+                        return JDR_INP;
+                    }
+                    jd.nrst = ((unwrap!(jd.inbuf.as_ref())[0] as i32) << 8
+                        | unwrap!(jd.inbuf.as_ref())[1] as i32)
+                        as u16;
+                    current_block_111 = 5265702136860997526;
+                }
+                196 => {
+                    if len > 512 {
+                        return JDR_MEM2;
+                    }
+                    if jpeg_in_buffer(jd, Some(0), len) != len {
+                        return JDR_INP;
+                    }
+                    rc = create_huffman_tbl(jd, len);
+                    if rc as u64 != 0 {
                         return rc;
                     }
-                    jd.rst = 1;
+                    current_block_111 = 5265702136860997526;
                 }
-                rc = mcu_load(jd);
-                if rc as u32 != JDR_OK as u32 {
-                    return rc;
+                219 => {
+                    if len > 512 {
+                        return JDR_MEM2;
+                    }
+                    if jpeg_in_buffer(jd, Some(0), len) != len {
+                        return JDR_INP;
+                    }
+                    rc = create_qt_tbl(jd, len);
+                    if rc as u64 != 0 {
+                        return rc;
+                    }
+                    current_block_111 = 5265702136860997526;
                 }
-                rc = mcu_output(jd, x, y);
-                if rc as u32 != JDR_OK as u32 {
-                    return rc;
+                218 => {
+                    if len > 512 {
+                        return JDR_MEM2;
+                    }
+                    if jpeg_in_buffer(jd, Some(0), len) != len {
+                        return JDR_INP;
+                    }
+                    if jd.width == 0 || jd.height == 0 {
+                        return JDR_FMT1;
+                    }
+                    if unwrap!(jd.inbuf.as_ref())[0] as i32 != jd.ncomp as i32 {
+                        return JDR_FMT3;
+                    }
+                    i = 0;
+                    while i < jd.ncomp as u32 {
+                        b = unwrap!(jd.inbuf.as_ref())
+                            [(2 as u32).wrapping_add((2 as u32).wrapping_mul(i)) as usize];
+                        if b != 0 && b != 0x11 {
+                            return JDR_FMT3;
+                        }
+                        n = if i != 0 { 1 } else { 0 };
+                        if (jd.huffbits[n as usize][0]).is_none()
+                            || (jd.huffbits[n as usize][1]).is_none()
+                        {
+                            return JDR_FMT1;
+                        }
+                        if (jd.qttbl[jd.qtid[i as usize] as usize]).is_none() {
+                            return JDR_FMT1;
+                        }
+                        i = i.wrapping_add(1);
+                    }
+                    n = (jd.msy as i32 * jd.msx as i32) as u32;
+                    if n == 0 {
+                        return JDR_FMT1;
+                    }
+                    len = n.wrapping_mul(64).wrapping_mul(2).wrapping_add(64) as usize;
+                    if len < 256 {
+                        len = 256;
+                    }
+                    let mem = unsafe { alloc_pool_slice(jd, len / 4) };
+                    if mem.is_err() {
+                        return JDR_MEM1;
+                    }
+                    jd.workbuf = Some(unwrap!(mem));
+
+                    let mcubuf = unsafe { alloc_pool_slice(jd, (n as usize + 2) * 64) };
+                    if mcubuf.is_err() {
+                        return JDR_MEM1;
+                    }
+                    jd.mcubuf = Some(unwrap!(mcubuf));
+
+                    ofs = ofs.wrapping_rem(512);
+                    if ofs != 0 {
+                        jd.dctr = jpeg_in_buffer(jd, Some(ofs as usize), (512 - ofs) as usize);
+                    }
+                    jd.dptr = (ofs - (if 2 != 0 { 0 } else { 1 })) as usize;
+                    return JDR_OK;
                 }
-                x = x.wrapping_add(mx);
+                193 => {
+                    current_block_111 = 12749676338018479376;
+                }
+                194 => {
+                    current_block_111 = 12749676338018479376;
+                }
+                195 => {
+                    current_block_111 = 7120504289787790845;
+                }
+                197 => {
+                    current_block_111 = 11626555135028741001;
+                }
+                198 => {
+                    current_block_111 = 12215488699659360936;
+                }
+                199 => {
+                    current_block_111 = 5192055691381141330;
+                }
+                201 => {
+                    current_block_111 = 1443089516996880600;
+                }
+                202 => {
+                    current_block_111 = 15064317190960798138;
+                }
+                203 => {
+                    current_block_111 = 14109165499131509865;
+                }
+                205 => {
+                    current_block_111 = 9711326356574826945;
+                }
+                207 => {
+                    current_block_111 = 13359995684220628626;
+                }
+                206 | 217 => {
+                    current_block_111 = 13359995684220628626;
+                }
+                _ => {
+                    if jpeg_in_buffer(jd, None, len) != len {
+                        return JDR_INP;
+                    }
+                    current_block_111 = 5265702136860997526;
+                }
             }
-            y = y.wrapping_add(my);
+            match current_block_111 {
+                12749676338018479376 => {
+                    current_block_111 = 7120504289787790845;
+                }
+                5265702136860997526 => {
+                    break 's_526;
+                }
+                _ => {}
+            }
+            match current_block_111 {
+                7120504289787790845 => {
+                    current_block_111 = 11626555135028741001;
+                }
+                _ => {}
+            }
+            match current_block_111 {
+                11626555135028741001 => {
+                    current_block_111 = 12215488699659360936;
+                }
+                _ => {}
+            }
+            match current_block_111 {
+                12215488699659360936 => {
+                    current_block_111 = 5192055691381141330;
+                }
+                _ => {}
+            }
+            match current_block_111 {
+                5192055691381141330 => {
+                    current_block_111 = 1443089516996880600;
+                }
+                _ => {}
+            }
+            match current_block_111 {
+                1443089516996880600 => {
+                    current_block_111 = 15064317190960798138;
+                }
+                _ => {}
+            }
+            match current_block_111 {
+                15064317190960798138 => {
+                    current_block_111 = 14109165499131509865;
+                }
+                _ => {}
+            }
+            match current_block_111 {
+                14109165499131509865 => {
+                    current_block_111 = 9711326356574826945;
+                }
+                _ => {}
+            }
+            match current_block_111 {
+                9711326356574826945 => {}
+                _ => {}
+            }
+            return JDR_FMT3;
         }
-        return rc;
     }
 }
 
-unsafe fn jpeg_in_buffer(jd: &mut JDEC, inbuf_offset: Option<usize>, n_data: usize) -> usize {
+pub fn jd_decomp(mut jd: &mut JDEC, mut scale: u8) -> JRESULT {
+    let mut x: u32 = 0;
+    let mut y: u32 = 0;
+    let mut mx: u32 = 0;
+    let mut my: u32 = 0;
+    let mut rc: JRESULT = JDR_OK;
+    if scale > (if 0 != 0 { 3 } else { 0 }) {
+        return JDR_PAR;
+    }
+    jd.scale = scale;
+    mx = (jd.msx as i32 * 8 as i32) as u32;
+    my = (jd.msy as i32 * 8 as i32) as u32;
+    rc = JDR_OK;
+    y = 0;
+    while y < jd.height as u32 {
+        x = 0;
+        while x < jd.width as u32 {
+            if jd.nrst as i32 != 0 && {
+                let ref mut fresh68 = jd.rst;
+                let fresh69 = *fresh68;
+                *fresh68 = (*fresh68).wrapping_add(1);
+                fresh69 as i32 == jd.nrst as i32
+            } {
+                let ref mut fresh70 = jd.rsc;
+                let fresh71 = *fresh70;
+                *fresh70 = (*fresh70).wrapping_add(1);
+                rc = restart(jd, fresh71);
+                if rc as u32 != JDR_OK as u32 {
+                    return rc;
+                }
+                jd.rst = 1;
+            }
+            rc = mcu_load(jd);
+            if rc as u32 != JDR_OK as u32 {
+                return rc;
+            }
+            rc = mcu_output(jd, x, y);
+            if rc as u32 != JDR_OK as u32 {
+                return rc;
+            }
+            x = x.wrapping_add(mx);
+        }
+        y = y.wrapping_add(my);
+    }
+    return rc;
+}
+
+fn jpeg_in_buffer(jd: &mut JDEC, inbuf_offset: Option<usize>, n_data: usize) -> usize {
     let context = unsafe { NonNull::new_unchecked(jd.device as *mut JpegContext).as_mut() };
     let n_data = n_data as usize;
     if let Some(inbuf_offset) = inbuf_offset {
@@ -1387,10 +1371,8 @@ unsafe fn jpeg_in_buffer(jd: &mut JDEC, inbuf_offset: Option<usize>, n_data: usi
     n_data as _
 }
 
-fn jpeg_out_buffer(jd: &mut JDEC, rect: *mut JRECT) -> cty::c_int {
-    let jd = unsafe { NonNull::new_unchecked(jd as &mut JDEC).as_mut() };
+fn jpeg_out_buffer(jd: &mut JDEC, rect: &mut JRECT) -> cty::c_int {
     let context = unsafe { NonNull::new_unchecked(jd.device as *mut JpegContext).as_mut() };
-    let rect = unsafe { NonNull::new_unchecked(rect as *mut JRECT).as_mut() };
 
     let w = (rect.right - rect.left + 1) as i16;
     let h = (rect.bottom - rect.top + 1) as i16;
