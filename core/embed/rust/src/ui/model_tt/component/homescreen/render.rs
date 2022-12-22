@@ -8,7 +8,7 @@ use crate::{
         buffers::{get_blurring_buffer, get_jpeg_buffer, BufferJpeg},
         display,
         display::{bar_radius_buffer, ToifFormat},
-        tjpgdlib::{jd_decomp, jd_prepare, JDEC},
+        tjpgdlib::{jd_decomp, jd_init, jd_prepare, JDEC},
         uzlib::UzlibContext,
     },
     ui::{
@@ -420,9 +420,8 @@ pub fn homescreen_blurred(data: &[u8], texts: &[HomescreenText]) {
 
     let jpeg_ok = jpeg_size.x == WIDTH && jpeg_size.y == HEIGHT && mcu_height <= 16;
     let jpg_buffer = unsafe { get_jpeg_buffer(0, true) };
-    let mut jd: JDEC = JDEC::default();
-
-    jd_prepare(&mut jd, data, jpg_buffer, WIDTH);
+    let mut jd: JDEC = jd_init(data, jpg_buffer, WIDTH);
+    jd_prepare(&mut jd);
 
     if jpeg_ok {
         jd_decomp(&mut jd, 0);
@@ -557,9 +556,9 @@ pub fn homescreen(
     let jpeg_ok = jpeg_size.x == WIDTH && jpeg_size.y == HEIGHT && mcu_height <= 16;
 
     let jpg_buffer = unsafe { get_jpeg_buffer(0, true) };
-    let mut jd: JDEC = JDEC::default();
 
-    jd_prepare(&mut jd, data, jpg_buffer, WIDTH);
+    let mut jd: JDEC = jd_init(data, jpg_buffer, WIDTH);
+    jd_prepare(&mut jd);
 
     set_window(screen());
 

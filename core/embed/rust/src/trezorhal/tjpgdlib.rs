@@ -6,7 +6,7 @@
 )]
 
 use crate::trezorhal::buffers::{get_jpeg_work_buffer, BufferJpeg};
-use core::{mem, mem::MaybeUninit, slice};
+use core::{mem, slice};
 
 const JD_FORMAT: u32 = 1;
 
@@ -70,12 +70,6 @@ pub struct JDEC<'a> {
     current_line_pix: i16,
     data: &'a [u8],
     pub buffer: &'static mut BufferJpeg,
-}
-
-impl<'a> Default for JDEC<'a> {
-    fn default() -> Self {
-        unsafe { MaybeUninit::<Self>::zeroed().assume_init() }
-    }
 }
 
 static Zig: [u8; 64] = [
@@ -994,12 +988,52 @@ fn mcu_output(jd: &mut JDEC, x: u32, y: u32) -> JRESULT {
     }) as JRESULT;
 }
 
-pub fn jd_prepare<'a>(
-    mut jd: &mut JDEC<'a>,
-    data: &'a [u8],
-    buffer: &'static mut BufferJpeg,
-    buffer_width: i16,
-) -> JRESULT {
+pub fn jd_init<'a>(data: &'a [u8], buffer: &'static mut BufferJpeg, buffer_width: i16) -> JDEC<'a> {
+    let pool = Some(unsafe { get_jpeg_work_buffer(0, true).buffer.as_mut_slice() });
+    let pool_len = unwrap!(pool.as_ref()).len() as usize;
+
+    JDEC {
+        dctr: 0,
+        dptr: 0,
+        inbuf: None,
+        dbit: 0,
+        scale: 0,
+        msx: 0,
+        msy: 0,
+        qtid: [0; 3],
+        sz_pool: pool_len,
+        pool,
+        dcv: [0; 3],
+        rsc: 0,
+        width: 0,
+        height: 0,
+        huffbits: [[None, None], [None, None]],
+        huffcode: [[None, None], [None, None]],
+        huffdata: [[None, None], [None, None]],
+        qttbl: [None, None, None, None],
+        wreg: 0,
+        marker: 0,
+        longofs: [[0; 2]; 2],
+        hufflut_ac: [None, None],
+        hufflut_dc: [None, None],
+        workbuf: None,
+        rst: 0,
+        data_len: data.len(),
+        data,
+        data_read: 0,
+        buffer,
+        buffer_width,
+        buffer_height: 16,
+        current_line: 0,
+        current_line_pix: 0,
+        ncomp: 0,
+        nrst: 0,
+        mcubuf: None,
+        pool_start: 0,
+    }
+}
+
+pub fn jd_prepare(mut jd: &mut JDEC) -> JRESULT {
     let mut b: u8;
     let mut marker: u16;
     let mut n: u32;
@@ -1007,23 +1041,6 @@ pub fn jd_prepare<'a>(
     let mut ofs: u32;
     let mut len: usize;
     let mut rc: JRESULT;
-
-    jd.pool = Some(unsafe { &mut get_jpeg_work_buffer(0, true).buffer });
-    jd.sz_pool = unwrap!(jd.pool.as_ref()).len() as usize;
-    jd.dcv[0] = 0;
-    jd.dcv[1] = 0;
-    jd.dcv[2] = 0;
-    jd.rsc = 0;
-    jd.rst = 0;
-
-    jd.data_len = data.len();
-    jd.data = data;
-    jd.data_read = 0;
-    jd.buffer = buffer;
-    jd.buffer_width = buffer_width;
-    jd.buffer_height = 16;
-    jd.current_line = 0;
-    jd.current_line_pix = 0;
 
     let mem = unsafe { alloc_pool_slice(jd, 512) };
     if mem.is_err() {

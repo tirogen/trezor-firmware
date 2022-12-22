@@ -2,7 +2,7 @@ use super::ffi;
 
 use crate::trezorhal::{
     buffers::get_jpeg_buffer,
-    tjpgdlib::{jd_prepare, JDEC, JDR_OK},
+    tjpgdlib::{jd_init, jd_prepare, JDEC, JDR_OK},
 };
 pub use ffi::buffer_jpeg_t as BufferJpeg;
 
@@ -30,11 +30,9 @@ pub struct JpegInfo {
 // }
 
 pub fn jpeg_info(data: &[u8]) -> Result<JpegInfo, ()> {
-    let mut jd = JDEC::default();
-
     let work_buffer = unsafe { get_jpeg_buffer(0, true) };
-
-    let res = jd_prepare(&mut jd, data, work_buffer, 0);
+    let mut jd: JDEC = jd_init(data, work_buffer, 0);
+    let res = jd_prepare(&mut jd);
 
     let info = JpegInfo {
         width: jd.width,
