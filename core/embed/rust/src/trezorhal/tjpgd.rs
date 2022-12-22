@@ -1,5 +1,5 @@
 use super::ffi;
-use core::{mem::MaybeUninit};
+use core::mem::MaybeUninit;
 
 use crate::trezorhal::{
     buffers::{get_jpeg_buffer, get_jpeg_work_buffer},
@@ -30,7 +30,6 @@ pub struct JpegContext<'a> {
     buffer: &'a mut [u16],
 }
 
-
 pub fn jpeg_get_context<'a>(
     data: &'a [u8],
     buffer: &'a mut BufferJpeg,
@@ -51,17 +50,13 @@ pub fn jpeg_get_context<'a>(
 pub fn jpeg_buffer_prepare<'a>(jd: &mut JDEC, context: &'a mut JpegContext<'a>) {
     let work_buffer = unsafe { &mut get_jpeg_work_buffer(0, true).buffer };
     unsafe {
-        jd_prepare(
-            jd as *mut _,
-            work_buffer,
-            context as *mut JpegContext as *mut _,
-        );
+        jd_prepare(jd, work_buffer, context as *mut JpegContext as *mut _);
     }
 }
 
 pub fn jpeg_buffer_decomp(jd: &mut JDEC) {
     unsafe {
-        jd_decomp(jd as _,  0);
+        jd_decomp(jd, 0);
     }
 }
 
@@ -73,7 +68,7 @@ pub fn jpeg_info(data: &[u8]) -> Result<JpegInfo, ()> {
 
     let res = unsafe {
         jd_prepare(
-            &mut jd as *mut _,
+            &mut jd,
             work_buffer,
             &mut context as *mut JpegContext as *mut _,
         )
