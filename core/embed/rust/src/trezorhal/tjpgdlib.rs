@@ -34,8 +34,8 @@ pub struct JRECT {
 
 pub struct JDEC {
     pub dctr: usize,
-    pub dptr: *mut u8,
-    pub inbuf: *mut u8,
+    pub dptr: usize,
+    pub inbuf: Option<&'static mut [u8]>,
     pub dbit: u8,
     pub scale: u8,
     pub msx: u8,
@@ -61,7 +61,7 @@ pub struct JDEC {
     pub mcubuf: Option<&'static mut [i16]>,
     pub pool: *mut cty::c_void,
     pub sz_pool: usize,
-    pub infunc: Option<unsafe fn(*mut JDEC, *mut u8, usize) -> usize>,
+    pub infunc: Option<unsafe fn(*mut JDEC, Option<&mut &mut [u8]>, usize) -> usize>,
     pub device: *mut cty::c_void,
 }
 static mut Zig: [u8; 64] = [
@@ -185,20 +185,20 @@ unsafe fn i32_slice_to_u8(data: &'static mut [i32]) -> &'static mut [u8] {
     unsafe { slice::from_raw_parts_mut(ptr, len) }
 }
 
-unsafe fn create_qt_tbl(mut jd: *mut JDEC, mut data: *const u8, mut ndata: usize) -> JRESULT {
+unsafe fn create_qt_tbl(mut jd: *mut JDEC, mut data: &&mut [u8], mut ndata: usize) -> JRESULT {
     unsafe {
         let mut i: u32 = 0;
         let mut zi: u32 = 0;
         let mut d: u8 = 0;
+        let mut data_idx = 0;
         while ndata != 0 {
             if ndata < 65 {
                 return JDR_FMT1;
             }
             ndata -= 65;
 
-            let fresh2 = data;
-            data = data.offset(1);
-            d = *fresh2;
+            d = data[data_idx];
+            data_idx += 1;
             if d as i32 & 0xf0 != 0 {
                 return JDR_FMT1;
             }
@@ -212,18 +212,17 @@ unsafe fn create_qt_tbl(mut jd: *mut JDEC, mut data: *const u8, mut ndata: usize
             let mut j: u32 = 0;
             while j < 64 {
                 zi = Zig[j as usize] as u32;
-                let fresh4 = data;
-                data = data.offset(1);
 
                 unwrap!((*jd).qttbl[i as usize].as_mut())[zi as usize] =
-                    (*fresh4 as u32).wrapping_mul(Ipsf[zi as usize] as u32) as i32;
+                    (data[data_idx] as u32).wrapping_mul(Ipsf[zi as usize] as u32) as i32;
                 j = j.wrapping_add(1);
+                data_idx += 1;
             }
         }
         return JDR_OK;
     }
 }
-unsafe fn create_huffman_tbl(mut jd: *mut JDEC, mut data: *const u8, mut ndata: usize) -> JRESULT {
+unsafe fn create_huffman_tbl(mut jd: *mut JDEC, mut data: &&mut [u8], mut ndata: usize) -> JRESULT {
     unsafe {
         let mut i: u32 = 0;
         let mut j: u32 = 0;
@@ -233,14 +232,14 @@ unsafe fn create_huffman_tbl(mut jd: *mut JDEC, mut data: *const u8, mut ndata: 
         let mut np: usize = 0;
         let mut d: u8 = 0;
         let mut hc: u16 = 0;
+        let mut data_idx = 0;
         while ndata != 0 {
             if ndata < 17 {
                 return JDR_FMT1;
             }
             ndata -= 17;
-            let fresh5 = data;
-            data = data.offset(1);
-            d = *fresh5;
+            d = data[data_idx];
+            data_idx += 1;
             if d & 0xee != 0 {
                 return JDR_FMT1;
             }
@@ -255,10 +254,10 @@ unsafe fn create_huffman_tbl(mut jd: *mut JDEC, mut data: *const u8, mut ndata: 
             i = 0;
             np = i as usize;
             while i < 16 {
-                let fresh7 = data;
-                data = data.offset(1);
-                unwrap!((*jd).huffbits[num as usize][cls as usize].as_mut())[i as usize] = *fresh7;
-                np = (np as cty::c_ulong).wrapping_add(*fresh7 as cty::c_ulong) as usize;
+                unwrap!((*jd).huffbits[num as usize][cls as usize].as_mut())[i as usize] =
+                    data[data_idx];
+                np = (np as cty::c_ulong).wrapping_add(data[data_idx] as cty::c_ulong) as usize;
+                data_idx += 1;
                 i = i.wrapping_add(1);
             }
             let mem = alloc_pool_slice(jd, np);
@@ -299,9 +298,8 @@ unsafe fn create_huffman_tbl(mut jd: *mut JDEC, mut data: *const u8, mut ndata: 
             (*jd).huffdata[num as usize][cls as usize] = Some(unwrap!(mem));
             i = 0;
             while i < np as u32 {
-                let fresh14 = data;
-                data = data.offset(1);
-                d = *fresh14;
+                d = data[data_idx];
+                data_idx += 1;
                 if cls == 0 && d > 11 {
                     return JDR_FMT1;
                 }
@@ -374,7 +372,7 @@ unsafe fn create_huffman_tbl(mut jd: *mut JDEC, mut data: *const u8, mut ndata: 
 unsafe fn huffext(mut jd: *mut JDEC, mut id: u32, mut cls: u32) -> i32 {
     unsafe {
         let mut dc: usize = (*jd).dctr;
-        let mut dp: *mut u8 = (*jd).dptr;
+        let mut dp: usize = (*jd).dptr;
         let mut d: u32 = 0;
         let mut flg: u32 = 0;
         let mut nc: u32 = 0;
@@ -388,15 +386,19 @@ unsafe fn huffext(mut jd: *mut JDEC, mut id: u32, mut cls: u32) -> i32 {
                 d = 0xff;
             } else {
                 if dc == 0 {
-                    dp = (*jd).inbuf;
-                    dc = ((*jd).infunc).expect("non-null function pointer")(jd, dp, 512);
+                    dp = 0;
+                    dc = ((*jd).infunc).expect("non-null function pointer")(
+                        jd,
+                        Some(unwrap!((*jd).inbuf.as_mut())),
+                        512,
+                    );
                     if dc == 0 {
                         return 0 as i32 - JDR_INP as i32;
                     }
                 }
-                let fresh21 = dp;
-                dp = dp.offset(1);
-                d = *fresh21 as u32;
+                d = unwrap!((*jd).inbuf.as_mut())[dp] as u32;
+                dp += 1;
+
                 dc = dc.wrapping_sub(1);
                 if flg != 0 {
                     flg = 0;
@@ -413,8 +415,7 @@ unsafe fn huffext(mut jd: *mut JDEC, mut id: u32, mut cls: u32) -> i32 {
             wbit = wbit.wrapping_add(8);
         }
         (*jd).dctr = dc;
-        let ref mut fresh22 = (*jd).dptr;
-        *fresh22 = dp;
+        (*jd).dptr = dp;
         (*jd).wreg = w;
         d = w >> wbit.wrapping_sub(HUFF_BIT);
         if cls != 0 {
@@ -471,7 +472,7 @@ unsafe fn huffext(mut jd: *mut JDEC, mut id: u32, mut cls: u32) -> i32 {
 unsafe fn bitext(mut jd: *mut JDEC, mut nbit: u32) -> i32 {
     unsafe {
         let mut dc: usize = (*jd).dctr;
-        let mut dp: *mut u8 = (*jd).dptr;
+        let mut dp: usize = (*jd).dptr;
         let mut d: u32 = 0;
         let mut flg: u32 = 0;
         let mut wbit: u32 = ((*jd).dbit as i32 % 32 as i32) as u32;
@@ -483,15 +484,18 @@ unsafe fn bitext(mut jd: *mut JDEC, mut nbit: u32) -> i32 {
                 d = 0xff;
             } else {
                 if dc == 0 {
-                    dp = (*jd).inbuf;
-                    dc = ((*jd).infunc).expect("non-null function pointer")(jd, dp, 512);
+                    dp = 0;
+                    dc = ((*jd).infunc).expect("non-null function pointer")(
+                        jd,
+                        Some(unwrap!((*jd).inbuf.as_mut())),
+                        512,
+                    );
                     if dc == 0 {
                         return 0 as i32 - JDR_INP as i32;
                     }
                 }
-                let fresh25 = dp;
-                dp = dp.offset(1);
-                d = *fresh25 as u32;
+                d = unwrap!((*jd).inbuf.as_ref())[dp] as u32;
+                dp += 1;
                 dc = dc.wrapping_sub(1);
                 if flg != 0 {
                     flg = 0;
@@ -510,15 +514,15 @@ unsafe fn bitext(mut jd: *mut JDEC, mut nbit: u32) -> i32 {
         (*jd).wreg = w;
         (*jd).dbit = wbit.wrapping_sub(nbit) as u8;
         (*jd).dctr = dc;
-        let ref mut fresh26 = (*jd).dptr;
-        *fresh26 = dp;
+        (*jd).dptr = dp;
+
         return (w >> wbit.wrapping_sub(nbit).wrapping_rem(32)) as i32;
     }
 }
 unsafe fn restart(mut jd: *mut JDEC, mut rstn: u16) -> JRESULT {
     unsafe {
         let mut i: u32 = 0;
-        let mut dp: *mut u8 = (*jd).dptr;
+        let mut dp = (*jd).dptr;
         let mut dc: usize = (*jd).dctr;
         let mut marker: u16 = 0;
         if (*jd).marker != 0 {
@@ -529,20 +533,23 @@ unsafe fn restart(mut jd: *mut JDEC, mut rstn: u16) -> JRESULT {
             i = 0;
             while i < 2 {
                 if dc == 0 {
-                    dp = (*jd).inbuf;
-                    dc = ((*jd).infunc).expect("non-null function pointer")(jd, dp, 512);
+                    dp = 0;
+                    dc = ((*jd).infunc).expect("non-null function pointer")(
+                        jd,
+                        Some(unwrap!((*jd).inbuf.as_mut())),
+                        512,
+                    );
                     if dc == 0 {
                         return JDR_INP;
                     }
                 }
-                let fresh27 = dp;
-                dp = dp.offset(1);
-                marker = ((marker as i32) << 8 as i32 | *fresh27 as i32) as u16;
+                let fresh27 = unwrap!((*jd).inbuf.as_ref())[dp] as u32;
+                dp += 1;
+                marker = ((marker as i32) << 8 as i32 | fresh27 as i32) as u16;
                 dc = dc.wrapping_sub(1);
                 i = i.wrapping_add(1);
             }
-            let ref mut fresh28 = (*jd).dptr;
-            *fresh28 = dp;
+            (*jd).dptr = dp;
             (*jd).dctr = dc;
         }
         if marker as i32 & 0xffd8 != 0xffd0 || marker as i32 & 7 != rstn as i32 & 7 {
@@ -1046,13 +1053,12 @@ unsafe fn mcu_output(
 
 pub unsafe fn jd_prepare(
     mut jd: *mut JDEC,
-    mut infunc: Option<unsafe fn(*mut JDEC, *mut u8, usize) -> usize>,
+    mut infunc: Option<unsafe fn(*mut JDEC, Option<&mut &mut [u8]>, usize) -> usize>,
     mut pool: *mut cty::c_void,
     mut sz_pool: usize,
     mut dev: *mut cty::c_void,
 ) -> JRESULT {
     unsafe {
-        let mut seg: *mut u8 = 0 as *mut u8;
         let mut b: u8 = 0;
         let mut marker: u16 = 0;
         let mut n: u32 = 0;
@@ -1075,30 +1081,42 @@ pub unsafe fn jd_prepare(
         (*jd).dcv[2 as usize] = *fresh63;
         (*jd).rsc = 0;
         (*jd).rst = 0;
-        seg = alloc_pool(jd, 512) as *mut u8;
-        let ref mut fresh64 = (*jd).inbuf;
-        *fresh64 = seg;
-        if seg.is_null() {
+        let mem = alloc_pool_slice(jd, 512);
+        if mem.is_err() {
             return JDR_MEM1;
         }
+        (*jd).inbuf = Some(unwrap!(mem));
+
         marker = 0;
         ofs = marker as u32;
         loop {
-            if ((*jd).infunc).expect("non-null function pointer")(jd, seg, 1) != 1 {
+            if ((*jd).infunc).expect("non-null function pointer")(
+                jd,
+                Some(unwrap!((*jd).inbuf.as_mut())),
+                1,
+            ) != 1
+            {
                 return JDR_INP;
             }
             ofs = ofs.wrapping_add(1);
-            marker = ((marker as i32) << 8 | *seg.offset(0) as i32) as u16;
+            marker = ((marker as i32) << 8 | unwrap!((*jd).inbuf.as_ref())[0] as i32) as u16;
             if !(marker as i32 != 0xffd8) {
                 break;
             }
         }
         loop {
-            if ((*jd).infunc).expect("non-null function pointer")(jd, seg, 4) != 4 {
+            if ((*jd).infunc).expect("non-null function pointer")(
+                jd,
+                Some(unwrap!((*jd).inbuf.as_mut())),
+                4,
+            ) != 4
+            {
                 return JDR_INP;
             }
-            marker = ((*seg as i32) << 8 | *seg.offset(1) as i32) as u16;
-            len = ((*seg.offset(2) as i32) << 8 as i32 | *seg.offset(2).offset(1) as i32) as usize;
+            marker = ((unwrap!((*jd).inbuf.as_ref())[0] as i32) << 8
+                | unwrap!((*jd).inbuf.as_ref())[1] as i32) as u16;
+            len = ((unwrap!((*jd).inbuf.as_ref())[2] as i32) << 8
+                | unwrap!((*jd).inbuf.as_ref())[3] as i32) as usize;
             if len <= 2 || marker as i32 >> 8 != 0xff {
                 return JDR_FMT1;
             }
@@ -1106,33 +1124,35 @@ pub unsafe fn jd_prepare(
             ofs = (ofs as usize).wrapping_add(4 + len) as u32;
             's_526: {
                 let mut current_block_111: u64;
-                match marker as i32 & 0xff as i32 {
+                match marker as i32 & 0xff {
                     192 => {
                         if len > 512 {
                             return JDR_MEM2;
                         }
-                        if ((*jd).infunc).expect("non-null function pointer")(jd, seg, len) != len {
+                        if ((*jd).infunc).expect("non-null function pointer")(
+                            jd,
+                            Some(unwrap!((*jd).inbuf.as_mut())),
+                            len,
+                        ) != len
+                        {
                             return JDR_INP;
                         }
-                        (*jd).width = ((*(&mut *seg.offset(3) as *mut u8) as u16 as i32)
-                            << 8 as i32
-                            | *(&mut *seg.offset(3) as *mut u8).offset(1) as u16 as i32)
+                        (*jd).width = ((unwrap!((*jd).inbuf.as_ref())[3] as i32) << 8
+                            | unwrap!((*jd).inbuf.as_ref())[4] as i32)
                             as u16;
-                        (*jd).height = ((*(&mut *seg.offset(1) as *mut u8) as u16 as i32)
-                            << 8 as i32
-                            | *(&mut *seg.offset(1) as *mut u8).offset(1) as u16 as i32)
+                        (*jd).height = ((unwrap!((*jd).inbuf.as_ref())[1] as i32) << 8 as i32
+                            | unwrap!((*jd).inbuf.as_ref())[2] as i32)
                             as u16;
-                        (*jd).ncomp = *seg.offset(5);
-                        if (*jd).ncomp as i32 != 3 as i32 && (*jd).ncomp as i32 != 1 as i32 {
+                        (*jd).ncomp = unwrap!((*jd).inbuf.as_ref())[5];
+                        if (*jd).ncomp != 3 && (*jd).ncomp != 1 {
                             return JDR_FMT3;
                         }
                         i = 0;
                         while i < (*jd).ncomp as u32 {
-                            b = *seg.offset(
-                                (7 as u32).wrapping_add((3 as u32).wrapping_mul(i)) as isize
-                            );
+                            b = unwrap!((*jd).inbuf.as_ref())
+                                [(7 as u32).wrapping_add((3 as u32).wrapping_mul(i)) as usize];
                             if i == 0 {
-                                if b as i32 != 0x11 && b as i32 != 0x22 && b as i32 != 0x21 {
+                                if b != 0x11 && b != 0x22 && b != 0x21 {
                                     return JDR_FMT3;
                                 }
                                 (*jd).msx = (b as i32 >> 4) as u8;
@@ -1140,9 +1160,8 @@ pub unsafe fn jd_prepare(
                             } else if b as i32 != 0x11 {
                                 return JDR_FMT3;
                             }
-                            (*jd).qtid[i as usize] = *seg.offset(
-                                (8 as u32).wrapping_add((3 as u32).wrapping_mul(i)) as isize,
-                            );
+                            (*jd).qtid[i as usize] = unwrap!((*jd).inbuf.as_ref())
+                                [(8 as u32).wrapping_add((3 as u32).wrapping_mul(i)) as usize];
                             if (*jd).qtid[i as usize] as i32 > 3 {
                                 return JDR_FMT3;
                             }
@@ -1154,20 +1173,32 @@ pub unsafe fn jd_prepare(
                         if len > 512 {
                             return JDR_MEM2;
                         }
-                        if ((*jd).infunc).expect("non-null function pointer")(jd, seg, len) != len {
+                        if ((*jd).infunc).expect("non-null function pointer")(
+                            jd,
+                            Some(unwrap!((*jd).inbuf.as_mut())),
+                            len,
+                        ) != len
+                        {
                             return JDR_INP;
                         }
-                        (*jd).nrst = ((*seg as i32) << 8 | *seg.offset(1) as i32) as u16;
+                        (*jd).nrst = ((unwrap!((*jd).inbuf.as_ref())[0] as i32) << 8
+                            | unwrap!((*jd).inbuf.as_ref())[1] as i32)
+                            as u16;
                         current_block_111 = 5265702136860997526;
                     }
                     196 => {
                         if len > 512 {
                             return JDR_MEM2;
                         }
-                        if ((*jd).infunc).expect("non-null function pointer")(jd, seg, len) != len {
+                        if ((*jd).infunc).expect("non-null function pointer")(
+                            jd,
+                            Some(unwrap!((*jd).inbuf.as_mut())),
+                            len,
+                        ) != len
+                        {
                             return JDR_INP;
                         }
-                        rc = create_huffman_tbl(jd, seg, len);
+                        rc = create_huffman_tbl(jd, unwrap!((*jd).inbuf.as_ref()), len);
                         if rc as u64 != 0 {
                             return rc;
                         }
@@ -1177,10 +1208,15 @@ pub unsafe fn jd_prepare(
                         if len > 512 {
                             return JDR_MEM2;
                         }
-                        if ((*jd).infunc).expect("non-null function pointer")(jd, seg, len) != len {
+                        if ((*jd).infunc).expect("non-null function pointer")(
+                            jd,
+                            Some(unwrap!((*jd).inbuf.as_mut())),
+                            len,
+                        ) != len
+                        {
                             return JDR_INP;
                         }
-                        rc = create_qt_tbl(jd, seg, len);
+                        rc = create_qt_tbl(jd, unwrap!((*jd).inbuf.as_ref()), len);
                         if rc as u64 != 0 {
                             return rc;
                         }
@@ -1190,20 +1226,24 @@ pub unsafe fn jd_prepare(
                         if len > 512 {
                             return JDR_MEM2;
                         }
-                        if ((*jd).infunc).expect("non-null function pointer")(jd, seg, len) != len {
+                        if ((*jd).infunc).expect("non-null function pointer")(
+                            jd,
+                            Some(unwrap!((*jd).inbuf.as_mut())),
+                            len,
+                        ) != len
+                        {
                             return JDR_INP;
                         }
                         if (*jd).width == 0 || (*jd).height == 0 {
                             return JDR_FMT1;
                         }
-                        if *seg.offset(0) as i32 != (*jd).ncomp as i32 {
+                        if unwrap!((*jd).inbuf.as_ref())[0] as i32 != (*jd).ncomp as i32 {
                             return JDR_FMT3;
                         }
                         i = 0;
                         while i < (*jd).ncomp as u32 {
-                            b = *seg.offset(
-                                (2 as u32).wrapping_add((2 as u32).wrapping_mul(i)) as isize
-                            );
+                            b = unwrap!((*jd).inbuf.as_ref())
+                                [(2 as u32).wrapping_add((2 as u32).wrapping_mul(i)) as usize];
                             if b != 0 && b != 0x11 {
                                 return JDR_FMT3;
                             }
@@ -1242,14 +1282,11 @@ pub unsafe fn jd_prepare(
                         if ofs != 0 {
                             (*jd).dctr = ((*jd).infunc).expect("non-null function pointer")(
                                 jd,
-                                seg.offset(ofs as isize),
+                                Some(&mut &mut unwrap!((*jd).inbuf.as_mut())[(ofs as usize)..]),
                                 (512 as u32).wrapping_sub(ofs) as usize,
                             );
                         }
-                        let ref mut fresh67 = (*jd).dptr;
-                        *fresh67 = seg
-                            .offset(ofs as isize)
-                            .offset(-(if 2 != 0 { 0 } else { 1 }));
+                        (*jd).dptr = (ofs - (if 2 != 0 { 0 } else { 1 })) as usize;
                         return JDR_OK;
                     }
                     193 => {
@@ -1289,8 +1326,7 @@ pub unsafe fn jd_prepare(
                         current_block_111 = 13359995684220628626;
                     }
                     _ => {
-                        if ((*jd).infunc).expect("non-null function pointer")(jd, 0 as *mut u8, len)
-                            != len
+                        if ((*jd).infunc).expect("non-null function pointer")(jd, None, len) != len
                         {
                             return JDR_INP;
                         }

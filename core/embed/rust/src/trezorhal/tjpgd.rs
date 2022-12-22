@@ -30,12 +30,10 @@ pub struct JpegContext<'a> {
     buffer: &'a mut [u16],
 }
 
-unsafe fn jpeg_in_buffer(jd: *mut JDEC, buff: *mut u8, n_data: usize) -> usize {
+unsafe fn jpeg_in_buffer(jd: *mut JDEC, buff: Option<&mut &mut [u8]>, n_data: usize) -> usize {
     let context = unsafe { NonNull::new_unchecked((*jd).device as *mut JpegContext).as_mut() };
     let n_data = n_data as usize;
-    if !buff.is_null() {
-        let buff = unsafe { slice::from_raw_parts_mut(buff, n_data) };
-
+    if let Some(buff) = buff {
         if (context.data_read + n_data) <= context.data_len {
             let _ = &buff[0..n_data]
                 .copy_from_slice(&context.data[context.data_read..context.data_read + n_data]);
