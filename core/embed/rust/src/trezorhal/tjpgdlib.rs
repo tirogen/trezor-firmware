@@ -26,16 +26,14 @@ pub const JDR_MEM1: JRESULT = 3;
 pub const JDR_INP: JRESULT = 2;
 pub const JDR_INTR: JRESULT = 1;
 pub const JDR_OK: JRESULT = 0;
-#[derive(Copy, Clone)]
-#[repr(C)]
+
 pub struct JRECT {
     pub left: u16,
     pub right: u16,
     pub top: u16,
     pub bottom: u16,
 }
-#[derive(Copy, Clone)]
-#[repr(C)]
+
 pub struct JDEC {
     pub dctr: usize,
     pub dptr: *mut u8,
@@ -59,8 +57,8 @@ pub struct JDEC {
     pub wreg: u32,
     pub marker: u8,
     pub longofs: [[u8; 2]; 2],
-    pub hufflut_ac: [*mut u16; 2],
-    pub hufflut_dc: [*mut u8; 2],
+    pub hufflut_ac: [Option<&'static mut [u16]>; 2],
+    pub hufflut_dc: [Option<&'static mut [u8]>; 2],
     pub workbuf: *mut cty::c_void,
     pub mcubuf: *mut i16,
     pub pool: *mut cty::c_void,
@@ -165,17 +163,18 @@ unsafe fn alloc_pool(mut jd: *mut JDEC, mut ndata: usize) -> *mut cty::c_void {
     }
 }
 
-unsafe fn alloc_pool_u8(mut jd: *mut JDEC, mut ndata: usize) -> Result<&'static mut [u8], ()> {
+unsafe fn alloc_pool_slice<T>(mut jd: *mut JDEC, mut ndata: usize) -> Result<&'static mut [T], ()> {
     unsafe {
         let mut rp: *mut cty::c_char = 0 as *mut cty::c_char;
-        let ndata_aligned = (ndata + 3) & !3;
+        let ndata_bytes = ndata * core::mem::size_of::<T>();
+        let ndata_aligned = (ndata_bytes + 3) & !3;
         if (*jd).sz_pool >= ndata_aligned {
             let ref mut fresh0 = (*jd).sz_pool;
             *fresh0 = *fresh0 - ndata_aligned;
             rp = (*jd).pool as *mut cty::c_char;
             let ref mut fresh1 = (*jd).pool;
             *fresh1 = rp.offset(ndata_aligned as isize) as *mut cty::c_void;
-            return Ok(slice::from_raw_parts_mut(rp as *mut u8, ndata));
+            return Ok(slice::from_raw_parts_mut(rp as *mut T, ndata));
         }
         Err(())
     }
@@ -311,34 +310,20 @@ unsafe fn create_huffman_tbl(mut jd: *mut JDEC, mut data: *const u8, mut ndata: 
             let mut span: u32 = 0;
             let mut td: u32 = 0;
             let mut ti: u32 = 0;
-            let mut tbl_ac: *mut u16 = 0 as *mut u16;
-            let mut tbl_dc: *mut u8 = 0 as *mut u8;
             if cls != 0 {
-                tbl_ac = alloc_pool(jd, (1 << 10) * ::core::mem::size_of::<u16>()) as *mut u16;
-                if tbl_ac.is_null() {
+                let tbl_ac = alloc_pool_slice(jd, 1 << HUFF_BIT);
+                if tbl_ac.is_err() {
                     return JDR_MEM1;
                 }
-                let ref mut fresh15 = (*jd).hufflut_ac[num as usize];
-                *fresh15 = tbl_ac;
-                memset(
-                    tbl_ac as *mut cty::c_void,
-                    0xff,
-                    ((1 << HUFF_BIT) as cty::c_ulong)
-                        .wrapping_mul(::core::mem::size_of::<u16>() as cty::c_ulong),
-                );
+                (*jd).hufflut_ac[num as usize] = Some(unwrap!(tbl_ac));
+                unwrap!((*jd).hufflut_ac[num as usize].as_mut()).fill(0xffff);
             } else {
-                tbl_dc = alloc_pool(jd, (1 << HUFF_BIT) * ::core::mem::size_of::<u8>()) as *mut u8;
-                if tbl_dc.is_null() {
+                let tbl_dc = alloc_pool_slice(jd, 1 << HUFF_BIT);
+                if tbl_dc.is_err() {
                     return JDR_MEM1;
                 }
-                let ref mut fresh16 = (*jd).hufflut_dc[num as usize];
-                *fresh16 = tbl_dc;
-                memset(
-                    tbl_dc as *mut cty::c_void,
-                    0xff,
-                    ((1 << HUFF_BIT) as cty::c_ulong)
-                        .wrapping_mul(::core::mem::size_of::<u8>() as cty::c_ulong),
-                );
+                (*jd).hufflut_dc[num as usize] = Some(unwrap!(tbl_dc));
+                unwrap!((*jd).hufflut_dc[num as usize].as_mut()).fill(0xff);
             }
             b = 0;
             i = b;
@@ -357,7 +342,8 @@ unsafe fn create_huffman_tbl(mut jd: *mut JDEC, mut data: *const u8, mut ndata: 
                             span = span.wrapping_sub(1);
                             let fresh18 = ti;
                             ti = ti.wrapping_add(1);
-                            *tbl_ac.offset(fresh18 as isize) = td as u16;
+                            unwrap!((*jd).hufflut_ac[num as usize].as_mut())[fresh18 as usize] =
+                                td as u16;
                         }
                     } else {
                         let fresh19 = i;
@@ -368,7 +354,8 @@ unsafe fn create_huffman_tbl(mut jd: *mut JDEC, mut data: *const u8, mut ndata: 
                             span = span.wrapping_sub(1);
                             let fresh20 = ti;
                             ti = ti.wrapping_add(1);
-                            *tbl_dc.offset(fresh20 as isize) = td as u8;
+                            unwrap!((*jd).hufflut_dc[num as usize].as_mut())[fresh20 as usize] =
+                                td as u8;
                         }
                     }
                     j = j.wrapping_sub(1);
@@ -430,13 +417,13 @@ unsafe fn huffext(mut jd: *mut JDEC, mut id: u32, mut cls: u32) -> i32 {
         (*jd).wreg = w;
         d = w >> wbit.wrapping_sub(HUFF_BIT);
         if cls != 0 {
-            d = *((*jd).hufflut_ac[id as usize]).offset(d as isize) as u32;
+            d = unwrap!((*jd).hufflut_ac[id as usize].as_ref())[d as usize] as u32;
             if d != 0xffff {
                 (*jd).dbit = wbit.wrapping_sub(d >> 8) as u8;
                 return (d & 0xff) as i32;
             }
         } else {
-            d = *((*jd).hufflut_dc[id as usize]).offset(d as isize) as u32;
+            d = unwrap!((*jd).hufflut_dc[id as usize].as_ref())[d as usize] as u32;
             if d != 0xff {
                 (*jd).dbit = wbit.wrapping_sub(d >> 4) as u8;
                 return (d & 0xf) as i32;
