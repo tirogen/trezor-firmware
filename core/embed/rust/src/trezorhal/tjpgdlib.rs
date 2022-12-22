@@ -51,7 +51,7 @@ pub struct JDEC {
     pub width: u16,
     pub height: u16,
     pub huffbits: [[Option<&'static mut [u8]>; 2]; 2],
-    pub huffcode: [[*mut u16; 2]; 2],
+    pub huffcode: [[Option<&'static mut [u16]>; 2]; 2],
     pub huffdata: [[*mut u8; 2]; 2],
     pub qttbl: [Option<&'static mut [i32]>; 4],
     pub wreg: u32,
@@ -229,7 +229,6 @@ unsafe fn create_huffman_tbl(mut jd: *mut JDEC, mut data: *const u8, mut ndata: 
         let mut d: u8 = 0;
         let mut pd: *mut u8 = 0 as *mut u8;
         let mut hc: u16 = 0;
-        let mut ph: *mut u16 = 0 as *mut u16;
         while ndata != 0 {
             if ndata < 17 {
                 return JDR_FMT1;
@@ -258,12 +257,12 @@ unsafe fn create_huffman_tbl(mut jd: *mut JDEC, mut data: *const u8, mut ndata: 
                 np = (np as cty::c_ulong).wrapping_add(*fresh7 as cty::c_ulong) as usize;
                 i = i.wrapping_add(1);
             }
-            ph = alloc_pool(jd, np * core::mem::size_of::<u16>()) as *mut u16;
-            if ph.is_null() {
+            let mem = alloc_pool_slice(jd, np);
+            if mem.is_err() {
                 return JDR_MEM1;
             }
-            let ref mut fresh9 = (*jd).huffcode[num as usize][cls as usize];
-            *fresh9 = ph;
+            (*jd).huffcode[num as usize][cls as usize] = Some(unwrap!(mem));
+
             hc = 0;
             i = 0;
             j = i;
@@ -279,7 +278,8 @@ unsafe fn create_huffman_tbl(mut jd: *mut JDEC, mut data: *const u8, mut ndata: 
                     hc = hc.wrapping_add(1);
                     let fresh12 = j;
                     j = j.wrapping_add(1);
-                    *ph.offset(fresh12 as isize) = fresh11;
+                    unwrap!((*jd).huffcode[num as usize][cls as usize].as_mut())
+                        [fresh12 as usize] = fresh11;
                 }
                 hc = ((hc as i32) << 1) as u16;
                 i = i.wrapping_add(1);
@@ -299,7 +299,7 @@ unsafe fn create_huffman_tbl(mut jd: *mut JDEC, mut data: *const u8, mut ndata: 
                 let fresh14 = data;
                 data = data.offset(1);
                 d = *fresh14;
-                if cls == 0 && d as i32 > 11 as i32 {
+                if cls == 0 && d > 11 {
                     return JDR_FMT1;
                 }
                 *pd.offset(i as isize) = d;
@@ -328,9 +328,10 @@ unsafe fn create_huffman_tbl(mut jd: *mut JDEC, mut data: *const u8, mut ndata: 
             while b < HUFF_BIT {
                 j = unwrap!((*jd).huffbits[num as usize][cls as usize].as_ref())[b as usize] as u32;
                 while j != 0 {
-                    ti = ((*ph.offset(i as isize) as i32)
+                    ti = (unwrap!((*jd).huffcode[num as usize][cls as usize].as_ref())[i as usize]
                         << ((HUFF_BIT - 1) as u32).wrapping_sub(b)
-                        & (1 << HUFF_BIT) - 1 as i32) as u32;
+                        & (1 << HUFF_BIT) - 1) as u32;
+
                     if cls != 0 {
                         let fresh17 = i;
                         i = i.wrapping_add(1);
@@ -372,7 +373,6 @@ unsafe fn huffext(mut jd: *mut JDEC, mut id: u32, mut cls: u32) -> i32 {
         let mut d: u32 = 0;
         let mut flg: u32 = 0;
         let mut hd: *const u8 = 0 as *const u8;
-        let mut hc: *const u16 = 0 as *const u16;
         let mut nc: u32 = 0;
         let mut bl: u32 = 0;
         let mut wbit: u32 = ((*jd).dbit as i32 % 32) as u32;
@@ -427,9 +427,10 @@ unsafe fn huffext(mut jd: *mut JDEC, mut id: u32, mut cls: u32) -> i32 {
             }
         }
         let mut hb_idx = 0;
+        let mut hc_idx = 0;
 
-        hc = ((*jd).huffcode[id as usize][cls as usize])
-            .offset((*jd).longofs[id as usize][cls as usize] as isize);
+        // hc = ((*jd).huffcode[id as usize][cls as usize])
+        //     .offset((*jd).longofs[id as usize][cls as usize] as isize);
         hd = ((*jd).huffdata[id as usize][cls as usize])
             .offset((*jd).longofs[id as usize][cls as usize] as isize);
         bl = (HUFF_BIT + 1) as u32;
@@ -440,9 +441,10 @@ unsafe fn huffext(mut jd: *mut JDEC, mut id: u32, mut cls: u32) -> i32 {
             if nc != 0 {
                 d = w >> wbit.wrapping_sub(bl);
                 loop {
-                    let fresh24 = hc;
-                    hc = hc.offset(1);
-                    if d == *fresh24 as u32 {
+                    let fresh24 = unwrap!((*jd).huffcode[id as usize][cls as usize].as_ref())
+                        [hc_idx + (*jd).longofs[id as usize][cls as usize] as usize];
+                    hc_idx += 1;
+                    if d == fresh24 as u32 {
                         (*jd).dbit = wbit.wrapping_sub(bl) as u8;
                         return *hd as i32;
                     }
@@ -455,7 +457,7 @@ unsafe fn huffext(mut jd: *mut JDEC, mut id: u32, mut cls: u32) -> i32 {
             }
             bl = bl.wrapping_add(1);
         }
-        return 0 as i32 - JDR_FMT1 as i32;
+        return 0 - JDR_FMT1 as i32;
     }
 }
 unsafe fn bitext(mut jd: *mut JDEC, mut nbit: u32) -> i32 {
