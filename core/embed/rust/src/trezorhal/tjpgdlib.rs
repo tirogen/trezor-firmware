@@ -1,11 +1,8 @@
 #![allow(
     dead_code,
-    mutable_transmutes,
     non_camel_case_types,
     non_snake_case,
-    non_upper_case_globals,
-    unused_assignments,
-    unused_mut
+    non_upper_case_globals
 )]
 
 use core::{mem, ptr::NonNull, slice};
@@ -148,7 +145,7 @@ static Ipsf: [u16; 64] = [
     (0.07612f64 * 8192_f64) as u16,
 ];
 
-fn BYTECLIP(mut val: i32) -> u8 {
+fn BYTECLIP(val: i32) -> u8 {
     if val < 0 {
         return 0;
     }
@@ -158,7 +155,7 @@ fn BYTECLIP(mut val: i32) -> u8 {
     return val as u8;
 }
 
-unsafe fn alloc_pool_slice<T>(mut jd: &mut JDEC, mut ndata: usize) -> Result<&'static mut [T], ()> {
+unsafe fn alloc_pool_slice<T>(mut jd: &mut JDEC, ndata: usize) -> Result<&'static mut [T], ()> {
     unsafe {
         let ndata_bytes = ndata * mem::size_of::<T>();
         let ndata_aligned = (ndata_bytes + 3) & !3;
@@ -174,17 +171,10 @@ unsafe fn alloc_pool_slice<T>(mut jd: &mut JDEC, mut ndata: usize) -> Result<&'s
     }
 }
 
-// unsafe fn i32_slice_to_u8(data: &'static mut [i32]) -> &'static mut [u8] {
-//     let len = data.len() * 4;
-//     let ptr = data.as_mut_ptr() as *mut u8;
-//     mem::forget(data);
-//     unsafe { slice::from_raw_parts_mut(ptr, len) }
-// }
-
 fn create_qt_tbl(mut jd: &mut JDEC, mut ndata: usize) -> JRESULT {
-    let mut i: u32 = 0;
-    let mut zi: u32 = 0;
-    let mut d: u8 = 0;
+    let mut i: u32;
+    let mut zi: u32;
+    let mut d: u8;
     let mut data_idx = 0;
     while ndata != 0 {
         if ndata < 65 {
@@ -220,14 +210,14 @@ fn create_qt_tbl(mut jd: &mut JDEC, mut ndata: usize) -> JRESULT {
     return JDR_OK;
 }
 fn create_huffman_tbl(mut jd: &mut JDEC, mut ndata: usize) -> JRESULT {
-    let mut i: u32 = 0;
-    let mut j: u32 = 0;
-    let mut b: u32 = 0;
-    let mut cls: u32 = 0;
-    let mut num: u32 = 0;
-    let mut np: usize = 0;
-    let mut d: u8 = 0;
-    let mut hc: u16 = 0;
+    let mut i: u32;
+    let mut j: u32;
+    let mut b: u32;
+    let mut cls: u32;
+    let mut num: u32;
+    let mut np: usize;
+    let mut d: u8;
+    let mut hc: u16;
     let mut data_idx = 0;
     while ndata != 0 {
         if ndata < 17 {
@@ -304,9 +294,9 @@ fn create_huffman_tbl(mut jd: &mut JDEC, mut ndata: usize) -> JRESULT {
             unwrap!(jd.huffdata[num as usize][cls as usize].as_mut())[i as usize] = d;
             i += 1;
         }
-        let mut span: u32 = 0;
-        let mut td: u32 = 0;
-        let mut ti: u32 = 0;
+        let mut span: u32;
+        let mut td: u32;
+        let mut ti: u32;
         if cls != 0 {
             let tbl_ac = unsafe { alloc_pool_slice(jd, 1 << HUFF_BIT) };
             if tbl_ac.is_err() {
@@ -364,13 +354,13 @@ fn create_huffman_tbl(mut jd: &mut JDEC, mut ndata: usize) -> JRESULT {
     }
     return JDR_OK;
 }
-fn huffext(mut jd: &mut JDEC, mut id: u32, mut cls: u32) -> i32 {
+fn huffext(mut jd: &mut JDEC, id: u32, cls: u32) -> i32 {
     let mut dc: usize = jd.dctr;
     let mut dp: usize = jd.dptr;
-    let mut d: u32 = 0;
+    let mut d: u32;
     let mut flg: u32 = 0;
-    let mut nc: u32 = 0;
-    let mut bl: u32 = 0;
+    let mut nc: u32;
+    let mut bl: u32;
     let mut wbit: u32 = (jd.dbit as i32 % 32) as u32;
     let mut w: u32 = (jd.wreg as cty::c_ulong
         & ((1 as cty::c_ulong) << wbit).wrapping_sub(1 as i32 as cty::c_ulong))
@@ -454,10 +444,10 @@ fn huffext(mut jd: &mut JDEC, mut id: u32, mut cls: u32) -> i32 {
     }
     return 0 - JDR_FMT1 as i32;
 }
-fn bitext(mut jd: &mut JDEC, mut nbit: u32) -> i32 {
+fn bitext(mut jd: &mut JDEC, nbit: u32) -> i32 {
     let mut dc: usize = jd.dctr;
     let mut dp: usize = jd.dptr;
-    let mut d: u32 = 0;
+    let mut d: u32;
     let mut flg: u32 = 0;
     let mut wbit: u32 = (jd.dbit as i32 % 32 as i32) as u32;
     let mut w: u32 = (jd.wreg as cty::c_ulong
@@ -498,13 +488,13 @@ fn bitext(mut jd: &mut JDEC, mut nbit: u32) -> i32 {
 
     return (w >> wbit.wrapping_sub(nbit).wrapping_rem(32)) as i32;
 }
-fn restart(mut jd: &mut JDEC, mut rstn: u16) -> JRESULT {
-    let mut i: u32 = 0;
+fn restart(mut jd: &mut JDEC, rstn: u16) -> JRESULT {
+    let mut i: u32;
     let mut dp = jd.dptr;
     let mut dc: usize = jd.dctr;
-    let mut marker: u16 = 0;
+    let mut marker: u16;
     if jd.marker != 0 {
-        marker = (0xff00 as i32 | jd.marker as i32) as u16;
+        marker = (0xff00 | jd.marker as i32) as u16;
         jd.marker = 0;
     } else {
         marker = 0;
@@ -535,27 +525,26 @@ fn restart(mut jd: &mut JDEC, mut rstn: u16) -> JRESULT {
     jd.dcv[2] = 0;
     return JDR_OK;
 }
-fn block_idct(src: &mut &mut [i32], mut dst: &mut [i16]) {
+fn block_idct(src: &mut &mut [i32], dst: &mut [i16]) {
     let M13: i32 = (1.41421f64 * 4096_f64) as i32;
     let M2: i32 = (1.08239f64 * 4096_f64) as i32;
     let M4: i32 = (2.61313f64 * 4096_f64) as i32;
     let M5: i32 = (1.84776f64 * 4096_f64) as i32;
-    let mut v0: i32 = 0;
-    let mut v1: i32 = 0;
-    let mut v2: i32 = 0;
-    let mut v3: i32 = 0;
-    let mut v4: i32 = 0;
-    let mut v5: i32 = 0;
-    let mut v6: i32 = 0;
-    let mut v7: i32 = 0;
-    let mut t10: i32 = 0;
-    let mut t11: i32 = 0;
-    let mut t12: i32 = 0;
-    let mut t13: i32 = 0;
-    let mut i: i32 = 0;
+    let mut v0: i32;
+    let mut v1: i32;
+    let mut v2: i32;
+    let mut v3: i32;
+    let mut v4: i32;
+    let mut v5: i32;
+    let mut v6: i32;
+    let mut v7: i32;
+    let mut t10: i32;
+    let mut t11: i32;
+    let mut t12: i32;
+    let mut t13: i32;
     let mut dst_idx = 0;
     let mut src_idx = 0;
-    i = 0;
+    let mut i = 0;
     while i < 8 {
         v0 = src[src_idx + 8 * 0];
         v1 = src[src_idx + 8 * 2];
@@ -642,16 +631,15 @@ fn block_idct(src: &mut &mut [i32], mut dst: &mut [i16]) {
 }
 
 fn mcu_load(mut jd: &mut JDEC) -> JRESULT {
-    let mut d: i32 = 0;
-    let mut e: i32 = 0;
-    let mut blk: u32 = 0;
-    let mut nby: u32 = 0;
-    let mut i: u32 = 0;
-    let mut bc: u32 = 0;
-    let mut z: u32 = 0;
-    let mut id: u32 = 0;
-    let mut cmp: u32 = 0;
-    nby = (jd.msx as i32 * jd.msy as i32) as u32;
+    let mut d: i32;
+    let mut e: i32;
+    let mut blk: u32;
+    let mut i: u32;
+    let mut bc: u32;
+    let mut z: u32;
+    let mut id: u32;
+    let mut cmp: u32;
+    let nby = (jd.msx as i32 * jd.msy as i32) as u32;
     let mut mcu_buf_idx = 0;
     blk = 0;
     while blk < nby.wrapping_add(2) {
@@ -748,23 +736,20 @@ fn mcu_load(mut jd: &mut JDEC) -> JRESULT {
     }
     return JDR_OK;
 }
-fn mcu_output(mut jd: &mut JDEC, mut x: u32, mut y: u32) -> JRESULT {
+fn mcu_output(jd: &mut JDEC, x: u32, y: u32) -> JRESULT {
     let CVACC: i32 = if ::core::mem::size_of::<i32>() as cty::c_ulong > 2 as i32 as cty::c_ulong {
         1024
     } else {
         128
     };
-    let mut ix: u32 = 0;
-    let mut iy: u32 = 0;
-    let mut mx: u32 = 0;
-    let mut my: u32 = 0;
-    let mut rx: u32 = 0;
-    let mut ry: u32 = 0;
-    let mut yy: i32 = 0;
-    let mut cb: i32 = 0;
-    let mut cr: i32 = 0;
-    let mut py_idx: usize = 0;
-    let mut pc_idx: usize = 0;
+    let mut ix: u32;
+    let mut iy: u32;
+    let mut mx: u32;
+    let mut yy: i32;
+    let mut cb: i32;
+    let mut cr: i32;
+    let mut py_idx: usize;
+    let mut pc_idx: usize;
     let mut rect: JRECT = JRECT {
         left: 0,
         right: 0,
@@ -772,13 +757,13 @@ fn mcu_output(mut jd: &mut JDEC, mut x: u32, mut y: u32) -> JRESULT {
         bottom: 0,
     };
     mx = (jd.msx as i32 * 8) as u32;
-    my = (jd.msy as i32 * 8) as u32;
-    rx = if x.wrapping_add(mx) <= jd.width as u32 {
+    let my = (jd.msy as i32 * 8) as u32;
+    let rx = if x.wrapping_add(mx) <= jd.width as u32 {
         mx
     } else {
         (jd.width as u32).wrapping_sub(x)
     };
-    ry = if y.wrapping_add(my) <= jd.height as u32 {
+    let ry = if y.wrapping_add(my) <= jd.height as u32 {
         my
     } else {
         (jd.height as u32).wrapping_sub(y)
@@ -793,7 +778,7 @@ fn mcu_output(mut jd: &mut JDEC, mut x: u32, mut y: u32) -> JRESULT {
     let workbuf = unsafe { slice::from_raw_parts_mut(ptr, len) };
 
     let mut pix_idx: usize = 0;
-    let mut op_idx: usize = 0;
+    let mut op_idx: usize;
 
     if 0 == 0 || jd.scale != 3 {
         if 1 != 2 {
@@ -864,17 +849,14 @@ fn mcu_output(mut jd: &mut JDEC, mut x: u32, mut y: u32) -> JRESULT {
             }
         }
         if 0 != 0 && jd.scale != 0 {
-            let mut x_0: u32 = 0;
-            let mut y_0: u32 = 0;
-            let mut r: u32 = 0;
-            let mut g: u32 = 0;
-            let mut b: u32 = 0;
-            let mut s: u32 = 0;
-            let mut w: u32 = 0;
-            let mut a: u32 = 0;
-            s = (jd.scale as i32 * 2) as u32;
-            w = ((1 as i32) << jd.scale as i32) as u32;
-            a = mx.wrapping_sub(w).wrapping_mul(if 1 != 2 { 3 } else { 1 });
+            let mut x_0: u32;
+            let mut y_0: u32;
+            let mut r: u32;
+            let mut g: u32;
+            let mut b: u32;
+            let s = (jd.scale as i32 * 2) as u32;
+            let w = ((1 as i32) << jd.scale as i32) as u32;
+            let a = mx.wrapping_sub(w).wrapping_mul(if 1 != 2 { 3 } else { 1 });
             op_idx = 0;
             iy = 0;
             while iy < my {
@@ -953,8 +935,8 @@ fn mcu_output(mut jd: &mut JDEC, mut x: u32, mut y: u32) -> JRESULT {
     if rx < mx {
         let mut s_0_idx = 0;
         let mut d_idx = 0;
-        let mut x_1: u32 = 0;
-        let mut y_1: u32 = 0;
+        let mut x_1: u32;
+        let mut y_1: u32;
         y_1 = 0;
         while y_1 < ry {
             x_1 = 0;
@@ -980,7 +962,7 @@ fn mcu_output(mut jd: &mut JDEC, mut x: u32, mut y: u32) -> JRESULT {
     if JD_FORMAT == 1 {
         let mut s_1_idx = 0;
         let mut d_0_idx = 0;
-        let mut w_0: u16 = 0;
+        let mut w_0: u16;
         let mut n: u32 = rx.wrapping_mul(ry);
         loop {
             w_0 = ((workbuf[s_1_idx] as i32 & 0xf8) << 8) as u16;
@@ -1007,18 +989,14 @@ fn mcu_output(mut jd: &mut JDEC, mut x: u32, mut y: u32) -> JRESULT {
     }) as JRESULT;
 }
 
-pub fn jd_prepare(
-    mut jd: &mut JDEC,
-    mut pool: &'static mut [u8],
-    mut dev: *mut cty::c_void,
-) -> JRESULT {
-    let mut b: u8 = 0;
-    let mut marker: u16 = 0;
-    let mut n: u32 = 0;
-    let mut i: u32 = 0;
-    let mut ofs: u32 = 0;
-    let mut len: usize = 0;
-    let mut rc: JRESULT = JDR_OK;
+pub fn jd_prepare(mut jd: &mut JDEC, pool: &'static mut [u8], dev: *mut cty::c_void) -> JRESULT {
+    let mut b: u8;
+    let mut marker: u16;
+    let mut n: u32;
+    let mut i: u32;
+    let mut ofs: u32;
+    let mut len: usize;
+    let mut rc: JRESULT;
 
     jd.sz_pool = pool.len();
     jd.pool = Some(pool);
@@ -1300,22 +1278,17 @@ pub fn jd_prepare(
     }
 }
 
-pub fn jd_decomp(mut jd: &mut JDEC, mut scale: u8) -> JRESULT {
-    let mut x: u32 = 0;
-    let mut y: u32 = 0;
-    let mut mx: u32 = 0;
-    let mut my: u32 = 0;
-    let mut rc: JRESULT = JDR_OK;
+pub fn jd_decomp(mut jd: &mut JDEC, scale: u8) -> JRESULT {
     if scale > (if 0 != 0 { 3 } else { 0 }) {
         return JDR_PAR;
     }
     jd.scale = scale;
-    mx = (jd.msx as i32 * 8 as i32) as u32;
-    my = (jd.msy as i32 * 8 as i32) as u32;
-    rc = JDR_OK;
-    y = 0;
+    let mx = (jd.msx as i32 * 8) as u32;
+    let my = (jd.msy as i32 * 8) as u32;
+    let mut rc = JDR_OK;
+    let mut y = 0;
     while y < jd.height as u32 {
-        x = 0;
+        let mut x = 0;
         while x < jd.width as u32 {
             if jd.nrst as i32 != 0 && {
                 let ref mut fresh68 = jd.rst;
