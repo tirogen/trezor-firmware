@@ -20,7 +20,6 @@ pub mod buffers;
 #[cfg(not(feature = "micropython"))]
 pub mod time;
 pub mod time_measurements;
-pub mod tjpgdlib;
 
 #[cfg(feature = "micropython")]
 pub use crate::micropython::time;

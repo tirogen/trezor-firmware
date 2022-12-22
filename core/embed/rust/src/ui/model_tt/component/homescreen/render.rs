@@ -8,7 +8,6 @@ use crate::{
         buffers::{get_blurring_buffer, get_jpeg_buffer, BufferJpeg},
         display,
         display::{bar_radius_buffer, ToifFormat},
-        tjpgdlib::{jd_decomp, jd_init, jd_prepare, JDEC},
         uzlib::UzlibContext,
     },
     ui::{
@@ -25,6 +24,7 @@ use crate::ui::{
     model_tt::theme,
     util::icon_text_center,
 };
+use crate::ui::display::tjpgd::{jd_decomp, jd_init, jd_prepare, JDEC};
 
 #[derive(Clone, Copy)]
 pub struct HomescreenText<'a> {

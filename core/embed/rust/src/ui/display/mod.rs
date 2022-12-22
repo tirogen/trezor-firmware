@@ -1,5 +1,6 @@
 #[cfg(any(feature = "model_tt", feature = "model_tr"))]
 pub mod loader;
+pub mod tjpgd;
 
 use super::{
     constant,
@@ -19,7 +20,7 @@ use crate::{
     trezorhal::{
         display,
         display::ToifFormat,
-        qr, time, tjpgdlib,
+        qr, time,
         uzlib::{UzlibContext, UZLIB_WINDOW_SIZE},
     },
     ui::lerp::Lerp,
@@ -153,7 +154,7 @@ pub fn image(center: Point, data: &[u8]) {
 }
 
 pub fn jpeg_info(data: &[u8]) -> Option<(Offset, u16)> {
-    if let Ok(info) = tjpgdlib::jpeg_info(data) {
+    if let Ok(info) = tjpgd::jpeg_info(data) {
         Some((
             Offset::new(
                 unwrap!(info.width.try_into()),
