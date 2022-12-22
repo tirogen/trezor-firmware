@@ -5,7 +5,7 @@
     non_upper_case_globals
 )]
 
-use crate::trezorhal::buffers::{get_jpeg_work_buffer, BufferJpeg};
+use crate::trezorhal::buffers::{get_jpeg_work_buffer, BufferJpeg, get_jpeg_buffer};
 use core::{mem, slice};
 
 const JD_FORMAT: u32 = 1;
@@ -70,6 +70,12 @@ pub struct JDEC<'a> {
     current_line_pix: i16,
     data: &'a [u8],
     pub buffer: &'static mut BufferJpeg,
+}
+
+pub struct JpegInfo {
+    pub width: u16,
+    pub height: u16,
+    pub mcu_height: u16,
 }
 
 static Zig: [u8; 64] = [
@@ -1417,4 +1423,22 @@ fn jpeg_out_buffer(jd: &mut JDEC, rect: &mut JRECT) -> i32 {
     }
 
     1
+}
+
+pub fn jpeg_info(data: &[u8]) -> Result<JpegInfo, ()> {
+    let work_buffer = unsafe { get_jpeg_buffer(0, true) };
+    let mut jd: JDEC = jd_init(data, work_buffer, 0);
+    let res = jd_prepare(&mut jd);
+
+    let info = JpegInfo {
+        width: jd.width,
+        height: jd.height,
+        mcu_height: (jd.msy * 8) as u16,
+    };
+
+    if info.mcu_height > 16 || res != JDR_OK {
+        return Err(());
+    }
+
+    Ok(info)
 }
