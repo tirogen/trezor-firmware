@@ -5,7 +5,8 @@
     non_upper_case_globals
 )]
 
-use core::{mem, ptr::NonNull, slice};
+use crate::trezorhal::buffers::{get_jpeg_work_buffer, BufferJpeg};
+use core::{mem, mem::MaybeUninit, slice};
 
 const JD_FORMAT: u32 = 1;
 
@@ -29,7 +30,7 @@ pub struct JRECT {
     pub bottom: u16,
 }
 
-pub struct JDEC {
+pub struct JDEC<'a> {
     pub dctr: usize,
     pub dptr: usize,
     pub inbuf: Option<&'static mut [u8]>,
@@ -59,10 +60,8 @@ pub struct JDEC {
     pub pool: Option<&'static mut [u8]>,
     pub sz_pool: usize,
     pub pool_start: usize,
-    pub device: *mut cty::c_void,
-}
 
-pub struct JpegContext<'a> {
+    // context
     data_read: usize,
     data_len: usize,
     buffer_width: i16,
@@ -70,7 +69,13 @@ pub struct JpegContext<'a> {
     current_line: i16,
     current_line_pix: i16,
     data: &'a [u8],
-    buffer: &'a mut [u16],
+    pub buffer: &'static mut BufferJpeg,
+}
+
+impl<'a> Default for JDEC<'a> {
+    fn default() -> Self {
+        unsafe { MaybeUninit::<Self>::zeroed().assume_init() }
+    }
 }
 
 static Zig: [u8; 64] = [
@@ -989,7 +994,12 @@ fn mcu_output(jd: &mut JDEC, x: u32, y: u32) -> JRESULT {
     }) as JRESULT;
 }
 
-pub fn jd_prepare(mut jd: &mut JDEC, pool: &'static mut [u8], dev: *mut cty::c_void) -> JRESULT {
+pub fn jd_prepare<'a>(
+    mut jd: &mut JDEC<'a>,
+    data: &'a [u8],
+    buffer: &'static mut BufferJpeg,
+    buffer_width: i16,
+) -> JRESULT {
     let mut b: u8;
     let mut marker: u16;
     let mut n: u32;
@@ -998,14 +1008,23 @@ pub fn jd_prepare(mut jd: &mut JDEC, pool: &'static mut [u8], dev: *mut cty::c_v
     let mut len: usize;
     let mut rc: JRESULT;
 
-    jd.sz_pool = pool.len();
-    jd.pool = Some(pool);
-    jd.device = dev;
+    jd.pool = Some(unsafe { &mut get_jpeg_work_buffer(0, true).buffer });
+    jd.sz_pool = unwrap!(jd.pool.as_ref()).len() as usize;
     jd.dcv[0] = 0;
     jd.dcv[1] = 0;
     jd.dcv[2] = 0;
     jd.rsc = 0;
     jd.rst = 0;
+
+    jd.data_len = data.len();
+    jd.data = data;
+    jd.data_read = 0;
+    jd.buffer = buffer;
+    jd.buffer_width = buffer_width;
+    jd.buffer_height = 16;
+    jd.current_line = 0;
+    jd.current_line_pix = 0;
+
     let mem = unsafe { alloc_pool_slice(jd, 512) };
     if mem.is_err() {
         return JDR_MEM1;
@@ -1321,18 +1340,17 @@ pub fn jd_decomp(mut jd: &mut JDEC, scale: u8) -> JRESULT {
 }
 
 fn jpeg_in_buffer(jd: &mut JDEC, inbuf_offset: Option<usize>, n_data: usize) -> usize {
-    let context = unsafe { NonNull::new_unchecked(jd.device as *mut JpegContext).as_mut() };
     let n_data = n_data as usize;
     if let Some(inbuf_offset) = inbuf_offset {
-        if (context.data_read + n_data) <= context.data_len {
+        if (jd.data_read + n_data) <= jd.data_len {
             let _ = &unwrap!(jd.inbuf.as_mut())[inbuf_offset..inbuf_offset + n_data]
-                .copy_from_slice(&context.data[context.data_read..context.data_read + n_data]);
+                .copy_from_slice(&jd.data[jd.data_read..jd.data_read + n_data]);
         } else {
-            let rest = context.data_len - context.data_read;
+            let rest = jd.data_len - jd.data_read;
 
             if rest > 0 {
                 let _ = &unwrap!(jd.inbuf.as_mut())[inbuf_offset..inbuf_offset + rest]
-                    .copy_from_slice(&context.data[context.data_read..context.data_read + rest]);
+                    .copy_from_slice(&jd.data[jd.data_read..jd.data_read + rest]);
             } else {
                 // error - no data
                 return 0;
@@ -1340,13 +1358,11 @@ fn jpeg_in_buffer(jd: &mut JDEC, inbuf_offset: Option<usize>, n_data: usize) -> 
         }
     }
 
-    context.data_read += n_data;
+    jd.data_read += n_data;
     n_data as _
 }
 
-fn jpeg_out_buffer(jd: &mut JDEC, rect: &mut JRECT) -> cty::c_int {
-    let context = unsafe { NonNull::new_unchecked(jd.device as *mut JpegContext).as_mut() };
-
+fn jpeg_out_buffer(jd: &mut JDEC, rect: &mut JRECT) -> i32 {
     let w = (rect.right - rect.left + 1) as i16;
     let h = (rect.bottom - rect.top + 1) as i16;
     let x = rect.left as i16;
@@ -1358,27 +1374,27 @@ fn jpeg_out_buffer(jd: &mut JDEC, rect: &mut JRECT) -> cty::c_int {
         )
     };
 
-    if h > context.buffer_height {
+    if h > jd.buffer_height {
         // unsupported height, call and let know
         return 1;
     }
 
-    let buffer_len = (context.buffer_width * context.buffer_height) as usize;
+    let buffer_len = (jd.buffer_width * jd.buffer_height) as usize;
 
     for i in 0..h {
         for j in 0..w {
-            let buffer_pos = ((x + j) + (i * context.buffer_width)) as usize;
+            let buffer_pos = ((x + j) + (i * jd.buffer_width)) as usize;
             if buffer_pos < buffer_len {
-                context.buffer[buffer_pos] = bitmap[(i * w + j) as usize];
+                jd.buffer.buffer[buffer_pos] = bitmap[(i * w + j) as usize];
             }
         }
     }
 
-    context.current_line_pix += w;
+    jd.current_line_pix += w;
 
-    if context.current_line_pix >= context.buffer_width {
-        context.current_line_pix = 0;
-        context.current_line += (jd.msy * 8) as i16;
+    if jd.current_line_pix >= jd.buffer_width {
+        jd.current_line_pix = 0;
+        jd.current_line += (jd.msy * 8) as i16;
         // finished line, abort and continue later
         return 0;
     }

@@ -5,13 +5,10 @@ use crate::trezorhal::{
 };
 use crate::{
     trezorhal::{
-        buffers::{get_blurring_buffer, get_jpeg_buffer},
+        buffers::{get_blurring_buffer, get_jpeg_buffer, BufferJpeg},
         display,
         display::{bar_radius_buffer, ToifFormat},
-        tjpgd::{
-            jpeg_buffer_decomp, jpeg_buffer_prepare, jpeg_get_context, BufferJpeg, JpegContext,
-        },
-        tjpgdlib::JDEC,
+        tjpgdlib::{jd_decomp, jd_prepare, JDEC},
         uzlib::UzlibContext,
     },
     ui::{
@@ -242,11 +239,14 @@ fn homescreen_line(
     icon_data: &[u8],
     text_buffer: &mut BufferText,
     text_info: HomescreenTextInfo,
-    image_data: &[u16],
+    data_buffer: &mut BufferJpeg,
+    mcu_height: i16,
     y: i16,
 ) -> bool {
     let t_buffer = unsafe { get_buffer_4bpp((y & 0x1) as u16, true) };
     let mut img_buffer = unsafe { get_buffer_16bpp((y & 0x1) as u16, false) };
+
+    let image_data = get_data(data_buffer, y, mcu_height);
 
     for x in 0..HOMESCREEN_IMAGE_SIZE {
         let d = image_data[x as usize];
@@ -340,10 +340,17 @@ fn update_accs_sub(data: &[u16], idx: usize, acc_r: &mut u16, acc_g: &mut u16, a
 }
 
 // computes color averages for one line of image data
-fn compute_line_avgs(avg_dest: &mut [[u16; HOMESCREEN_IMAGE_SIZE as usize]; COLORS], data: &[u16]) {
+fn compute_line_avgs(
+    avg_dest: &mut [[u16; HOMESCREEN_IMAGE_SIZE as usize]; COLORS],
+    buffer: &mut BufferJpeg,
+    line_num: i16,
+    mcu_height: i16,
+) {
     let mut acc_r = 0;
     let mut acc_g = 0;
     let mut acc_b = 0;
+    let data = get_data(buffer, line_num, mcu_height);
+
     for i in -BLUR_RADIUS..=BLUR_RADIUS {
         let ic = i.clamp(0, HOMESCREEN_IMAGE_SIZE as i16 - 1) as usize;
         update_accs_add(data, ic, &mut acc_r, &mut acc_g, &mut acc_b);
@@ -414,12 +421,11 @@ pub fn homescreen_blurred(data: &[u8], texts: &[HomescreenText]) {
     let jpeg_ok = jpeg_size.x == WIDTH && jpeg_size.y == HEIGHT && mcu_height <= 16;
     let jpg_buffer = unsafe { get_jpeg_buffer(0, true) };
     let mut jd: JDEC = JDEC::default();
-    let mut jpg_ctx: JpegContext = jpeg_get_context(data, jpg_buffer, WIDTH);
 
-    jpeg_buffer_prepare(&mut jd, &mut jpg_ctx);
+    jd_prepare(&mut jd, data, jpg_buffer, WIDTH);
 
     if jpeg_ok {
-        jpeg_buffer_decomp(&mut jd);
+        jd_decomp(&mut jd, 0);
     }
     let mcu_height = mcu_height as i16;
     let mut line_num = 0;
@@ -433,11 +439,10 @@ pub fn homescreen_blurred(data: &[u8], texts: &[HomescreenText]) {
     let mut add_idx = 0;
     let mut rem_idx = 0;
 
-    let mut dest = get_data(jpg_buffer, line_num, mcu_height);
+    // handling top edge case: preload the edge value N+1 times
+    compute_line_avgs(&mut avgs[add_idx], jd.buffer, line_num, mcu_height);
     line_num += 1;
 
-    // handling top edge case: preload the edge value N+1 times
-    compute_line_avgs(&mut avgs[add_idx], dest);
     for _ in 0..=BLUR_RADIUS {
         vertical_avg_add(&mut avgs_totals, &avgs[add_idx]);
     }
@@ -445,14 +450,13 @@ pub fn homescreen_blurred(data: &[u8], texts: &[HomescreenText]) {
 
     // load enough values to be able to compute first line averages
     for _ in 0..BLUR_RADIUS {
-        dest = get_data(jpg_buffer, line_num, mcu_height);
+        compute_line_avgs(&mut avgs[add_idx], jd.buffer, line_num, mcu_height);
         line_num += 1;
-        compute_line_avgs(&mut avgs[add_idx], dest);
         vertical_avg_add(&mut avgs_totals, &avgs[add_idx]);
         add_idx += 1;
 
         if (line_num % mcu_height) == 0 && jpeg_ok {
-            jpeg_buffer_decomp(&mut jd);
+            jd_decomp(&mut jd, 0);
         }
     }
 
@@ -460,7 +464,8 @@ pub fn homescreen_blurred(data: &[u8], texts: &[HomescreenText]) {
         // several lines have been already decompressed before this loop, adjust for
         // that
         if y < HOMESCREEN_IMAGE_SIZE - (BLUR_RADIUS + 1) {
-            dest = get_data(jpg_buffer, line_num, mcu_height);
+            //dest = get_data(jd.buffer, line_num, mcu_height);
+            compute_line_avgs(&mut avgs[add_idx], jd.buffer, line_num, mcu_height);
             line_num += 1;
         }
 
@@ -469,10 +474,6 @@ pub fn homescreen_blurred(data: &[u8], texts: &[HomescreenText]) {
         if done {
             (text_info, next_text_idx) =
                 homescreen_next_text(texts, text_buffer, &mut icon_data, text_info, next_text_idx);
-        }
-
-        if y < HOMESCREEN_IMAGE_SIZE - (BLUR_RADIUS + 1) as i16 {
-            compute_line_avgs(&mut avgs[add_idx], dest);
         }
 
         vertical_avg(&mut avgs_totals, avgs, add_idx, rem_idx);
@@ -507,7 +508,7 @@ pub fn homescreen_blurred(data: &[u8], texts: &[HomescreenText]) {
         }
 
         if (line_num % mcu_height) == 0 && (line_num < HEIGHT) && jpeg_ok {
-            jpeg_buffer_decomp(&mut jd);
+            jd_decomp(&mut jd, 0);
         }
     }
     dma2d_wait_for_transfer();
@@ -558,9 +559,7 @@ pub fn homescreen(
     let jpg_buffer = unsafe { get_jpeg_buffer(0, true) };
     let mut jd: JDEC = JDEC::default();
 
-    let mut jpg_ctx: JpegContext = jpeg_get_context(data, jpg_buffer, WIDTH);
-
-    jpeg_buffer_prepare(&mut jd, &mut jpg_ctx);
+    jd_prepare(&mut jd, data, jpg_buffer, WIDTH);
 
     set_window(screen());
 
@@ -568,11 +567,11 @@ pub fn homescreen(
 
     for y in 0..HEIGHT {
         if (y % mcu_height) == 0 && jpeg_ok {
-            jpeg_buffer_decomp(&mut jd);
+            jd_decomp(&mut jd, 0);
         }
 
-        let dest = get_data(jpg_buffer, y, mcu_height);
-        let done = homescreen_line(&icon_data, text_buffer, text_info, dest, y);
+        //let dest = get_data(jd.buffer, y, mcu_height);
+        let done = homescreen_line(&icon_data, text_buffer, text_info, jd.buffer, mcu_height, y);
 
         if done {
             if notification.is_some() && next_text_idx == 0 {
