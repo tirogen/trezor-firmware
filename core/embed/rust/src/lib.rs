@@ -4,7 +4,6 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 #![allow(dead_code)]
 #![feature(lang_items)]
-#![feature(label_break_value)]
 
 #[macro_use]
 extern crate num_derive;
