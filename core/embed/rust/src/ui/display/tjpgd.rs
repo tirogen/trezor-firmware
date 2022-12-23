@@ -553,7 +553,7 @@ fn block_idct(src: &mut &mut [i32], dst: &mut [i16]) {
     let mut src_idx = 0;
     let mut i = 0;
     while i < 8 {
-        v0 = src[src_idx + 8 * 0];
+        v0 = src[src_idx];
         v1 = src[src_idx + 8 * 2];
         v2 = src[src_idx + 8 * 4];
         v3 = src[src_idx + 8 * 6];
@@ -567,7 +567,7 @@ fn block_idct(src: &mut &mut [i32], dst: &mut [i16]) {
         v1 = t11 + t12;
         v2 = t12 - t11;
         v4 = src[src_idx + 8 * 7];
-        v5 = src[src_idx + 8 * 1];
+        v5 = src[src_idx + 8];
         v6 = src[src_idx + 8 * 5];
         v7 = src[src_idx + 8 * 3];
         t10 = v5 - v4;
@@ -581,9 +581,9 @@ fn block_idct(src: &mut &mut [i32], dst: &mut [i16]) {
         v6 = t13 - ((t12 * M4) >> 12) - v7;
         v5 -= v6;
         v4 -= v5;
-        src[src_idx + 8 * 0] = v0 + v7;
+        src[src_idx] = v0 + v7;
         src[src_idx + 8 * 7] = v0 - v7;
-        src[src_idx + 8 * 1] = v1 + v6;
+        src[src_idx + 8] = v1 + v6;
         src[src_idx + 8 * 6] = v1 - v6;
         src[src_idx + 8 * 2] = v2 + v5;
         src[src_idx + 8 * 5] = v2 - v5;
@@ -623,7 +623,7 @@ fn block_idct(src: &mut &mut [i32], dst: &mut [i16]) {
         v6 = t13 - ((t12 * M4) >> 12) - v7;
         v5 -= v6;
         v4 -= v5;
-        dst[dst_idx + 0] = ((v0 + v7) >> 8) as i16;
+        dst[dst_idx] = ((v0 + v7) >> 8) as i16;
         dst[dst_idx + 7] = ((v0 - v7) >> 8) as i16;
         dst[dst_idx + 1] = ((v1 + v6) >> 8) as i16;
         dst[dst_idx + 6] = ((v1 - v6) >> 8) as i16;
@@ -649,7 +649,7 @@ fn mcu_load(mut jd: &mut JDEC) -> JRESULT {
     let nby = (jd.msx as i32 * jd.msy as i32) as u32;
     let mut mcu_buf_idx = 0;
     blk = 0;
-    while blk < nby.wrapping_add(2) {
+    while blk < nby+2 {
         cmp = if blk < nby { 0 } else { blk - nby + 1 };
         if cmp != 0 && jd.ncomp as i32 != 3 {
             i = 0;
@@ -670,9 +670,9 @@ fn mcu_load(mut jd: &mut JDEC) -> JRESULT {
                 if e < 0 {
                     return (0 - e) as JRESULT;
                 }
-                bc = (1 << bc.wrapping_sub(1)) as u32;
+                bc = 1 << (bc-1);
                 if e as u32 & bc == 0 {
-                    e = (e as u32).wrapping_sub((bc << 1).wrapping_sub(1)) as i32;
+                    e = (e as u32).wrapping_sub((bc << 1) -1 ) as i32;
                 }
                 d += e;
                 jd.dcv[cmp as usize] = d as i16;
@@ -700,9 +700,9 @@ fn mcu_load(mut jd: &mut JDEC) -> JRESULT {
                     if d < 0 {
                         return (0 - d) as JRESULT;
                     }
-                    bc = (1 << bc.wrapping_sub(1)) as u32;
+                    bc = 1 << (bc-1);
                     if d as u32 & bc == 0 {
-                        d = (d as u32).wrapping_sub((bc << 1 as i32).wrapping_sub(1)) as i32;
+                        d = (d as u32).wrapping_sub((bc << 1).wrapping_sub(1)) as i32;
                     }
                     i = Zig[z as usize] as u32;
 
@@ -710,7 +710,7 @@ fn mcu_load(mut jd: &mut JDEC) -> JRESULT {
                     unwrap!(jd.workbuf.as_mut())[i as usize] = (d * dfq[i as usize]) >> 8;
                 }
                 z += 1;
-                if !(z < 64) {
+                if z >= 64 {
                     break;
                 }
             }
@@ -806,7 +806,7 @@ fn mcu_output(jd: &mut JDEC, x: u32, y: u32) -> JRESULT {
                     } else {
                         pc_idx += 1;
                     }
-                    yy = unwrap!(jd.mcubuf.as_ref())[py_idx + 0] as i32;
+                    yy = unwrap!(jd.mcubuf.as_ref())[py_idx] as i32;
                     py_idx += 1;
 
                     workbuf[pix_idx] = BYTECLIP(yy + (1.402f64 * CVACC as f64) as i32 * cr / CVACC);
