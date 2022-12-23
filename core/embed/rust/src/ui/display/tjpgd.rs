@@ -1062,7 +1062,7 @@ pub fn jd_prepare(mut jd: &mut JDEC) -> JRESULT {
         's_526: {
             let mut current_block_111: u64;
             match marker as i32 & 0xff {
-                192 => {
+                0xC0 => {
                     if len > 512 {
                         return JDR_MEM2;
                     }
@@ -1099,7 +1099,7 @@ pub fn jd_prepare(mut jd: &mut JDEC) -> JRESULT {
                     }
                     current_block_111 = 5265702136860997526;
                 }
-                221 => {
+                0xDD => {
                     if len > 512 {
                         return JDR_MEM2;
                     }
@@ -1111,7 +1111,7 @@ pub fn jd_prepare(mut jd: &mut JDEC) -> JRESULT {
                         as u16;
                     current_block_111 = 5265702136860997526;
                 }
-                196 => {
+                0xC4 => {
                     if len > 512 {
                         return JDR_MEM2;
                     }
@@ -1124,7 +1124,7 @@ pub fn jd_prepare(mut jd: &mut JDEC) -> JRESULT {
                     }
                     current_block_111 = 5265702136860997526;
                 }
-                219 => {
+                0xDB => {
                     if len > 512 {
                         return JDR_MEM2;
                     }
@@ -1137,7 +1137,7 @@ pub fn jd_prepare(mut jd: &mut JDEC) -> JRESULT {
                     }
                     current_block_111 = 5265702136860997526;
                 }
-                218 => {
+                0xDA => {
                     if len > 512 {
                         return JDR_MEM2;
                     }
@@ -1194,40 +1194,40 @@ pub fn jd_prepare(mut jd: &mut JDEC) -> JRESULT {
                     jd.dptr = (ofs - (if JD_FASTDECODE != 0 { 0 } else { 1 })) as usize;
                     return JDR_OK;
                 }
-                193 => {
+                0xC1 => {
                     current_block_111 = 12749676338018479376;
                 }
-                194 => {
+                0xC2 => {
                     current_block_111 = 12749676338018479376;
                 }
-                195 => {
+                0xC3 => {
                     current_block_111 = 7120504289787790845;
                 }
-                197 => {
+                0xC5 => {
                     current_block_111 = 11626555135028741001;
                 }
-                198 => {
+                0xC6 => {
                     current_block_111 = 12215488699659360936;
                 }
-                199 => {
+                0xC7 => {
                     current_block_111 = 5192055691381141330;
                 }
-                201 => {
+                0xC9 => {
                     current_block_111 = 1443089516996880600;
                 }
-                202 => {
+                0xCA => {
                     current_block_111 = 15064317190960798138;
                 }
-                203 => {
+                0xCB => {
                     current_block_111 = 14109165499131509865;
                 }
-                205 => {
+                0xCD => {
                     current_block_111 = 9711326356574826945;
                 }
-                207 => {
+                0xCF => {
                     current_block_111 = 13359995684220628626;
                 }
-                206 | 217 => {
+                0xCE | 0xD9 => {
                     current_block_111 = 13359995684220628626;
                 }
                 _ => {
