@@ -1042,7 +1042,7 @@ pub fn jd_prepare(mut jd: &mut JDEC) -> JRESULT {
         }
         ofs += 1;
         marker = ((marker as i32) << 8 | unwrap!(jd.inbuf.as_ref())[0] as i32) as u16;
-        if marker as i32 == 0xffd8 {
+        if marker == 0xffd8 {
             break;
         }
     }
@@ -1061,7 +1061,7 @@ pub fn jd_prepare(mut jd: &mut JDEC) -> JRESULT {
         ofs += (4 + len) as u32;
         's_526: {
             let mut current_block_111: u64;
-            match marker as i32 & 0xff {
+            match marker & 0xff {
                 0xC0 => {
                     if len > 512 {
                         return JDR_MEM2;
@@ -1195,40 +1195,40 @@ pub fn jd_prepare(mut jd: &mut JDEC) -> JRESULT {
                     return JDR_OK;
                 }
                 0xC1 => {
-                    current_block_111 = 12749676338018479376;
+                    return JDR_FMT3;
                 }
                 0xC2 => {
-                    current_block_111 = 12749676338018479376;
+                    return JDR_FMT3;
                 }
                 0xC3 => {
-                    current_block_111 = 7120504289787790845;
+                    return JDR_FMT3;
                 }
                 0xC5 => {
-                    current_block_111 = 11626555135028741001;
+                    return JDR_FMT3;
                 }
                 0xC6 => {
-                    current_block_111 = 12215488699659360936;
+                    return JDR_FMT3;
                 }
                 0xC7 => {
-                    current_block_111 = 5192055691381141330;
+                    return JDR_FMT3;
                 }
                 0xC9 => {
-                    current_block_111 = 1443089516996880600;
+                    return JDR_FMT3;
                 }
                 0xCA => {
-                    current_block_111 = 15064317190960798138;
+                    return JDR_FMT3;
                 }
                 0xCB => {
-                    current_block_111 = 14109165499131509865;
+                    return JDR_FMT3;
                 }
                 0xCD => {
-                    current_block_111 = 9711326356574826945;
+                    return JDR_FMT3;
                 }
                 0xCF => {
-                    current_block_111 = 13359995684220628626;
+                    return JDR_FMT3;
                 }
                 0xCE | 0xD9 => {
-                    current_block_111 = 13359995684220628626;
+                    return JDR_FMT3;
                 }
                 _ => {
                     if jpeg_in_buffer(jd, None, len) != len {
@@ -1239,37 +1239,13 @@ pub fn jd_prepare(mut jd: &mut JDEC) -> JRESULT {
             }
             match current_block_111 {
                 12749676338018479376 => {
-                    current_block_111 = 7120504289787790845;
+                    return JDR_FMT3;
                 }
                 5265702136860997526 => {
                     break 's_526;
                 }
                 _ => {}
             }
-            if current_block_111 == 7120504289787790845 {
-                current_block_111 = 11626555135028741001;
-            }
-            if current_block_111 == 11626555135028741001 {
-                current_block_111 = 12215488699659360936;
-            }
-            if current_block_111 == 12215488699659360936 {
-                current_block_111 = 5192055691381141330;
-            }
-            if current_block_111 == 5192055691381141330 {
-                current_block_111 = 1443089516996880600;
-            }
-            if current_block_111 == 1443089516996880600 {
-                current_block_111 = 15064317190960798138;
-            }
-            if current_block_111 == 15064317190960798138 {
-                current_block_111 = 14109165499131509865;
-            }
-            if current_block_111 == 14109165499131509865 {
-                current_block_111 = 9711326356574826945;
-            }
-            if current_block_111 == 9711326356574826945 {}
-
-            return JDR_FMT3;
         }
     }
 }
