@@ -12,7 +12,7 @@ use core::{
 };
 
 const JD_FORMAT: u32 = 1;
-const JD_SCALE: u32 = 0;
+const JD_USE_SCALE: u32 = 0;
 const JD_FASTDECODE: u32 = 2;
 
 const HUFF_BIT: u32 = 10;
@@ -709,7 +709,7 @@ fn mcu_load(mut jd: &mut JDEC) -> JRESULT {
                 }
             }
             if JD_FORMAT != 2 || cmp == 0 {
-                if z == 1 || JD_SCALE != 0 && jd.scale == 3 {
+                if z == 1 || JD_USE_SCALE != 0 && jd.scale == 3 {
                     d = (unwrap!(jd.workbuf.as_ref())[0] / 256 + 128) as i32;
                     if JD_FASTDECODE >= 1 {
                         i = 0;
@@ -773,7 +773,7 @@ fn mcu_output(jd: &mut JDEC, x: u32, y: u32) -> JRESULT {
     let mut pix_idx: usize = 0;
     let mut op_idx: usize;
 
-    if JD_SCALE == 0 || jd.scale != 3 {
+    if JD_USE_SCALE == 0 || jd.scale != 3 {
         if JD_FORMAT != 2 {
             iy = 0;
             while iy < my {
@@ -837,7 +837,7 @@ fn mcu_output(jd: &mut JDEC, x: u32, y: u32) -> JRESULT {
                 iy += 1;
             }
         }
-        if JD_SCALE != 0 && jd.scale != 0 {
+        if JD_USE_SCALE != 0 && jd.scale != 0 {
             let mut x_0: u32;
             let mut y_0: u32;
             let mut r: u32;
@@ -1232,7 +1232,7 @@ pub fn jd_prepare(mut jd: &mut JDEC) -> JRESULT {
 }
 
 pub fn jd_decomp(mut jd: &mut JDEC, scale: u8) -> JRESULT {
-    if scale > (if JD_SCALE != 0 { 3 } else { 0 }) {
+    if scale > (if JD_USE_SCALE != 0 { 3 } else { 0 }) {
         return JDR_PAR;
     }
     jd.scale = scale;
