@@ -369,8 +369,8 @@ fn huffext(mut jd: &mut JDEC, id: u32, cls: u32) -> i32 {
     let mut nc: u32;
     let mut bl: u32;
     let mut wbit: u32 = (jd.dbit as i32 % 32) as u32;
-    let mut w: u32 = (jd.wreg as cty::c_ulong
-        & ((1 as cty::c_ulong) << wbit).wrapping_sub(1 as i32 as cty::c_ulong))
+    let mut w: u32 = (jd.wreg as u32
+        & ((1 as u32) << wbit).wrapping_sub(1))
         as u32;
     while wbit < 16 {
         if jd.marker != 0 {
@@ -456,7 +456,7 @@ fn bitext(mut jd: &mut JDEC, nbit: u32) -> i32 {
     let mut dp: usize = jd.dptr;
     let mut d: u32;
     let mut flg: u32 = 0;
-    let mut wbit: u32 = (jd.dbit as i32 % 32 as i32) as u32;
+    let mut wbit: u32 = (jd.dbit as i32 % 32) as u32;
     let mut w: u32 = (jd.wreg as cty::c_ulong
         & ((1 as cty::c_ulong) << wbit).wrapping_sub(1 as i32 as cty::c_ulong))
         as u32;
@@ -468,7 +468,7 @@ fn bitext(mut jd: &mut JDEC, nbit: u32) -> i32 {
                 dp = 0;
                 dc = jpeg_in_buffer(jd, Some(0), 512);
                 if dc == 0 {
-                    return 0 as i32 - JDR_INP as i32;
+                    return 0 - JDR_INP as i32;
                 }
             }
             d = unwrap!(jd.inbuf.as_ref())[dp] as u32;
@@ -485,7 +485,7 @@ fn bitext(mut jd: &mut JDEC, nbit: u32) -> i32 {
                 continue;
             }
         }
-        w = w << 8 as i32 | d;
+        w = w << 8 | d;
         wbit += 8;
     }
     jd.wreg = w;
@@ -493,7 +493,7 @@ fn bitext(mut jd: &mut JDEC, nbit: u32) -> i32 {
     jd.dctr = dc;
     jd.dptr = dp;
 
-    return (w >> wbit.wrapping_sub(nbit).wrapping_rem(32)) as i32;
+    (w >> wbit.wrapping_sub(nbit).wrapping_rem(32)) as i32
 }
 fn restart(mut jd: &mut JDEC, rstn: u16) -> JRESULT {
     let mut i: u32;
@@ -530,7 +530,7 @@ fn restart(mut jd: &mut JDEC, rstn: u16) -> JRESULT {
     jd.dcv[0] = 0;
     jd.dcv[1] = 0;
     jd.dcv[2] = 0;
-    return JDR_OK;
+    JDR_OK
 }
 fn block_idct(src: &mut &mut [i32], dst: &mut [i16]) {
     let M13: i32 = (1.41421f64 * 4096_f64) as i32;
@@ -649,7 +649,7 @@ fn mcu_load(mut jd: &mut JDEC) -> JRESULT {
     let nby = (jd.msx as i32 * jd.msy as i32) as u32;
     let mut mcu_buf_idx = 0;
     blk = 0;
-    while blk < nby+2 {
+    while blk < nby + 2 {
         cmp = if blk < nby { 0 } else { blk - nby + 1 };
         if cmp != 0 && jd.ncomp as i32 != 3 {
             i = 0;
@@ -670,9 +670,9 @@ fn mcu_load(mut jd: &mut JDEC) -> JRESULT {
                 if e < 0 {
                     return (0 - e) as JRESULT;
                 }
-                bc = 1 << (bc-1);
+                bc = 1 << (bc - 1);
                 if e as u32 & bc == 0 {
-                    e = (e as u32).wrapping_sub((bc << 1) -1 ) as i32;
+                    e = (e as u32).wrapping_sub((bc << 1) - 1) as i32;
                 }
                 d += e;
                 jd.dcv[cmp as usize] = d as i16;
@@ -700,7 +700,7 @@ fn mcu_load(mut jd: &mut JDEC) -> JRESULT {
                     if d < 0 {
                         return (0 - d) as JRESULT;
                     }
-                    bc = 1 << (bc-1);
+                    bc = 1 << (bc - 1);
                     if d as u32 & bc == 0 {
                         d = (d as u32).wrapping_sub((bc << 1).wrapping_sub(1)) as i32;
                     }
