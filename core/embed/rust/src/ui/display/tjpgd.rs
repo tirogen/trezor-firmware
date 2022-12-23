@@ -1153,7 +1153,7 @@ pub fn jd_prepare(mut jd: &mut JDEC) -> JRESULT {
                 if n == 0 {
                     return JDR_FMT1;
                 }
-                len = (n * 64 * 2 + 64) as usize;
+                len = (n * 64 * 3 + 64) as usize;
                 if len < 256 {
                     len = 256;
                 }
