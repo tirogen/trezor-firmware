@@ -977,11 +977,7 @@ fn mcu_output(jd: &mut JDEC, x: u32, y: u32) -> JRESULT {
             }
         }
     }
-    return (if jpeg_out_buffer(jd, &mut rect) != 0 {
-        JDR_OK as i32
-    } else {
-        JDR_INTR as i32
-    }) as JRESULT;
+    jpeg_out_buffer(jd, &mut rect)
 }
 
 pub fn jd_init<'a>(data: &'a [u8], buffer: &'static mut BufferJpeg, buffer_width: i16) -> JDEC<'a> {
@@ -1347,7 +1343,7 @@ fn jpeg_in_buffer(jd: &mut JDEC, inbuf_offset: Option<usize>, n_data: usize) -> 
     n_data as _
 }
 
-fn jpeg_out_buffer(jd: &mut JDEC, rect: &mut JRECT) -> i32 {
+fn jpeg_out_buffer(jd: &mut JDEC, rect: &mut JRECT) -> JRESULT {
     let w = (rect.right - rect.left + 1) as i16;
     let h = (rect.bottom - rect.top + 1) as i16;
     let x = rect.left as i16;
@@ -1361,7 +1357,7 @@ fn jpeg_out_buffer(jd: &mut JDEC, rect: &mut JRECT) -> i32 {
 
     if h > jd.buffer_height {
         // unsupported height, call and let know
-        return 1;
+        return JDR_OK;
     }
 
     let buffer_len = (jd.buffer_width * jd.buffer_height) as usize;
@@ -1381,10 +1377,10 @@ fn jpeg_out_buffer(jd: &mut JDEC, rect: &mut JRECT) -> i32 {
         jd.current_line_pix = 0;
         jd.current_line += (jd.msy * 8) as i16;
         // finished line, abort and continue later
-        return 0;
+        return JDR_INTR;
     }
 
-    1
+    JDR_OK
 }
 
 pub fn jpeg_info(data: &[u8]) -> Result<JpegInfo, ()> {
