@@ -7,10 +7,12 @@
 
 use crate::trezorhal::buffers::{get_jpeg_buffer, get_jpeg_work_buffer, BufferJpeg};
 use core::{mem, slice};
+use core::f64::consts::FRAC_1_SQRT_2;
+use core::f64::consts::SQRT_2;
 
 const JD_FORMAT: u32 = 1;
 const JD_SCALE: u32 = 0;
-const JD_FASTDECOMP: u32 = 2;
+const JD_FASTDECODE: u32 = 2;
 
 const HUFF_BIT: u32 = 10;
 
@@ -108,7 +110,7 @@ static Ipsf: [u16; 64] = [
     (1.53636f64 * 8192_f64) as u16,
     (1.30656f64 * 8192_f64) as u16,
     (1.02656f64 * 8192_f64) as u16,
-    (0.70711f64 * 8192_f64) as u16,
+    (FRAC_1_SQRT_2 * 8192_f64) as u16,
     (0.36048f64 * 8192_f64) as u16,
     (1.17588f64 * 8192_f64) as u16,
     (1.63099f64 * 8192_f64) as u16,
@@ -136,7 +138,7 @@ static Ipsf: [u16; 64] = [
     (0.21677f64 * 8192_f64) as u16,
     (0.54120f64 * 8192_f64) as u16,
     (0.75066f64 * 8192_f64) as u16,
-    (0.70711f64 * 8192_f64) as u16,
+    (FRAC_1_SQRT_2 * 8192_f64) as u16,
     (0.63638f64 * 8192_f64) as u16,
     (0.54120f64 * 8192_f64) as u16,
     (0.42522f64 * 8192_f64) as u16,
@@ -210,7 +212,7 @@ fn create_qt_tbl(mut jd: &mut JDEC, mut ndata: usize) -> JRESULT {
                 as u32)
                 .wrapping_mul(Ipsf[zi as usize] as u32)
                 as i32;
-            j = j.wrapping_add(1);
+            j += 1;
             data_idx += 1;
         }
     }
@@ -345,7 +347,7 @@ fn create_huffman_tbl(mut jd: &mut JDEC, mut ndata: usize) -> JRESULT {
                         as u32
                         | (b + 1) << 4;
                     i += 1;
-                    span = ((1 as i32) << ((HUFF_BIT - 1) as u32).wrapping_sub(b)) as u32;
+                    span = (1 << ((HUFF_BIT - 1) as u32).wrapping_sub(b)) as u32;
                     while span != 0 {
                         span -= 1;
                         let fresh20 = ti;
@@ -369,9 +371,7 @@ fn huffext(mut jd: &mut JDEC, id: u32, cls: u32) -> i32 {
     let mut nc: u32;
     let mut bl: u32;
     let mut wbit: u32 = (jd.dbit as i32 % 32) as u32;
-    let mut w: u32 = (jd.wreg as u32
-        & ((1 as u32) << wbit).wrapping_sub(1))
-        as u32;
+    let mut w: u32 = jd.wreg & ((1 << wbit) - 1);
     while wbit < 16 {
         if jd.marker != 0 {
             d = 0xff;
@@ -428,13 +428,13 @@ fn huffext(mut jd: &mut JDEC, id: u32, cls: u32) -> i32 {
             as u32;
         hb_idx += 1;
         if nc != 0 {
-            d = w >> wbit.wrapping_sub(bl);
+            d = w >> (wbit-bl);
             loop {
                 let fresh24 = unwrap!(jd.huffcode[id as usize][cls as usize].as_ref())
                     [hc_idx + jd.longofs[id as usize][cls as usize] as usize];
                 hc_idx += 1;
                 if d == fresh24 as u32 {
-                    jd.dbit = wbit.wrapping_sub(bl) as u8;
+                    jd.dbit = (wbit-bl) as u8;
 
                     return unwrap!((jd.huffdata[id as usize][cls as usize]).as_ref())
                         [hd_idx + jd.longofs[id as usize][cls as usize] as usize]
@@ -449,7 +449,7 @@ fn huffext(mut jd: &mut JDEC, id: u32, cls: u32) -> i32 {
         }
         bl += 1;
     }
-    return 0 - JDR_FMT1 as i32;
+    0 - JDR_FMT1 as i32
 }
 fn bitext(mut jd: &mut JDEC, nbit: u32) -> i32 {
     let mut dc: usize = jd.dctr;
@@ -457,9 +457,7 @@ fn bitext(mut jd: &mut JDEC, nbit: u32) -> i32 {
     let mut d: u32;
     let mut flg: u32 = 0;
     let mut wbit: u32 = (jd.dbit as i32 % 32) as u32;
-    let mut w: u32 = (jd.wreg as cty::c_ulong
-        & ((1 as cty::c_ulong) << wbit).wrapping_sub(1 as i32 as cty::c_ulong))
-        as u32;
+    let mut w: u32 = jd.wreg & ((1 << wbit) -1);
     while wbit < nbit {
         if jd.marker != 0 {
             d = 0xff;
@@ -533,7 +531,7 @@ fn restart(mut jd: &mut JDEC, rstn: u16) -> JRESULT {
     JDR_OK
 }
 fn block_idct(src: &mut &mut [i32], dst: &mut [i16]) {
-    let M13: i32 = (1.41421f64 * 4096_f64) as i32;
+    let M13: i32 = (SQRT_2 * 4096_f64) as i32;
     let M2: i32 = (1.08239f64 * 4096_f64) as i32;
     let M4: i32 = (2.61313f64 * 4096_f64) as i32;
     let M5: i32 = (1.84776f64 * 4096_f64) as i32;
@@ -559,7 +557,7 @@ fn block_idct(src: &mut &mut [i32], dst: &mut [i16]) {
         v3 = src[src_idx + 8 * 6];
         t10 = v0 + v2;
         t12 = v0 - v2;
-        t11 = ((v1 - v3) * M13) >> 12 as i32;
+        t11 = ((v1 - v3) * M13) >> 12;
         v3 += v1;
         t11 -= v3;
         v0 = t10 + v3;
@@ -690,7 +688,7 @@ fn mcu_load(mut jd: &mut JDEC) -> JRESULT {
                     return (0 - d) as JRESULT;
                 }
                 bc = d as u32;
-                z = z.wrapping_add(bc >> 4);
+                z += bc >> 4;
                 if z >= 64 {
                     return JDR_FMT1;
                 }
@@ -714,10 +712,10 @@ fn mcu_load(mut jd: &mut JDEC) -> JRESULT {
                     break;
                 }
             }
-            if 1 != 2 || cmp == 0 {
-                if z == 1 || 0 != 0 && jd.scale == 3 {
+            if JD_FORMAT != 2 || cmp == 0 {
+                if z == 1 || JD_SCALE != 0 && jd.scale == 3 {
                     d = (unwrap!(jd.workbuf.as_ref())[0] / 256 + 128) as i32;
-                    if 2 >= 1 {
+                    if JD_FASTDECODE >= 1 {
                         i = 0;
                         while i < 64 {
                             unwrap!(jd.mcubuf.as_mut())[mcu_buf_idx + i as usize] = d as i16;
@@ -779,8 +777,8 @@ fn mcu_output(jd: &mut JDEC, x: u32, y: u32) -> JRESULT {
     let mut pix_idx: usize = 0;
     let mut op_idx: usize;
 
-    if 0 == 0 || jd.scale != 3 {
-        if 1 != 2 {
+    if JD_SCALE == 0 || jd.scale != 3 {
+        if JD_FORMAT != 2 {
             iy = 0;
             while iy < my {
                 py_idx = 0;
@@ -843,7 +841,7 @@ fn mcu_output(jd: &mut JDEC, x: u32, y: u32) -> JRESULT {
                 iy += 1;
             }
         }
-        if 0 != 0 && jd.scale != 0 {
+        if JD_SCALE != 0 && jd.scale != 0 {
             let mut x_0: u32;
             let mut y_0: u32;
             let mut r: u32;
@@ -851,7 +849,7 @@ fn mcu_output(jd: &mut JDEC, x: u32, y: u32) -> JRESULT {
             let mut b: u32;
             let s = (jd.scale * 2) as u32;
             let w = (1 << jd.scale as i32) as u32;
-            let a = mx.wrapping_sub(w).wrapping_mul(if 1 != 2 { 3 } else { 1 });
+            let a = mx.wrapping_sub(w).wrapping_mul(if JD_FORMAT != 2 { 3 } else { 1 });
             op_idx = 0;
             iy = 0;
             while iy < my {
@@ -865,12 +863,12 @@ fn mcu_output(jd: &mut JDEC, x: u32, y: u32) -> JRESULT {
                     while y_0 < w {
                         x_0 = 0;
                         while x_0 < w {
-                            r = r.wrapping_add(workbuf[pix_idx] as u32);
+                            r += workbuf[pix_idx] as u32;
                             pix_idx += 1;
                             if JD_FORMAT != 2 {
-                                g = g.wrapping_add(workbuf[pix_idx] as u32);
+                                g += workbuf[pix_idx] as u32;
                                 pix_idx += 1;
-                                b = b.wrapping_add(workbuf[pix_idx] as u32);
+                                b += workbuf[pix_idx] as u32;
                                 pix_idx += 1;
                             }
                             x_0 += 1;
@@ -1281,7 +1279,7 @@ pub fn jd_prepare(mut jd: &mut JDEC) -> JRESULT {
 }
 
 pub fn jd_decomp(mut jd: &mut JDEC, scale: u8) -> JRESULT {
-    if scale > (if 0 != 0 { 3 } else { 0 }) {
+    if scale > (if JD_SCALE != 0 { 3 } else { 0 }) {
         return JDR_PAR;
     }
     jd.scale = scale;
