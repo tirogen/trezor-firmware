@@ -20,11 +20,13 @@ use crate::{
 use crate::ui::{
     component::text::TextStyle,
     constant::{HEIGHT, WIDTH},
-    display::jpeg_info,
+    display::{
+        jpeg_info,
+        tjpgd::{jd_decomp, jd_init, jd_prepare, JDEC},
+    },
     model_tt::theme,
     util::icon_text_center,
 };
-use crate::ui::display::tjpgd::{jd_decomp, jd_init, jd_prepare, JDEC};
 
 #[derive(Clone, Copy)]
 pub struct HomescreenText<'a> {

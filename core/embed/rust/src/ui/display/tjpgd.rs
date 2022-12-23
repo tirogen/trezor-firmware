@@ -5,10 +5,12 @@
     non_upper_case_globals
 )]
 
-use crate::trezorhal::buffers::{get_jpeg_work_buffer, BufferJpeg, get_jpeg_buffer};
+use crate::trezorhal::buffers::{get_jpeg_buffer, get_jpeg_work_buffer, BufferJpeg};
 use core::{mem, slice};
 
 const JD_FORMAT: u32 = 1;
+const JD_SCALE: u32 = 0;
+const JD_FASTDECOMP: u32 = 2;
 
 const HUFF_BIT: u32 = 10;
 
@@ -157,7 +159,7 @@ fn BYTECLIP(val: i32) -> u8 {
     if val > 255 {
         return 255;
     }
-    return val as u8;
+    val as u8
 }
 
 unsafe fn alloc_pool_slice<T>(mut jd: &mut JDEC, ndata: usize) -> Result<&'static mut [T], ()> {
@@ -169,7 +171,7 @@ unsafe fn alloc_pool_slice<T>(mut jd: &mut JDEC, ndata: usize) -> Result<&'stati
             let end = jd.pool_start + ndata_aligned;
             let data = &mut unwrap!(jd.pool.as_mut())[start..end];
             jd.pool_start = end;
-            jd.sz_pool = jd.sz_pool - ndata_aligned;
+            jd.sz_pool -= ndata_aligned;
             return Ok(slice::from_raw_parts_mut(data.as_ptr() as *mut T, ndata));
         }
         Err(())
@@ -212,7 +214,7 @@ fn create_qt_tbl(mut jd: &mut JDEC, mut ndata: usize) -> JRESULT {
             data_idx += 1;
         }
     }
-    return JDR_OK;
+    JDR_OK
 }
 fn create_huffman_tbl(mut jd: &mut JDEC, mut ndata: usize) -> JRESULT {
     let mut i: u32;
@@ -266,19 +268,19 @@ fn create_huffman_tbl(mut jd: &mut JDEC, mut ndata: usize) -> JRESULT {
             b = unwrap!(jd.huffbits[num as usize][cls as usize].as_ref())[i as usize] as u32;
             loop {
                 let fresh10 = b;
-                b = b.wrapping_sub(1);
-                if !(fresh10 != 0) {
+                b -= 1;
+                if fresh10 == 0 {
                     break;
                 }
                 let fresh11 = hc;
-                hc = hc.wrapping_add(1);
+                hc += 1;
                 let fresh12 = j;
-                j = j.wrapping_add(1);
+                j += 1;
                 unwrap!(jd.huffcode[num as usize][cls as usize].as_mut())[fresh12 as usize] =
                     fresh11;
             }
-            hc = ((hc as i32) << 1) as u16;
-            i = i.wrapping_add(1);
+            hc <<= 1;
+            i += 1;
         }
         if ndata < np {
             return JDR_FMT1;
@@ -322,9 +324,9 @@ fn create_huffman_tbl(mut jd: &mut JDEC, mut ndata: usize) -> JRESULT {
         while b < HUFF_BIT {
             j = unwrap!(jd.huffbits[num as usize][cls as usize].as_ref())[b as usize] as u32;
             while j != 0 {
-                ti = (unwrap!(jd.huffcode[num as usize][cls as usize].as_ref())[i as usize]
-                    << ((HUFF_BIT - 1) as u32).wrapping_sub(b)
-                    & (1 << HUFF_BIT) - 1) as u32;
+                ti = ((unwrap!(jd.huffcode[num as usize][cls as usize].as_ref())[i as usize]
+                    << ((HUFF_BIT - 1) as u32).wrapping_sub(b))
+                    & ((1 << HUFF_BIT) - 1)) as u32;
 
                 if cls != 0 {
                     td = unwrap!(jd.huffdata[num as usize][cls as usize].as_ref())[i as usize]
@@ -333,31 +335,31 @@ fn create_huffman_tbl(mut jd: &mut JDEC, mut ndata: usize) -> JRESULT {
                     i += 1;
                     span = (1 << ((HUFF_BIT - 1) as u32).wrapping_sub(b)) as u32;
                     while span != 0 {
-                        span = span.wrapping_sub(1);
+                        span -= 1;
                         let fresh18 = ti;
-                        ti = ti.wrapping_add(1);
+                        ti += 1;
                         unwrap!(jd.hufflut_ac[num as usize].as_mut())[fresh18 as usize] = td as u16;
                     }
                 } else {
                     td = unwrap!(jd.huffdata[num as usize][cls as usize].as_ref())[i as usize]
                         as u32
-                        | b.wrapping_add(1) << 4 as i32;
+                        | (b + 1) << 4;
                     i += 1;
                     span = ((1 as i32) << ((HUFF_BIT - 1) as u32).wrapping_sub(b)) as u32;
                     while span != 0 {
-                        span = span.wrapping_sub(1);
+                        span -= 1;
                         let fresh20 = ti;
-                        ti = ti.wrapping_add(1);
+                        ti += 1;
                         unwrap!(jd.hufflut_dc[num as usize].as_mut())[fresh20 as usize] = td as u8;
                     }
                 }
-                j = j.wrapping_sub(1);
+                j -= 1;
             }
-            b = b.wrapping_add(1);
+            b += 1;
         }
         jd.longofs[num as usize][cls as usize] = i as u8;
     }
-    return JDR_OK;
+    JDR_OK
 }
 fn huffext(mut jd: &mut JDEC, id: u32, cls: u32) -> i32 {
     let mut dc: usize = jd.dctr;
@@ -378,13 +380,13 @@ fn huffext(mut jd: &mut JDEC, id: u32, cls: u32) -> i32 {
                 dp = 0;
                 dc = jpeg_in_buffer(jd, Some(0), 512);
                 if dc == 0 {
-                    return 0 as i32 - JDR_INP as i32;
+                    return 0 - JDR_INP as i32;
                 }
             }
             d = unwrap!(jd.inbuf.as_mut())[dp] as u32;
             dp += 1;
 
-            dc = dc.wrapping_sub(1);
+            dc -= 1;
             if flg != 0 {
                 flg = 0;
                 if d != 0 {
@@ -396,13 +398,13 @@ fn huffext(mut jd: &mut JDEC, id: u32, cls: u32) -> i32 {
                 continue;
             }
         }
-        w = w << 8 as i32 | d;
-        wbit = wbit.wrapping_add(8);
+        w = w << 8 | d;
+        wbit += 8;
     }
     jd.dctr = dc;
     jd.dptr = dp;
     jd.wreg = w;
-    d = w >> wbit.wrapping_sub(HUFF_BIT);
+    d = w >> (wbit - HUFF_BIT);
     if cls != 0 {
         d = unwrap!(jd.hufflut_ac[id as usize].as_ref())[d as usize] as u32;
         if d != 0xffff {
@@ -439,13 +441,13 @@ fn huffext(mut jd: &mut JDEC, id: u32, cls: u32) -> i32 {
                         as i32;
                 }
                 hd_idx += 1;
-                nc = nc.wrapping_sub(1);
-                if !(nc != 0) {
+                nc -= 1;
+                if nc == 0 {
                     break;
                 }
             }
         }
-        bl = bl.wrapping_add(1);
+        bl += 1;
     }
     return 0 - JDR_FMT1 as i32;
 }
@@ -471,7 +473,7 @@ fn bitext(mut jd: &mut JDEC, nbit: u32) -> i32 {
             }
             d = unwrap!(jd.inbuf.as_ref())[dp] as u32;
             dp += 1;
-            dc = dc.wrapping_sub(1);
+            dc -= 1;
             if flg != 0 {
                 flg = 0;
                 if d != 0 {
@@ -484,10 +486,10 @@ fn bitext(mut jd: &mut JDEC, nbit: u32) -> i32 {
             }
         }
         w = w << 8 as i32 | d;
-        wbit = wbit.wrapping_add(8);
+        wbit += 8;
     }
     jd.wreg = w;
-    jd.dbit = wbit.wrapping_sub(nbit) as u8;
+    jd.dbit = (wbit - nbit) as u8;
     jd.dctr = dc;
     jd.dptr = dp;
 
@@ -515,8 +517,8 @@ fn restart(mut jd: &mut JDEC, rstn: u16) -> JRESULT {
             let fresh27 = unwrap!(jd.inbuf.as_ref())[dp] as u32;
             dp += 1;
             marker = ((marker as i32) << 8 | fresh27 as i32) as u16;
-            dc = dc.wrapping_sub(1);
-            i = i.wrapping_add(1);
+            dc -= 1;
+            i += 1;
         }
         jd.dptr = dp;
         jd.dctr = dc;
@@ -557,7 +559,7 @@ fn block_idct(src: &mut &mut [i32], dst: &mut [i16]) {
         v3 = src[src_idx + 8 * 6];
         t10 = v0 + v2;
         t12 = v0 - v2;
-        t11 = (v1 - v3) * M13 >> 12 as i32;
+        t11 = ((v1 - v3) * M13) >> 12 as i32;
         v3 += v1;
         t11 -= v3;
         v0 = t10 + v3;
@@ -572,11 +574,11 @@ fn block_idct(src: &mut &mut [i32], dst: &mut [i16]) {
         t11 = v5 + v4;
         t12 = v6 - v7;
         v7 += v6;
-        v5 = (t11 - v7) * M13 >> 12;
+        v5 = ((t11 - v7) * M13) >> 12;
         v7 += t11;
-        t13 = (t10 + t12) * M5 >> 12;
-        v4 = t13 - (t10 * M2 >> 12);
-        v6 = t13 - (t12 * M4 >> 12) - v7;
+        t13 = ((t10 + t12) * M5) >> 12;
+        v4 = t13 - ((t10 * M2) >> 12);
+        v6 = t13 - ((t12 * M4) >> 12) - v7;
         v5 -= v6;
         v4 -= v5;
         src[src_idx + 8 * 0] = v0 + v7;
@@ -593,13 +595,13 @@ fn block_idct(src: &mut &mut [i32], dst: &mut [i16]) {
     src_idx -= 8;
     i = 0;
     while i < 8 {
-        v0 = src[src_idx + 0] + (128 << 8);
+        v0 = src[src_idx] + (128 << 8);
         v1 = src[src_idx + 2];
         v2 = src[src_idx + 4];
         v3 = src[src_idx + 6];
         t10 = v0 + v2;
         t12 = v0 - v2;
-        t11 = (v1 - v3) * M13 >> 12;
+        t11 = ((v1 - v3) * M13) >> 12;
         v3 += v1;
         t11 -= v3;
         v0 = t10 + v3;
@@ -614,21 +616,21 @@ fn block_idct(src: &mut &mut [i32], dst: &mut [i16]) {
         t11 = v5 + v4;
         t12 = v6 - v7;
         v7 += v6;
-        v5 = (t11 - v7) * M13 >> 12;
+        v5 = ((t11 - v7) * M13) >> 12;
         v7 += t11;
-        t13 = (t10 + t12) * M5 >> 12;
-        v4 = t13 - (t10 * M2 >> 12);
-        v6 = t13 - (t12 * M4 >> 12) - v7;
+        t13 = ((t10 + t12) * M5) >> 12;
+        v4 = t13 - ((t10 * M2) >> 12);
+        v6 = t13 - ((t12 * M4) >> 12) - v7;
         v5 -= v6;
         v4 -= v5;
-        dst[dst_idx + 0] = (v0 + v7 >> 8) as i16;
-        dst[dst_idx + 7] = (v0 - v7 >> 8) as i16;
-        dst[dst_idx + 1] = (v1 + v6 >> 8) as i16;
-        dst[dst_idx + 6] = (v1 - v6 >> 8) as i16;
-        dst[dst_idx + 2] = (v2 + v5 >> 8) as i16;
-        dst[dst_idx + 5] = (v2 - v5 >> 8) as i16;
-        dst[dst_idx + 3] = (v3 + v4 >> 8) as i16;
-        dst[dst_idx + 4] = (v3 - v4 >> 8) as i16;
+        dst[dst_idx + 0] = ((v0 + v7) >> 8) as i16;
+        dst[dst_idx + 7] = ((v0 - v7) >> 8) as i16;
+        dst[dst_idx + 1] = ((v1 + v6) >> 8) as i16;
+        dst[dst_idx + 6] = ((v1 - v6) >> 8) as i16;
+        dst[dst_idx + 2] = ((v2 + v5) >> 8) as i16;
+        dst[dst_idx + 5] = ((v2 - v5) >> 8) as i16;
+        dst[dst_idx + 3] = ((v3 + v4) >> 8) as i16;
+        dst[dst_idx + 4] = ((v3 - v4) >> 8) as i16;
         dst_idx += 8;
         src_idx += 8;
         i += 1;
@@ -648,15 +650,11 @@ fn mcu_load(mut jd: &mut JDEC) -> JRESULT {
     let mut mcu_buf_idx = 0;
     blk = 0;
     while blk < nby.wrapping_add(2) {
-        cmp = if blk < nby {
-            0
-        } else {
-            blk.wrapping_sub(nby).wrapping_add(1)
-        };
+        cmp = if blk < nby { 0 } else { blk - nby + 1 };
         if cmp != 0 && jd.ncomp as i32 != 3 {
             i = 0;
             while i < 64 {
-                unwrap!(jd.mcubuf.as_mut())[mcu_buf_idx + i as usize] = 128 as i16;
+                unwrap!(jd.mcubuf.as_mut())[mcu_buf_idx + i as usize] = 128;
                 i += 1;
             }
         } else {
@@ -672,7 +670,7 @@ fn mcu_load(mut jd: &mut JDEC) -> JRESULT {
                 if e < 0 {
                     return (0 - e) as JRESULT;
                 }
-                bc = ((1) << bc.wrapping_sub(1)) as u32;
+                bc = (1 << bc.wrapping_sub(1)) as u32;
                 if e as u32 & bc == 0 {
                     e = (e as u32).wrapping_sub((bc << 1).wrapping_sub(1)) as i32;
                 }
@@ -680,7 +678,7 @@ fn mcu_load(mut jd: &mut JDEC) -> JRESULT {
                 jd.dcv[cmp as usize] = d as i16;
             }
             let dfq = unwrap!(jd.qttbl[jd.qtid[cmp as usize] as usize].as_ref());
-            unwrap!(jd.workbuf.as_mut())[0] = d * dfq[0] >> 8;
+            unwrap!(jd.workbuf.as_mut())[0] = (d * dfq[0]) >> 8;
             unwrap!(jd.workbuf.as_mut())[1..64].fill(0);
             z = 1;
             loop {
@@ -692,7 +690,7 @@ fn mcu_load(mut jd: &mut JDEC) -> JRESULT {
                     return (0 - d) as JRESULT;
                 }
                 bc = d as u32;
-                z = z.wrapping_add(bc >> 4 as i32);
+                z = z.wrapping_add(bc >> 4);
                 if z >= 64 {
                     return JDR_FMT1;
                 }
@@ -702,16 +700,16 @@ fn mcu_load(mut jd: &mut JDEC) -> JRESULT {
                     if d < 0 {
                         return (0 - d) as JRESULT;
                     }
-                    bc = ((1) << bc.wrapping_sub(1)) as u32;
+                    bc = (1 << bc.wrapping_sub(1)) as u32;
                     if d as u32 & bc == 0 {
                         d = (d as u32).wrapping_sub((bc << 1 as i32).wrapping_sub(1)) as i32;
                     }
                     i = Zig[z as usize] as u32;
 
                     let dfq = unwrap!(jd.qttbl[jd.qtid[cmp as usize] as usize].as_ref());
-                    unwrap!(jd.workbuf.as_mut())[i as usize] = d * dfq[i as usize] >> 8 as i32;
+                    unwrap!(jd.workbuf.as_mut())[i as usize] = (d * dfq[i as usize]) >> 8;
                 }
-                z = z.wrapping_add(1);
+                z += 1;
                 if !(z < 64) {
                     break;
                 }
@@ -737,16 +735,12 @@ fn mcu_load(mut jd: &mut JDEC) -> JRESULT {
             }
         }
         mcu_buf_idx += 64;
-        blk = blk.wrapping_add(1);
+        blk += 1;
     }
-    return JDR_OK;
+    JDR_OK
 }
 fn mcu_output(jd: &mut JDEC, x: u32, y: u32) -> JRESULT {
-    let CVACC: i32 = if ::core::mem::size_of::<i32>() as cty::c_ulong > 2 as i32 as cty::c_ulong {
-        1024
-    } else {
-        128
-    };
+    let CVACC: i32 = if mem::size_of::<i32>() > 2 { 1024 } else { 128 };
     let mut ix: u32;
     let mut iy: u32;
     let mut mx: u32;
@@ -802,7 +796,7 @@ fn mcu_output(jd: &mut JDEC, x: u32, y: u32) -> JRESULT {
                 py_idx += (iy * 8) as usize;
                 ix = 0;
                 while ix < mx {
-                    cb = unwrap!(jd.mcubuf.as_mut())[pc_idx + 0] as i32 - 128;
+                    cb = unwrap!(jd.mcubuf.as_mut())[pc_idx] as i32 - 128;
                     cr = unwrap!(jd.mcubuf.as_mut())[pc_idx + 64] as i32 - 128;
                     if mx == 16 {
                         if ix == 8 {
@@ -825,32 +819,28 @@ fn mcu_output(jd: &mut JDEC, x: u32, y: u32) -> JRESULT {
                     pix_idx += 1;
                     workbuf[pix_idx] = BYTECLIP(yy + (1.772f64 * CVACC as f64) as i32 * cb / CVACC);
                     pix_idx += 1;
-                    ix = ix.wrapping_add(1);
+                    ix += 1;
                 }
-                iy = iy.wrapping_add(1);
+                iy += 1;
             }
         } else {
             iy = 0;
             while iy < my {
                 py_idx = (iy * 8) as usize;
-                if my == 16 {
-                    if iy >= 8 {
-                        py_idx += 64;
-                    }
+                if my == 16 && iy >= 8 {
+                    py_idx += 64;
                 }
                 ix = 0;
                 while ix < mx {
-                    if mx == 16 {
-                        if ix == 8 {
-                            py_idx += 64 - 8;
-                        }
+                    if mx == 16 && ix == 8 {
+                        py_idx += 64 - 8;
                     }
                     workbuf[pix_idx] = unwrap!(jd.mcubuf.as_ref())[py_idx] as u8;
                     pix_idx += 1;
                     py_idx += 1;
-                    ix = ix.wrapping_add(1);
+                    ix += 1;
                 }
-                iy = iy.wrapping_add(1);
+                iy += 1;
             }
         }
         if 0 != 0 && jd.scale != 0 {
@@ -859,8 +849,8 @@ fn mcu_output(jd: &mut JDEC, x: u32, y: u32) -> JRESULT {
             let mut r: u32;
             let mut g: u32;
             let mut b: u32;
-            let s = (jd.scale as i32 * 2) as u32;
-            let w = ((1 as i32) << jd.scale as i32) as u32;
+            let s = (jd.scale * 2) as u32;
+            let w = (1 << jd.scale as i32) as u32;
             let a = mx.wrapping_sub(w).wrapping_mul(if 1 != 2 { 3 } else { 1 });
             op_idx = 0;
             iy = 0;
@@ -883,10 +873,10 @@ fn mcu_output(jd: &mut JDEC, x: u32, y: u32) -> JRESULT {
                                 b = b.wrapping_add(workbuf[pix_idx] as u32);
                                 pix_idx += 1;
                             }
-                            x_0 = x_0.wrapping_add(1);
+                            x_0 += 1;
                         }
                         pix_idx += a as usize;
-                        y_0 = y_0.wrapping_add(1);
+                        y_0 += 1;
                     }
                     workbuf[op_idx] = (r >> s) as u8;
                     op_idx += 1;
@@ -896,15 +886,15 @@ fn mcu_output(jd: &mut JDEC, x: u32, y: u32) -> JRESULT {
                         workbuf[op_idx] = (b >> s) as u8;
                         op_idx += 1;
                     }
-                    ix = ix.wrapping_add(w);
+                    ix += w;
                 }
-                iy = iy.wrapping_add(w);
+                iy += w;
             }
         }
     } else {
         pix_idx = 0;
         pc_idx = (mx * my) as usize;
-        cb = unwrap!(jd.mcubuf.as_ref())[pc_idx + 0] as i32 - 128;
+        cb = unwrap!(jd.mcubuf.as_ref())[pc_idx] as i32 - 128;
         cr = unwrap!(jd.mcubuf.as_ref())[pc_idx + 64] as i32 - 128;
         iy = 0;
         while iy < my {
@@ -931,9 +921,9 @@ fn mcu_output(jd: &mut JDEC, x: u32, y: u32) -> JRESULT {
                     workbuf[pix_idx] = yy as u8;
                     pix_idx += 1;
                 }
-                ix = ix.wrapping_add(8);
+                ix += 8;
             }
-            iy = iy.wrapping_add(8);
+            iy += 8;
         }
     }
     mx >>= jd.scale as i32;
@@ -957,18 +947,18 @@ fn mcu_output(jd: &mut JDEC, x: u32, y: u32) -> JRESULT {
                     s_0_idx += 1;
                     d_idx += 1;
                 }
-                x_1 = x_1.wrapping_add(1);
+                x_1 += 1;
             }
             s_0_idx += ((mx - rx) * (if JD_FORMAT != 2 { 3 } else { 1 })) as usize;
 
-            y_1 = y_1.wrapping_add(1);
+            y_1 += 1;
         }
     }
     if JD_FORMAT == 1 {
         let mut s_1_idx = 0;
         let mut d_0_idx = 0;
         let mut w_0: u16;
-        let mut n: u32 = rx.wrapping_mul(ry);
+        let mut n: u32 = rx * ry;
         loop {
             w_0 = ((workbuf[s_1_idx] as i32 & 0xf8) << 8) as u16;
             s_1_idx += 1;
@@ -981,8 +971,8 @@ fn mcu_output(jd: &mut JDEC, x: u32, y: u32) -> JRESULT {
             workbuf[d_0_idx + 1] = (w_0 >> 8) as u8;
             d_0_idx += 2;
 
-            n = n.wrapping_sub(1);
-            if !(n != 0) {
+            n -= 1;
+            if n == 0 {
                 break;
             }
         }
@@ -1060,9 +1050,9 @@ pub fn jd_prepare(mut jd: &mut JDEC) -> JRESULT {
         if jpeg_in_buffer(jd, Some(0), 1) != 1 {
             return JDR_INP;
         }
-        ofs = ofs.wrapping_add(1);
+        ofs += 1;
         marker = ((marker as i32) << 8 | unwrap!(jd.inbuf.as_ref())[0] as i32) as u16;
-        if !(marker as i32 != 0xffd8) {
+        if marker as i32 == 0xffd8 {
             break;
         }
     }
@@ -1077,8 +1067,8 @@ pub fn jd_prepare(mut jd: &mut JDEC) -> JRESULT {
         if len <= 2 || marker as i32 >> 8 != 0xff {
             return JDR_FMT1;
         }
-        len = len.wrapping_sub(2);
-        ofs = (ofs as usize).wrapping_add(4 + len) as u32;
+        len -= 2;
+        ofs += (4 + len) as u32;
         's_526: {
             let mut current_block_111: u64;
             match marker as i32 & 0xff {
@@ -1092,7 +1082,7 @@ pub fn jd_prepare(mut jd: &mut JDEC) -> JRESULT {
                     jd.width = ((unwrap!(jd.inbuf.as_ref())[3] as i32) << 8
                         | unwrap!(jd.inbuf.as_ref())[4] as i32)
                         as u16;
-                    jd.height = ((unwrap!(jd.inbuf.as_ref())[1] as i32) << 8 as i32
+                    jd.height = ((unwrap!(jd.inbuf.as_ref())[1] as i32) << 8
                         | unwrap!(jd.inbuf.as_ref())[2] as i32)
                         as u16;
                     jd.ncomp = unwrap!(jd.inbuf.as_ref())[5];
@@ -1101,8 +1091,7 @@ pub fn jd_prepare(mut jd: &mut JDEC) -> JRESULT {
                     }
                     i = 0;
                     while i < jd.ncomp as u32 {
-                        b = unwrap!(jd.inbuf.as_ref())
-                            [(7 as u32).wrapping_add((3 as u32).wrapping_mul(i)) as usize];
+                        b = unwrap!(jd.inbuf.as_ref())[(7 + 3 * i) as usize];
                         if i == 0 {
                             if b != 0x11 && b != 0x22 && b != 0x21 {
                                 return JDR_FMT3;
@@ -1112,12 +1101,11 @@ pub fn jd_prepare(mut jd: &mut JDEC) -> JRESULT {
                         } else if b as i32 != 0x11 {
                             return JDR_FMT3;
                         }
-                        jd.qtid[i as usize] = unwrap!(jd.inbuf.as_ref())
-                            [(8 as u32).wrapping_add((3 as u32).wrapping_mul(i)) as usize];
+                        jd.qtid[i as usize] = unwrap!(jd.inbuf.as_ref())[(8 + 3 * i) as usize];
                         if jd.qtid[i as usize] as i32 > 3 {
                             return JDR_FMT3;
                         }
-                        i = i.wrapping_add(1);
+                        i += 1;
                     }
                     current_block_111 = 5265702136860997526;
                 }
@@ -1174,8 +1162,7 @@ pub fn jd_prepare(mut jd: &mut JDEC) -> JRESULT {
                     }
                     i = 0;
                     while i < jd.ncomp as u32 {
-                        b = unwrap!(jd.inbuf.as_ref())
-                            [(2 as u32).wrapping_add((2 as u32).wrapping_mul(i)) as usize];
+                        b = unwrap!(jd.inbuf.as_ref())[(2 + 2 * i) as usize];
                         if b != 0 && b != 0x11 {
                             return JDR_FMT3;
                         }
@@ -1269,52 +1256,29 @@ pub fn jd_prepare(mut jd: &mut JDEC) -> JRESULT {
                 }
                 _ => {}
             }
-            match current_block_111 {
-                7120504289787790845 => {
-                    current_block_111 = 11626555135028741001;
-                }
-                _ => {}
+            if current_block_111 == 7120504289787790845 {
+                current_block_111 = 11626555135028741001;
             }
-            match current_block_111 {
-                11626555135028741001 => {
-                    current_block_111 = 12215488699659360936;
-                }
-                _ => {}
+            if current_block_111 == 11626555135028741001 {
+                current_block_111 = 12215488699659360936;
             }
-            match current_block_111 {
-                12215488699659360936 => {
-                    current_block_111 = 5192055691381141330;
-                }
-                _ => {}
+            if current_block_111 == 12215488699659360936 {
+                current_block_111 = 5192055691381141330;
             }
-            match current_block_111 {
-                5192055691381141330 => {
-                    current_block_111 = 1443089516996880600;
-                }
-                _ => {}
+            if current_block_111 == 5192055691381141330 {
+                current_block_111 = 1443089516996880600;
             }
-            match current_block_111 {
-                1443089516996880600 => {
-                    current_block_111 = 15064317190960798138;
-                }
-                _ => {}
+            if current_block_111 == 1443089516996880600 {
+                current_block_111 = 15064317190960798138;
             }
-            match current_block_111 {
-                15064317190960798138 => {
-                    current_block_111 = 14109165499131509865;
-                }
-                _ => {}
+            if current_block_111 == 15064317190960798138 {
+                current_block_111 = 14109165499131509865;
             }
-            match current_block_111 {
-                14109165499131509865 => {
-                    current_block_111 = 9711326356574826945;
-                }
-                _ => {}
+            if current_block_111 == 14109165499131509865 {
+                current_block_111 = 9711326356574826945;
             }
-            match current_block_111 {
-                9711326356574826945 => {}
-                _ => {}
-            }
+            if current_block_111 == 9711326356574826945 {}
+
             return JDR_FMT3;
         }
     }
@@ -1332,16 +1296,14 @@ pub fn jd_decomp(mut jd: &mut JDEC, scale: u8) -> JRESULT {
     while y < jd.height as u32 {
         let mut x = 0;
         while x < jd.width as u32 {
-            if jd.nrst as i32 != 0 && {
-                let ref mut fresh68 = jd.rst;
-                let fresh69 = *fresh68;
-                *fresh68 = (*fresh68).wrapping_add(1);
-                fresh69 as i32 == jd.nrst as i32
+            if jd.nrst != 0 && {
+                let val = jd.rst;
+                jd.rst += 1;
+                val == jd.nrst
             } {
-                let ref mut fresh70 = jd.rsc;
-                let fresh71 = *fresh70;
-                *fresh70 = (*fresh70).wrapping_add(1);
-                rc = restart(jd, fresh71);
+                let val = jd.rsc;
+                jd.rsc += 1;
+                rc = restart(jd, val);
                 if rc as u32 != JDR_OK as u32 {
                     return rc;
                 }
@@ -1359,7 +1321,7 @@ pub fn jd_decomp(mut jd: &mut JDEC, scale: u8) -> JRESULT {
         }
         y = y.wrapping_add(my);
     }
-    return rc;
+    rc
 }
 
 fn jpeg_in_buffer(jd: &mut JDEC, inbuf_offset: Option<usize>, n_data: usize) -> usize {

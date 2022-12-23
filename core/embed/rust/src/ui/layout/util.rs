@@ -260,7 +260,7 @@ pub extern "C" fn upy_jpeg_info(data: Obj) -> Obj {
                     mp_obj_new_tuple(3, values.as_ptr())
                 };
 
-                Ok(obj.into())
+                Ok(obj)
             } else {
                 let msg =
                     unsafe { CStr::from_bytes_with_nul_unchecked(b"Invalid image format.\0") };
