@@ -1059,192 +1059,173 @@ pub fn jd_prepare(mut jd: &mut JDEC) -> JRESULT {
         }
         len -= 2;
         ofs += (4 + len) as u32;
-        's_526: {
-            let mut current_block_111: u64;
-            match marker & 0xff {
-                0xC0 => {
-                    if len > 512 {
-                        return JDR_MEM2;
-                    }
-                    if jpeg_in_buffer(jd, Some(0), len) != len {
-                        return JDR_INP;
-                    }
-                    jd.width = ((unwrap!(jd.inbuf.as_ref())[3] as i32) << 8
-                        | unwrap!(jd.inbuf.as_ref())[4] as i32)
-                        as u16;
-                    jd.height = ((unwrap!(jd.inbuf.as_ref())[1] as i32) << 8
-                        | unwrap!(jd.inbuf.as_ref())[2] as i32)
-                        as u16;
-                    jd.ncomp = unwrap!(jd.inbuf.as_ref())[5];
-                    if jd.ncomp != 3 && jd.ncomp != 1 {
+
+        match marker & 0xff {
+            0xC0 => {
+                if len > 512 {
+                    return JDR_MEM2;
+                }
+                if jpeg_in_buffer(jd, Some(0), len) != len {
+                    return JDR_INP;
+                }
+                jd.width = ((unwrap!(jd.inbuf.as_ref())[3] as i32) << 8
+                    | unwrap!(jd.inbuf.as_ref())[4] as i32) as u16;
+                jd.height = ((unwrap!(jd.inbuf.as_ref())[1] as i32) << 8
+                    | unwrap!(jd.inbuf.as_ref())[2] as i32) as u16;
+                jd.ncomp = unwrap!(jd.inbuf.as_ref())[5];
+                if jd.ncomp != 3 && jd.ncomp != 1 {
+                    return JDR_FMT3;
+                }
+                i = 0;
+                while i < jd.ncomp as u32 {
+                    b = unwrap!(jd.inbuf.as_ref())[(7 + 3 * i) as usize];
+                    if i == 0 {
+                        if b != 0x11 && b != 0x22 && b != 0x21 {
+                            return JDR_FMT3;
+                        }
+                        jd.msx = (b as i32 >> 4) as u8;
+                        jd.msy = (b as i32 & 15) as u8;
+                    } else if b as i32 != 0x11 {
                         return JDR_FMT3;
                     }
-                    i = 0;
-                    while i < jd.ncomp as u32 {
-                        b = unwrap!(jd.inbuf.as_ref())[(7 + 3 * i) as usize];
-                        if i == 0 {
-                            if b != 0x11 && b != 0x22 && b != 0x21 {
-                                return JDR_FMT3;
-                            }
-                            jd.msx = (b as i32 >> 4) as u8;
-                            jd.msy = (b as i32 & 15) as u8;
-                        } else if b as i32 != 0x11 {
-                            return JDR_FMT3;
-                        }
-                        jd.qtid[i as usize] = unwrap!(jd.inbuf.as_ref())[(8 + 3 * i) as usize];
-                        if jd.qtid[i as usize] as i32 > 3 {
-                            return JDR_FMT3;
-                        }
-                        i += 1;
-                    }
-                    current_block_111 = 5265702136860997526;
-                }
-                0xDD => {
-                    if len > 512 {
-                        return JDR_MEM2;
-                    }
-                    if jpeg_in_buffer(jd, Some(0), len) != len {
-                        return JDR_INP;
-                    }
-                    jd.nrst = ((unwrap!(jd.inbuf.as_ref())[0] as i32) << 8
-                        | unwrap!(jd.inbuf.as_ref())[1] as i32)
-                        as u16;
-                    current_block_111 = 5265702136860997526;
-                }
-                0xC4 => {
-                    if len > 512 {
-                        return JDR_MEM2;
-                    }
-                    if jpeg_in_buffer(jd, Some(0), len) != len {
-                        return JDR_INP;
-                    }
-                    rc = create_huffman_tbl(jd, len);
-                    if rc as u64 != 0 {
-                        return rc;
-                    }
-                    current_block_111 = 5265702136860997526;
-                }
-                0xDB => {
-                    if len > 512 {
-                        return JDR_MEM2;
-                    }
-                    if jpeg_in_buffer(jd, Some(0), len) != len {
-                        return JDR_INP;
-                    }
-                    rc = create_qt_tbl(jd, len);
-                    if rc as u64 != 0 {
-                        return rc;
-                    }
-                    current_block_111 = 5265702136860997526;
-                }
-                0xDA => {
-                    if len > 512 {
-                        return JDR_MEM2;
-                    }
-                    if jpeg_in_buffer(jd, Some(0), len) != len {
-                        return JDR_INP;
-                    }
-                    if jd.width == 0 || jd.height == 0 {
-                        return JDR_FMT1;
-                    }
-                    if unwrap!(jd.inbuf.as_ref())[0] as i32 != jd.ncomp as i32 {
+                    jd.qtid[i as usize] = unwrap!(jd.inbuf.as_ref())[(8 + 3 * i) as usize];
+                    if jd.qtid[i as usize] as i32 > 3 {
                         return JDR_FMT3;
                     }
-                    i = 0;
-                    while i < jd.ncomp as u32 {
-                        b = unwrap!(jd.inbuf.as_ref())[(2 + 2 * i) as usize];
-                        if b != 0 && b != 0x11 {
-                            return JDR_FMT3;
-                        }
-                        n = if i != 0 { 1 } else { 0 };
-                        if (jd.huffbits[n as usize][0]).is_none()
-                            || (jd.huffbits[n as usize][1]).is_none()
-                        {
-                            return JDR_FMT1;
-                        }
-                        if (jd.qttbl[jd.qtid[i as usize] as usize]).is_none() {
-                            return JDR_FMT1;
-                        }
-                        i += 1;
-                    }
-                    n = (jd.msy as i32 * jd.msx as i32) as u32;
-                    if n == 0 {
-                        return JDR_FMT1;
-                    }
-                    len = (n * 64 * 2 + 64) as usize;
-                    if len < 256 {
-                        len = 256;
-                    }
-                    let mem = unsafe { alloc_pool_slice(jd, len / 4) };
-                    if mem.is_err() {
-                        return JDR_MEM1;
-                    }
-                    jd.workbuf = Some(unwrap!(mem));
-
-                    let mcubuf = unsafe { alloc_pool_slice(jd, (n as usize + 2) * 64) };
-                    if mcubuf.is_err() {
-                        return JDR_MEM1;
-                    }
-                    jd.mcubuf = Some(unwrap!(mcubuf));
-
-                    ofs %= 512;
-                    if ofs != 0 {
-                        jd.dctr = jpeg_in_buffer(jd, Some(ofs as usize), (512 - ofs) as usize);
-                    }
-                    jd.dptr = (ofs - (if JD_FASTDECODE != 0 { 0 } else { 1 })) as usize;
-                    return JDR_OK;
-                }
-                0xC1 => {
-                    return JDR_FMT3;
-                }
-                0xC2 => {
-                    return JDR_FMT3;
-                }
-                0xC3 => {
-                    return JDR_FMT3;
-                }
-                0xC5 => {
-                    return JDR_FMT3;
-                }
-                0xC6 => {
-                    return JDR_FMT3;
-                }
-                0xC7 => {
-                    return JDR_FMT3;
-                }
-                0xC9 => {
-                    return JDR_FMT3;
-                }
-                0xCA => {
-                    return JDR_FMT3;
-                }
-                0xCB => {
-                    return JDR_FMT3;
-                }
-                0xCD => {
-                    return JDR_FMT3;
-                }
-                0xCF => {
-                    return JDR_FMT3;
-                }
-                0xCE | 0xD9 => {
-                    return JDR_FMT3;
-                }
-                _ => {
-                    if jpeg_in_buffer(jd, None, len) != len {
-                        return JDR_INP;
-                    }
-                    current_block_111 = 5265702136860997526;
+                    i += 1;
                 }
             }
-            match current_block_111 {
-                12749676338018479376 => {
+            0xDD => {
+                if len > 512 {
+                    return JDR_MEM2;
+                }
+                if jpeg_in_buffer(jd, Some(0), len) != len {
+                    return JDR_INP;
+                }
+                jd.nrst = ((unwrap!(jd.inbuf.as_ref())[0] as i32) << 8
+                    | unwrap!(jd.inbuf.as_ref())[1] as i32) as u16;
+            }
+            0xC4 => {
+                if len > 512 {
+                    return JDR_MEM2;
+                }
+                if jpeg_in_buffer(jd, Some(0), len) != len {
+                    return JDR_INP;
+                }
+                rc = create_huffman_tbl(jd, len);
+                if rc as u64 != 0 {
+                    return rc;
+                }
+            }
+            0xDB => {
+                if len > 512 {
+                    return JDR_MEM2;
+                }
+                if jpeg_in_buffer(jd, Some(0), len) != len {
+                    return JDR_INP;
+                }
+                rc = create_qt_tbl(jd, len);
+                if rc as u64 != 0 {
+                    return rc;
+                }
+            }
+            0xDA => {
+                if len > 512 {
+                    return JDR_MEM2;
+                }
+                if jpeg_in_buffer(jd, Some(0), len) != len {
+                    return JDR_INP;
+                }
+                if jd.width == 0 || jd.height == 0 {
+                    return JDR_FMT1;
+                }
+                if unwrap!(jd.inbuf.as_ref())[0] as i32 != jd.ncomp as i32 {
                     return JDR_FMT3;
                 }
-                5265702136860997526 => {
-                    break 's_526;
+                i = 0;
+                while i < jd.ncomp as u32 {
+                    b = unwrap!(jd.inbuf.as_ref())[(2 + 2 * i) as usize];
+                    if b != 0 && b != 0x11 {
+                        return JDR_FMT3;
+                    }
+                    n = if i != 0 { 1 } else { 0 };
+                    if (jd.huffbits[n as usize][0]).is_none()
+                        || (jd.huffbits[n as usize][1]).is_none()
+                    {
+                        return JDR_FMT1;
+                    }
+                    if (jd.qttbl[jd.qtid[i as usize] as usize]).is_none() {
+                        return JDR_FMT1;
+                    }
+                    i += 1;
                 }
-                _ => {}
+                n = (jd.msy as i32 * jd.msx as i32) as u32;
+                if n == 0 {
+                    return JDR_FMT1;
+                }
+                len = (n * 64 * 2 + 64) as usize;
+                if len < 256 {
+                    len = 256;
+                }
+                let mem = unsafe { alloc_pool_slice(jd, len / 4) };
+                if mem.is_err() {
+                    return JDR_MEM1;
+                }
+                jd.workbuf = Some(unwrap!(mem));
+
+                let mcubuf = unsafe { alloc_pool_slice(jd, (n as usize + 2) * 64) };
+                if mcubuf.is_err() {
+                    return JDR_MEM1;
+                }
+                jd.mcubuf = Some(unwrap!(mcubuf));
+
+                ofs %= 512;
+                if ofs != 0 {
+                    jd.dctr = jpeg_in_buffer(jd, Some(ofs as usize), (512 - ofs) as usize);
+                }
+                jd.dptr = (ofs - (if JD_FASTDECODE != 0 { 0 } else { 1 })) as usize;
+                return JDR_OK;
+            }
+            0xC1 => {
+                return JDR_FMT3;
+            }
+            0xC2 => {
+                return JDR_FMT3;
+            }
+            0xC3 => {
+                return JDR_FMT3;
+            }
+            0xC5 => {
+                return JDR_FMT3;
+            }
+            0xC6 => {
+                return JDR_FMT3;
+            }
+            0xC7 => {
+                return JDR_FMT3;
+            }
+            0xC9 => {
+                return JDR_FMT3;
+            }
+            0xCA => {
+                return JDR_FMT3;
+            }
+            0xCB => {
+                return JDR_FMT3;
+            }
+            0xCD => {
+                return JDR_FMT3;
+            }
+            0xCF => {
+                return JDR_FMT3;
+            }
+            0xCE | 0xD9 => {
+                return JDR_FMT3;
+            }
+            _ => {
+                if jpeg_in_buffer(jd, None, len) != len {
+                    return JDR_INP;
+                }
             }
         }
     }
