@@ -1,4 +1,7 @@
-use crate::trezorhal::buffers::{get_jpeg_buffer, get_jpeg_work_buffer, BufferJpeg};
+use crate::{
+    trezorhal::buffers::{get_jpeg_buffer, get_jpeg_work_buffer, BufferJpeg},
+    ui::display::Color,
+};
 use core::{
     f64::consts::{FRAC_1_SQRT_2, SQRT_2},
     mem, slice,
@@ -187,23 +190,21 @@ fn create_qt_tbl(mut jd: &mut JDEC, mut ndata: usize) -> JRESULT {
 
         d = unwrap!(jd.inbuf.as_ref())[data_idx];
         data_idx += 1;
-        if d as i32 & 0xf0 != 0 {
+        if d & 0xf0 != 0 {
             return JDR_FMT1;
         }
-        i = (d as i32 & 3) as u32;
+        i = (d & 3) as u32;
 
         let pb = unsafe { alloc_pool_slice(jd, 64) };
         if pb.is_err() {
             return JDR_MEM1;
         }
         jd.qttbl[i as usize] = Some(unwrap!(pb));
-        let mut j: u32 = 0;
-        while j < 64 {
-            zi = ZIG[j as usize] as u32;
+        for j in 0..64 {
+            zi = ZIG[j] as u32;
 
             unwrap!(jd.qttbl[i as usize].as_mut())[zi as usize] =
                 ((unwrap!(jd.inbuf.as_ref())[data_idx] as u32) * IPFS[zi as usize] as u32) as i32;
-            j += 1;
             data_idx += 1;
         }
     }
@@ -235,7 +236,7 @@ fn create_huffman_tbl(mut jd: &mut JDEC, mut ndata: usize) -> JRESULT {
         if mem.is_err() {
             return JDR_MEM1;
         }
-        jd.huffbits[num as usize][cls as usize] = Some(unwrap!(mem));
+        jd.huffbits[num][cls] = Some(unwrap!(mem));
 
         i = 0;
         np = i as usize;
@@ -320,7 +321,8 @@ fn create_huffman_tbl(mut jd: &mut JDEC, mut ndata: usize) -> JRESULT {
                         & ((1 << HUFF_BIT) - 1)) as u32;
 
                     if cls != 0 {
-                        td = unwrap!(jd.huffdata[num][cls].as_ref())[i as usize] as u32 | (b + 1) << 8;
+                        td = unwrap!(jd.huffdata[num][cls].as_ref())[i as usize] as u32
+                            | (b + 1) << 8;
                         i += 1;
                         span = 1 << ((HUFF_BIT - 1) - b);
                         while span != 0 {
@@ -330,7 +332,8 @@ fn create_huffman_tbl(mut jd: &mut JDEC, mut ndata: usize) -> JRESULT {
                             unwrap!(jd.hufflut_ac[num].as_mut())[fresh18 as usize] = td as u16;
                         }
                     } else {
-                        td = unwrap!(jd.huffdata[num][cls].as_ref())[i as usize] as u32 | (b + 1) << 4;
+                        td = unwrap!(jd.huffdata[num][cls].as_ref())[i as usize] as u32
+                            | (b + 1) << 4;
                         i += 1;
                         span = 1 << ((HUFF_BIT - 1) - b);
                         while span != 0 {
@@ -415,7 +418,7 @@ fn huffext(mut jd: &mut JDEC, id: usize, cls: usize) -> i32 {
         hd_idx = jd.longofs[id][cls];
         bl = (HUFF_BIT + 1) as u32;
     } else {
-        bl=1;
+        bl = 1;
     }
 
     while bl <= 16 {
@@ -424,14 +427,12 @@ fn huffext(mut jd: &mut JDEC, id: usize, cls: usize) -> i32 {
         if nc != 0 {
             d = w >> (wbit - bl);
             loop {
-                let fresh24 =
-                    unwrap!(jd.huffcode[id][cls].as_ref())[hc_idx as usize];
+                let fresh24 = unwrap!(jd.huffcode[id][cls].as_ref())[hc_idx as usize];
                 hc_idx += 1;
                 if d == fresh24 as u32 {
                     jd.dbit = (wbit - bl) as u8;
 
-                    return unwrap!((jd.huffdata[id][cls]).as_ref())
-                        [hd_idx as usize] as i32;
+                    return unwrap!((jd.huffdata[id][cls]).as_ref())[hd_idx as usize] as i32;
                 }
                 hd_idx += 1;
                 nc -= 1;
@@ -963,8 +964,7 @@ fn mcu_output(jd: &mut JDEC, mut x: u32, mut y: u32) -> JRESULT {
         let mut s_1_idx = 0;
         let mut d_0_idx = 0;
         let mut w_0: u16;
-        let mut n: u32 = rx * ry;
-        loop {
+        for _ in 0..rx * ry {
             w_0 = ((workbuf[s_1_idx] as i32 & 0xf8) << 8) as u16;
             s_1_idx += 1;
             w_0 = (w_0 as i32 | (workbuf[s_1_idx] as i32 & 0xfc) << 3) as u16;
@@ -975,11 +975,6 @@ fn mcu_output(jd: &mut JDEC, mut x: u32, mut y: u32) -> JRESULT {
             workbuf[d_0_idx] = (w_0 & 0xFF) as u8;
             workbuf[d_0_idx + 1] = (w_0 >> 8) as u8;
             d_0_idx += 2;
-
-            n -= 1;
-            if n == 0 {
-                break;
-            }
         }
     }
     jpeg_out(jd, &mut rect)
@@ -1197,40 +1192,8 @@ pub fn jd_prepare(mut jd: &mut JDEC) -> JRESULT {
                 jd.dptr = (ofs - (if JD_FASTDECODE != 0 { 0 } else { 1 })) as usize;
                 return JDR_OK;
             }
-            0xC1 => {
-                return JDR_FMT3;
-            }
-            0xC2 => {
-                return JDR_FMT3;
-            }
-            0xC3 => {
-                return JDR_FMT3;
-            }
-            0xC5 => {
-                return JDR_FMT3;
-            }
-            0xC6 => {
-                return JDR_FMT3;
-            }
-            0xC7 => {
-                return JDR_FMT3;
-            }
-            0xC9 => {
-                return JDR_FMT3;
-            }
-            0xCA => {
-                return JDR_FMT3;
-            }
-            0xCB => {
-                return JDR_FMT3;
-            }
-            0xCD => {
-                return JDR_FMT3;
-            }
-            0xCF => {
-                return JDR_FMT3;
-            }
-            0xCE | 0xD9 => {
+            0xC1 | 0xC2 | 0xC3 | 0xC5 | 0xC6 | 0xC7 | 0xC9 | 0xCA | 0xCB | 0xCD | 0xCF | 0xCE
+            | 0xD9 => {
                 return JDR_FMT3;
             }
             _ => {
