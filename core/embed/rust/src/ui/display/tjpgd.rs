@@ -21,6 +21,8 @@ const JD_FASTDECODE: u32 = 2;
 
 const HUFF_BIT: u32 = 10;
 
+const NUM_DEQUANTIZER_TABLES: usize = 4;
+
 #[derive(PartialEq, Eq)]
 pub enum JRESULT {
     FMT3 = 8,
@@ -52,6 +54,7 @@ pub struct JDEC<'a> {
     pub height: u16,
     pub huffbits: [[Option<&'static mut [u8]>; 2]; 2],
     pub huffcode: [[Option<&'static mut [u16]>; 2]; 2],
+    pub huffcode_len: [[usize; 2]; 2],
     pub huffdata: [[Option<&'static mut [u8]>; 2]; 2],
     pub qttbl: [Option<&'static mut [i32]>; 4],
     pub wreg: u32,
@@ -247,6 +250,7 @@ fn create_huffman_tbl(mut jd: &mut JDEC, mut ndata: usize) -> JRESULT {
             return JRESULT::MEM1;
         }
         jd.huffcode[num][cls] = Some(unwrap!(mem));
+        jd.huffcode_len[num][cls] = np;
 
         hc = 0;
         i = 0;
@@ -422,11 +426,13 @@ fn huffext(mut jd: &mut JDEC, id: usize, cls: usize) -> Result<i32, JRESULT> {
         if nc != 0 {
             d = w >> (wbit - bl);
             loop {
+                if hc_idx as usize >= jd.huffcode_len[id][cls] {
+                    return Err(JRESULT::FMT1);
+                }
                 let fresh24 = unwrap!(jd.huffcode[id][cls].as_ref())[hc_idx as usize];
                 hc_idx += 1;
                 if d == fresh24 as u32 {
                     jd.dbit = (wbit - bl) as u8;
-
                     return Ok(unwrap!((jd.huffdata[id][cls]).as_ref())[hd_idx as usize] as i32);
                 }
                 hd_idx += 1;
@@ -655,7 +661,11 @@ fn mcu_load(mut jd: &mut JDEC) -> JRESULT {
                 d += e;
                 jd.dcv[cmp as usize] = d as i16;
             }
-            let dfq = unwrap!(jd.qttbl[jd.qtid[cmp as usize] as usize].as_ref());
+            let dqidx = jd.qtid[cmp as usize] as usize;
+            if dqidx >= NUM_DEQUANTIZER_TABLES {
+                return JRESULT::FMT1;
+            }
+            let dfq = unwrap!(jd.qttbl[dqidx].as_ref());
             unwrap!(jd.workbuf.as_mut())[0] = (d * dfq[0]) >> 8;
             unwrap!(jd.workbuf.as_mut())[1..64].fill(0);
             z = 1;
@@ -687,7 +697,11 @@ fn mcu_load(mut jd: &mut JDEC) -> JRESULT {
                         d -= ((bc << 1) - 1) as i32;
                     }
                     let i = ZIG[z as usize] as u32;
-                    let dfq = unwrap!(jd.qttbl[jd.qtid[cmp as usize] as usize].as_ref());
+                    let dqidx = jd.qtid[cmp as usize] as usize;
+                    if dqidx >= NUM_DEQUANTIZER_TABLES {
+                        return JRESULT::FMT1;
+                    }
+                    let dfq = unwrap!(jd.qttbl[dqidx].as_ref());
                     unwrap!(jd.workbuf.as_mut())[i as usize] = (d * dfq[i as usize]) >> 8;
                 }
                 z += 1;
@@ -983,6 +997,7 @@ pub fn jd_init(data: &[u8]) -> JDEC {
         height: 0,
         huffbits: [[None, None], [None, None]],
         huffcode: [[None, None], [None, None]],
+        huffcode_len: [[0; 2]; 2],
         huffdata: [[None, None], [None, None]],
         qttbl: [None, None, None, None],
         wreg: 0,
