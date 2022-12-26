@@ -1,4 +1,7 @@
-use crate::trezorhal::buffers::{get_jpeg_buffer, get_jpeg_work_buffer, BufferJpeg};
+use crate::{
+    trezorhal::buffers::{get_jpeg_buffer, get_jpeg_work_buffer, BufferJpeg},
+    ui::geometry::{Offset, Point, Rect},
+};
 use core::{
     f64::consts::{FRAC_1_SQRT_2, SQRT_2},
     mem, slice,
@@ -10,7 +13,7 @@ const JD_FASTDECODE: u32 = 2;
 
 const HUFF_BIT: u32 = 10;
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Eq)]
 pub enum JRESULT {
     FMT3 = 8,
     FMT2 = 7,
@@ -21,13 +24,6 @@ pub enum JRESULT {
     INP = 2,
     INTR = 1,
     OK = 0,
-}
-
-pub struct JRECT {
-    pub left: u16,
-    pub right: u16,
-    pub top: u16,
-    pub bottom: u16,
 }
 
 pub struct JDEC<'a> {
@@ -70,12 +66,6 @@ pub struct JDEC<'a> {
     current_line_pix: i16,
     data: &'a [u8],
     pub buffer: &'static mut BufferJpeg,
-}
-
-pub struct JpegInfo {
-    pub width: u16,
-    pub height: u16,
-    pub mcu_height: u16,
 }
 
 static ZIG: [u8; 64] = [
@@ -178,7 +168,6 @@ unsafe fn alloc_pool_slice<T>(mut jd: &mut JDEC, ndata: usize) -> Result<&'stati
 
 fn create_qt_tbl(mut jd: &mut JDEC, mut ndata: usize) -> JRESULT {
     let mut i: u32;
-    let mut zi: u32;
     let mut d: u8;
     let mut data_idx = 0;
     while ndata != 0 {
@@ -199,9 +188,7 @@ fn create_qt_tbl(mut jd: &mut JDEC, mut ndata: usize) -> JRESULT {
             return JRESULT::MEM1;
         }
         jd.qttbl[i as usize] = Some(unwrap!(pb));
-        for j in 0..64 {
-            zi = ZIG[j] as u32;
-
+        for zi in ZIG {
             unwrap!(jd.qttbl[i as usize].as_mut())[zi as usize] =
                 ((unwrap!(jd.inbuf.as_ref())[data_idx] as u32) * IPFS[zi as usize] as u32) as i32;
             data_idx += 1;
@@ -622,7 +609,6 @@ fn mcu_load(mut jd: &mut JDEC) -> JRESULT {
     let mut d: i32;
     let mut e: i32;
     let mut blk: u32;
-    let mut i: u32;
     let mut bc: u32;
     let mut z: u32;
     let mut id: u32;
@@ -633,10 +619,8 @@ fn mcu_load(mut jd: &mut JDEC) -> JRESULT {
     while blk < nby + 2 {
         cmp = if blk < nby { 0 } else { blk - nby + 1 };
         if cmp != 0 && jd.ncomp as i32 != 3 {
-            i = 0;
-            while i < 64 {
-                unwrap!(jd.mcubuf.as_mut())[mcu_buf_idx + i as usize] = 128;
-                i += 1;
+            for  i in 0..64 {
+                unwrap!(jd.mcubuf.as_mut())[mcu_buf_idx + i] = 128;
             }
         } else {
             id = if cmp != 0 { 1 } else { 0 };
@@ -693,8 +677,7 @@ fn mcu_load(mut jd: &mut JDEC) -> JRESULT {
                     if d as u32 & bc == 0 {
                         d -= ((bc << 1) - 1) as i32;
                     }
-                    i = ZIG[z as usize] as u32;
-
+                    let i = ZIG[z as usize] as u32;
                     let dfq = unwrap!(jd.qttbl[jd.qtid[cmp as usize] as usize].as_ref());
                     unwrap!(jd.workbuf.as_mut())[i as usize] = (d * dfq[i as usize]) >> 8;
                 }
@@ -707,10 +690,8 @@ fn mcu_load(mut jd: &mut JDEC) -> JRESULT {
                 if z == 1 || JD_USE_SCALE != 0 && jd.scale == 3 {
                     d = (unwrap!(jd.workbuf.as_ref())[0] / 256 + 128) as i32;
                     if JD_FASTDECODE >= 1 {
-                        i = 0;
-                        while i < 64 {
-                            unwrap!(jd.mcubuf.as_mut())[mcu_buf_idx + i as usize] = d as i16;
-                            i += 1;
+                        for i in 0..64 {
+                            unwrap!(jd.mcubuf.as_mut())[mcu_buf_idx + i] = d as i16;
                         }
                     } else {
                         unwrap!(jd.mcubuf.as_mut())[..64].fill(d as i16);
@@ -738,12 +719,6 @@ fn mcu_output(jd: &mut JDEC, mut x: u32, mut y: u32) -> JRESULT {
     let mut cr: i32;
     let mut py_idx: usize;
     let mut pc_idx: usize;
-    let mut rect: JRECT = JRECT {
-        left: 0,
-        right: 0,
-        top: 0,
-        bottom: 0,
-    };
     mx = (jd.msx as i32 * 8) as u32;
     let my = (jd.msy as i32 * 8) as u32;
     let mut rx = if (x + mx) <= jd.width as u32 {
@@ -766,11 +741,10 @@ fn mcu_output(jd: &mut JDEC, mut x: u32, mut y: u32) -> JRESULT {
         x >>= jd.scale;
         y >>= jd.scale;
     }
-    rect.left = x as u16;
-    rect.right = (x + rx - 1) as u16;
-    rect.top = y as u16;
-    rect.bottom = (y + ry - 1) as u16;
-
+    let rect = Rect::from_top_left_and_size(
+        Point::new(x as i16, y as i16),
+        Offset::new(rx as i16, ry as i16),
+    );
     let len = unwrap!(jd.workbuf.as_ref()).len() * 4;
     let ptr = unwrap!(jd.workbuf.as_mut()).as_mut_ptr() as *mut u8;
     let workbuf = unsafe { slice::from_raw_parts_mut(ptr, len) };
@@ -974,7 +948,7 @@ fn mcu_output(jd: &mut JDEC, mut x: u32, mut y: u32) -> JRESULT {
             d_0_idx += 2;
         }
     }
-    jpeg_out(jd, &mut rect)
+    jpeg_out(jd, rect)
 }
 
 pub fn jd_init<'a>(data: &'a [u8], buffer: &'static mut BufferJpeg, buffer_width: i16) -> JDEC<'a> {
@@ -1263,10 +1237,10 @@ fn jpeg_in(jd: &mut JDEC, inbuf_offset: Option<usize>, n_data: usize) -> usize {
     n_data as _
 }
 
-fn jpeg_out(jd: &mut JDEC, rect: &mut JRECT) -> JRESULT {
-    let w = (rect.right - rect.left + 1) as i16;
-    let h = (rect.bottom - rect.top + 1) as i16;
-    let x = rect.left as i16;
+fn jpeg_out(jd: &mut JDEC, rect: Rect) -> JRESULT {
+    let w = rect.width();
+    let h = rect.height();
+    let x = rect.x0;
 
     let bitmap = unsafe {
         slice::from_raw_parts(
@@ -1303,20 +1277,16 @@ fn jpeg_out(jd: &mut JDEC, rect: &mut JRECT) -> JRESULT {
     JRESULT::OK
 }
 
-pub fn jpeg_info(data: &[u8]) -> Result<JpegInfo, ()> {
+pub fn jpeg_info(data: &[u8]) -> Option<(Offset, u16)> {
     let work_buffer = unsafe { get_jpeg_buffer(0, true) };
     let mut jd: JDEC = jd_init(data, work_buffer, 0);
     let res = jd_prepare(&mut jd);
 
-    let info = JpegInfo {
-        width: jd.width,
-        height: jd.height,
-        mcu_height: (jd.msy * 8) as u16,
-    };
+    let mcu_height = jd.msy as u16 * 8;
 
-    if info.mcu_height > 16 || res != JRESULT::OK {
-        return Err(());
+    if mcu_height > 16 || res != JRESULT::OK {
+        return None;
     }
 
-    Ok(info)
+    Some((Offset::new(jd.width as i16, jd.height as i16), mcu_height))
 }

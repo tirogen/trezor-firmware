@@ -153,20 +153,6 @@ pub fn image(center: Point, data: &[u8]) {
     display::image(r.x0, r.y0, r.width(), r.height(), toif_data);
 }
 
-pub fn jpeg_info(data: &[u8]) -> Option<(Offset, u16)> {
-    if let Ok(info) = tjpgd::jpeg_info(data) {
-        Some((
-            Offset::new(
-                unwrap!(info.width.try_into()),
-                unwrap!(info.height.try_into()),
-            ),
-            info.mcu_height,
-        ))
-    } else {
-        None
-    }
-}
-
 pub fn toif_info(data: &[u8]) -> Option<(Offset, ToifFormat)> {
     if let Ok(info) = display::toif_info(data) {
         Some((

@@ -7,14 +7,17 @@ use crate::{
     trezorhal::usb::usb_configured,
     ui::{
         component::{Component, Event, EventCtx, Pad, TimerToken},
-        display::{self, jpeg_info, Color, Font},
+        display::{self, Color, Font},
         event::{TouchEvent, USBEvent},
         geometry::{Offset, Point, Rect},
         model_tt::{constant, theme::IMAGE_HOMESCREEN},
     },
 };
 
-use crate::trezorhal::time_measurements::{clear_acc, get_ticks, init_ticks};
+use crate::{
+    trezorhal::time_measurements::{clear_acc, get_ticks, init_ticks},
+    ui::display::tjpgd::jpeg_info,
+};
 use render::{
     homescreen, homescreen_blurred, HomescreenNotification, HomescreenText, HOMESCREEN_IMAGE_SIZE,
 };

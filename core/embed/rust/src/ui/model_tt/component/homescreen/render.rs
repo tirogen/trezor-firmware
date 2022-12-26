@@ -20,10 +20,7 @@ use crate::{
 use crate::ui::{
     component::text::TextStyle,
     constant::{HEIGHT, WIDTH},
-    display::{
-        jpeg_info,
-        tjpgd::{jd_decomp, jd_init, jd_prepare, JDEC},
-    },
+    display::tjpgd::{jd_decomp, jd_init, jd_prepare, jpeg_info, JDEC},
     model_tt::theme,
     util::icon_text_center,
 };

@@ -14,7 +14,7 @@ use crate::{
             paragraphs::{Paragraph, ParagraphSource, ParagraphStrType},
             TextStyle,
         },
-        display::jpeg_info,
+        display::tjpgd::jpeg_info,
         util::set_animation_disabled,
     },
 };
