@@ -1,6 +1,14 @@
 use crate::{
-    trezorhal::buffers::{get_jpeg_buffer, get_jpeg_work_buffer, BufferJpeg},
-    ui::geometry::{Offset, Point, Rect},
+    trezorhal::{
+        buffers::{get_jpeg_buffer, get_jpeg_work_buffer, BufferJpeg},
+        display::pixeldata,
+    },
+    ui::{
+        constant,
+        constant::WIDTH,
+        display::set_window,
+        geometry::{Offset, Point, Rect},
+    },
 };
 use core::{
     f64::consts::{FRAC_1_SQRT_2, SQRT_2},
@@ -8,7 +16,7 @@ use core::{
 };
 
 const JD_FORMAT: u32 = 1;
-const JD_USE_SCALE: u32 = 0;
+const JD_USE_SCALE: u32 = 1;
 const JD_FASTDECODE: u32 = 2;
 
 const HUFF_BIT: u32 = 10;
@@ -58,6 +66,7 @@ pub struct JDEC<'a> {
     pub pool_start: usize,
 
     // context
+    pos: Option<Point>,
     data_read: usize,
     data_len: usize,
     buffer_width: i16,
@@ -619,7 +628,7 @@ fn mcu_load(mut jd: &mut JDEC) -> JRESULT {
     while blk < nby + 2 {
         cmp = if blk < nby { 0 } else { blk - nby + 1 };
         if cmp != 0 && jd.ncomp as i32 != 3 {
-            for  i in 0..64 {
+            for i in 0..64 {
                 unwrap!(jd.mcubuf.as_mut())[mcu_buf_idx + i] = 128;
             }
         } else {
@@ -951,9 +960,11 @@ fn mcu_output(jd: &mut JDEC, mut x: u32, mut y: u32) -> JRESULT {
     jpeg_out(jd, rect)
 }
 
-pub fn jd_init<'a>(data: &'a [u8], buffer: &'static mut BufferJpeg, buffer_width: i16) -> JDEC<'a> {
+pub fn jd_init(data: &[u8]) -> JDEC {
     let pool = Some(unsafe { get_jpeg_work_buffer(0, true).buffer.as_mut_slice() });
     let pool_len = unwrap!(pool.as_ref()).len() as usize;
+
+    let buffer = unsafe { get_jpeg_buffer(0, true) };
 
     JDEC {
         dctr: 0,
@@ -985,7 +996,7 @@ pub fn jd_init<'a>(data: &'a [u8], buffer: &'static mut BufferJpeg, buffer_width
         data,
         data_read: 0,
         buffer,
-        buffer_width,
+        buffer_width: WIDTH,
         buffer_height: 16,
         current_line: 0,
         current_line_pix: 0,
@@ -993,6 +1004,7 @@ pub fn jd_init<'a>(data: &'a [u8], buffer: &'static mut BufferJpeg, buffer_width
         nrst: 0,
         mcubuf: None,
         pool_start: 0,
+        pos: None,
     }
 }
 
@@ -1249,37 +1261,62 @@ fn jpeg_out(jd: &mut JDEC, rect: Rect) -> JRESULT {
         )
     };
 
-    if h > jd.buffer_height {
-        // unsupported height, call and let know
-        return JRESULT::OK;
-    }
-
-    let buffer_len = (jd.buffer_width * jd.buffer_height) as usize;
-
-    for i in 0..h {
-        for j in 0..w {
-            let buffer_pos = ((x + j) + (i * jd.buffer_width)) as usize;
-            if buffer_pos < buffer_len {
-                jd.buffer.buffer[buffer_pos] = bitmap[(i * w + j) as usize];
+    if let Some(pos) = jd.pos {
+        let r = rect.translate(pos.into());
+        let clamped = r.clamp(constant::screen());
+        set_window(clamped);
+        for py in r.y0..r.y1 {
+            for px in r.x0..r.x1 {
+                let p = Point::new(px, py);
+                if clamped.contains(p) {
+                    let off = p - r.top_left();
+                    let c = bitmap[(off.y * w + off.x) as usize];
+                    pixeldata(c);
+                }
             }
         }
-    }
+    } else {
+        if h > jd.buffer_height {
+            // unsupported height, call and let know
+            return JRESULT::OK;
+        }
 
-    jd.current_line_pix += w;
+        let buffer_len = (jd.buffer_width * jd.buffer_height) as usize;
 
-    if jd.current_line_pix >= jd.width as i16 {
-        jd.current_line_pix = 0;
-        jd.current_line += (jd.msy * 8) as i16;
-        // finished line, abort and continue later
-        return JRESULT::INTR;
+        for i in 0..h {
+            for j in 0..w {
+                let buffer_pos = ((x + j) + (i * jd.buffer_width)) as usize;
+                if buffer_pos < buffer_len {
+                    jd.buffer.buffer[buffer_pos] = bitmap[(i * w + j) as usize];
+                }
+            }
+        }
+
+        jd.current_line_pix += w;
+
+        if jd.current_line_pix >= jd.width as i16 {
+            jd.current_line_pix = 0;
+            jd.current_line += (jd.msy * 8) as i16;
+            // finished line, abort and continue later
+            return JRESULT::INTR;
+        }
     }
 
     JRESULT::OK
 }
 
+pub fn jpeg(data: &[u8], pos: Point, scale: u8) {
+    let mut jd: JDEC = jd_init(data);
+    jd.pos = Some(pos);
+    let res = jd_prepare(&mut jd);
+
+    if res == JRESULT::OK {
+        jd_decomp(&mut jd, scale);
+    }
+}
+
 pub fn jpeg_info(data: &[u8]) -> Option<(Offset, u16)> {
-    let work_buffer = unsafe { get_jpeg_buffer(0, true) };
-    let mut jd: JDEC = jd_init(data, work_buffer, 0);
+    let mut jd: JDEC = jd_init(data);
     let res = jd_prepare(&mut jd);
 
     let mcu_height = jd.msy as u16 * 8;
