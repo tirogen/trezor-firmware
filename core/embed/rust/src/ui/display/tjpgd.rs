@@ -15,11 +15,32 @@ use core::{
     mem, slice,
 };
 
+/* Specifies output pixel format.
+/  0: RGB888 (24-bit/pix)
+/  1: RGB565 (16-bit/pix)
+/  2: Grayscale (8-bit/pix)
+*/
 const JD_FORMAT: u32 = 1;
+
+/* Switches output descaling feature.
+/  0: Disable
+/  1: Enable
+*/
 const JD_USE_SCALE: u32 = 1;
+
+/* Optimization level
+/  0: Basic optimization. Suitable for 8/16-bit MCUs. NOT IMPLEMENTED
+/  1: + 32-bit barrel shifter. Suitable for 32-bit MCUs.
+/  2: + Table conversion for huffman decoding (wants 6 << HUFF_BIT bytes of RAM)
+*/
 const JD_FASTDECODE: u32 = 2;
 
+/* Specifies size of stream input buffer */
+const JD_SZBUF: usize = 512;
+
 const HUFF_BIT: u32 = 10;
+const HUFF_LEN: u32 = 1 << HUFF_BIT;
+const HUFF_MASK: u32 = HUFF_LEN - 1;
 
 const NUM_DEQUANTIZER_TABLES: usize = 4;
 
@@ -80,11 +101,19 @@ pub struct JDEC<'a> {
     pub buffer: &'static mut BufferJpeg,
 }
 
+/* ----------------------------------------------- */
+/* Zigzag-order to raster-order conversion table */
+/* ----------------------------------------------- */
 static ZIG: [u8; 64] = [
     0, 1, 8, 16, 9, 2, 3, 10, 17, 24, 32, 25, 18, 11, 4, 5, 12, 19, 26, 33, 40, 48, 41, 34, 27, 20,
     13, 6, 7, 14, 21, 28, 35, 42, 49, 56, 57, 50, 43, 36, 29, 22, 15, 23, 30, 37, 44, 51, 58, 59,
     52, 45, 38, 31, 39, 46, 53, 60, 61, 54, 47, 55, 62, 63,
 ];
+
+/* ------------------------------------------------- */
+/* Input scale factor of Arai algorithm */
+/* (scaled up 16 bits for fixed point operations) */
+/* ------------------------------------------------- */
 static IPFS: [u16; 64] = [
     (1.00000f64 * 8192_f64) as u16,
     (1.38704f64 * 8192_f64) as u16,
@@ -162,6 +191,9 @@ fn byte_clip(val: i32) -> u8 {
     val as u8
 }
 
+/* ----------------------------------------------------------------------- */
+/* Allocate a memory block from memory pool */
+/* ----------------------------------------------------------------------- */
 unsafe fn alloc_pool_slice<T>(mut jd: &mut JDEC, ndata: usize) -> Result<&'static mut [T], ()> {
     unsafe {
         let ndata_bytes = ndata * mem::size_of::<T>();
@@ -178,6 +210,9 @@ unsafe fn alloc_pool_slice<T>(mut jd: &mut JDEC, ndata: usize) -> Result<&'stati
     }
 }
 
+/* ----------------------------------------------------------------------- */
+/* Create de-quantization and prescaling tables with a DQT segment */
+/* ----------------------------------------------------------------------- */
 fn create_qt_tbl(mut jd: &mut JDEC, mut ndata: usize) -> JRESULT {
     let mut i: u32;
     let mut d: u8;
@@ -208,6 +243,10 @@ fn create_qt_tbl(mut jd: &mut JDEC, mut ndata: usize) -> JRESULT {
     }
     JRESULT::OK
 }
+
+/* ----------------------------------------------------------------------- */
+/* Create huffman code tables with a DHT segment */
+/* ----------------------------------------------------------------------- */
 fn create_huffman_tbl(mut jd: &mut JDEC, mut ndata: usize) -> JRESULT {
     let mut i: u32;
     let mut j: u32;
@@ -296,14 +335,14 @@ fn create_huffman_tbl(mut jd: &mut JDEC, mut ndata: usize) -> JRESULT {
             let mut td: u32;
             let mut ti: u32;
             if cls != 0 {
-                let tbl_ac = unsafe { alloc_pool_slice(jd, 1 << HUFF_BIT) };
+                let tbl_ac = unsafe { alloc_pool_slice(jd, HUFF_LEN as usize) };
                 if tbl_ac.is_err() {
                     return JRESULT::MEM1;
                 }
                 jd.hufflut_ac[num] = Some(unwrap!(tbl_ac));
                 unwrap!(jd.hufflut_ac[num].as_mut()).fill(0xffff);
             } else {
-                let tbl_dc = unsafe { alloc_pool_slice(jd, 1 << HUFF_BIT) };
+                let tbl_dc = unsafe { alloc_pool_slice(jd, HUFF_LEN as usize) };
                 if tbl_dc.is_err() {
                     return JRESULT::MEM1;
                 }
@@ -315,9 +354,9 @@ fn create_huffman_tbl(mut jd: &mut JDEC, mut ndata: usize) -> JRESULT {
             while b < HUFF_BIT {
                 j = unwrap!(jd.huffbits[num][cls].as_ref())[b as usize] as u32;
                 while j != 0 {
-                    ti = ((unwrap!(jd.huffcode[num][cls].as_ref())[i as usize]
-                        << (((HUFF_BIT - 1) as u32) - b))
-                        & ((1 << HUFF_BIT) - 1)) as u32;
+                    ti = (unwrap!(jd.huffcode[num][cls].as_ref())[i as usize]
+                        << (((HUFF_BIT - 1) as u32) - b)) as u32
+                        & HUFF_MASK;
 
                     if cls != 0 {
                         td = unwrap!(jd.huffdata[num][cls].as_ref())[i as usize] as u32
@@ -351,6 +390,10 @@ fn create_huffman_tbl(mut jd: &mut JDEC, mut ndata: usize) -> JRESULT {
     }
     JRESULT::OK
 }
+
+/* ----------------------------------------------------------------------- */
+/* Extract a huffman decoded data from input stream */
+/* ----------------------------------------------------------------------- */
 fn huffext(mut jd: &mut JDEC, id: usize, cls: usize) -> Result<i32, JRESULT> {
     let mut dc: usize = jd.dctr;
     let mut dp: usize = jd.dptr;
@@ -366,7 +409,7 @@ fn huffext(mut jd: &mut JDEC, id: usize, cls: usize) -> Result<i32, JRESULT> {
         } else {
             if dc == 0 {
                 dp = 0;
-                dc = jpeg_in(jd, Some(0), 512);
+                dc = jpeg_in(jd, Some(0), JD_SZBUF);
                 if dc == 0 {
                     return Err(JRESULT::INP);
                 }
@@ -446,6 +489,10 @@ fn huffext(mut jd: &mut JDEC, id: usize, cls: usize) -> Result<i32, JRESULT> {
     }
     Err(JRESULT::FMT1)
 }
+
+/* ----------------------------------------------------------------------- */
+/* Extract N bits from input stream */
+/* ----------------------------------------------------------------------- */
 fn bitext(mut jd: &mut JDEC, nbit: u32) -> Result<i32, JRESULT> {
     let mut dc: usize = jd.dctr;
     let mut dp: usize = jd.dptr;
@@ -459,7 +506,7 @@ fn bitext(mut jd: &mut JDEC, nbit: u32) -> Result<i32, JRESULT> {
         } else {
             if dc == 0 {
                 dp = 0;
-                dc = jpeg_in(jd, Some(0), 512);
+                dc = jpeg_in(jd, Some(0), JD_SZBUF);
                 if dc == 0 {
                     return Err(JRESULT::INP);
                 }
@@ -488,6 +535,10 @@ fn bitext(mut jd: &mut JDEC, nbit: u32) -> Result<i32, JRESULT> {
 
     Ok((w >> ((wbit - nbit) % 32)) as i32)
 }
+
+/* ----------------------------------------------------------------------- */
+/* Process restart interval */
+/* ----------------------------------------------------------------------- */
 fn restart(mut jd: &mut JDEC, rstn: u16) -> JRESULT {
     let mut i: u32;
     let mut dp = jd.dptr;
@@ -502,7 +553,7 @@ fn restart(mut jd: &mut JDEC, rstn: u16) -> JRESULT {
         while i < 2 {
             if dc == 0 {
                 dp = 0;
-                dc = jpeg_in(jd, Some(0), 512);
+                dc = jpeg_in(jd, Some(0), JD_SZBUF);
                 if dc == 0 {
                     return JRESULT::INP;
                 }
@@ -525,6 +576,10 @@ fn restart(mut jd: &mut JDEC, rstn: u16) -> JRESULT {
     jd.dcv[2] = 0;
     JRESULT::OK
 }
+
+/* ----------------------------------------------------------------------- */
+/* Apply Inverse-DCT in Arai Algorithm (see also aa_idct.png) */
+/* ----------------------------------------------------------------------- */
 fn block_idct(src: &mut &mut [i32], dst: &mut [i16]) {
     let m13: i32 = (SQRT_2 * 4096_f64) as i32;
     let m2: i32 = (1.08239f64 * 4096_f64) as i32;
@@ -620,6 +675,9 @@ fn block_idct(src: &mut &mut [i32], dst: &mut [i16]) {
     }
 }
 
+/* ----------------------------------------------------------------------- */
+/* Load all blocks in an MCU into working buffer */
+/* ----------------------------------------------------------------------- */
 fn mcu_load(mut jd: &mut JDEC) -> JRESULT {
     let mut d: i32;
     let mut e: i32;
@@ -732,6 +790,10 @@ fn mcu_load(mut jd: &mut JDEC) -> JRESULT {
     }
     JRESULT::OK
 }
+
+/* ----------------------------------------------------------------------- */
+/* Output an MCU: Convert YCrCb to RGB and output it in RGB form */
+/* ----------------------------------------------------------------------- */
 fn mcu_output(jd: &mut JDEC, mut x: u32, mut y: u32) -> JRESULT {
     let cvacc: i32 = if mem::size_of::<i32>() > 2 { 1024 } else { 128 };
     let mut ix: u32;
@@ -1023,6 +1085,9 @@ pub fn jd_init(data: &[u8]) -> JDEC {
     }
 }
 
+/* ----------------------------------------------------------------------- */
+/* Analyze the JPEG image and Initialize decompressor object */
+/* ----------------------------------------------------------------------- */
 pub fn jd_prepare(mut jd: &mut JDEC) -> JRESULT {
     let mut b: u8;
     let mut marker: u16;
@@ -1031,7 +1096,7 @@ pub fn jd_prepare(mut jd: &mut JDEC) -> JRESULT {
     let mut ofs: u32;
     let mut len: usize;
 
-    let mem = unsafe { alloc_pool_slice(jd, 512) };
+    let mem = unsafe { alloc_pool_slice(jd, JD_SZBUF) };
     if mem.is_err() {
         return JRESULT::MEM1;
     }
@@ -1065,7 +1130,7 @@ pub fn jd_prepare(mut jd: &mut JDEC) -> JRESULT {
 
         match marker & 0xff {
             0xC0 => {
-                if len > 512 {
+                if len > JD_SZBUF {
                     return JRESULT::MEM2;
                 }
                 if jpeg_in(jd, Some(0), len) != len {
@@ -1099,7 +1164,7 @@ pub fn jd_prepare(mut jd: &mut JDEC) -> JRESULT {
                 }
             }
             0xDD => {
-                if len > 512 {
+                if len > JD_SZBUF {
                     return JRESULT::MEM2;
                 }
                 if jpeg_in(jd, Some(0), len) != len {
@@ -1109,7 +1174,7 @@ pub fn jd_prepare(mut jd: &mut JDEC) -> JRESULT {
                     | unwrap!(jd.inbuf.as_ref())[1] as i32) as u16;
             }
             0xC4 => {
-                if len > 512 {
+                if len > JD_SZBUF {
                     return JRESULT::MEM2;
                 }
                 if jpeg_in(jd, Some(0), len) != len {
@@ -1121,7 +1186,7 @@ pub fn jd_prepare(mut jd: &mut JDEC) -> JRESULT {
                 }
             }
             0xDB => {
-                if len > 512 {
+                if len > JD_SZBUF {
                     return JRESULT::MEM2;
                 }
                 if jpeg_in(jd, Some(0), len) != len {
@@ -1133,7 +1198,7 @@ pub fn jd_prepare(mut jd: &mut JDEC) -> JRESULT {
                 }
             }
             0xDA => {
-                if len > 512 {
+                if len > JD_SZBUF {
                     return JRESULT::MEM2;
                 }
                 if jpeg_in(jd, Some(0), len) != len {
@@ -1182,9 +1247,9 @@ pub fn jd_prepare(mut jd: &mut JDEC) -> JRESULT {
                 }
                 jd.mcubuf = Some(unwrap!(mcubuf));
 
-                ofs %= 512;
+                ofs %= JD_SZBUF as u32;
                 if ofs != 0 {
-                    jd.dctr = jpeg_in(jd, Some(ofs as usize), (512 - ofs) as usize);
+                    jd.dctr = jpeg_in(jd, Some(ofs as usize), (JD_SZBUF as u32 - ofs) as usize);
                 }
                 jd.dptr = (ofs - (if JD_FASTDECODE != 0 { 0 } else { 1 })) as usize;
                 return JRESULT::OK;
@@ -1202,6 +1267,9 @@ pub fn jd_prepare(mut jd: &mut JDEC) -> JRESULT {
     }
 }
 
+/* ----------------------------------------------------------------------- */
+/* Start to decompress the JPEG picture */
+/* ----------------------------------------------------------------------- */
 pub fn jd_decomp(mut jd: &mut JDEC, scale: u8) -> JRESULT {
     if scale > (if JD_USE_SCALE != 0 { 3 } else { 0 }) {
         return JRESULT::PAR;
