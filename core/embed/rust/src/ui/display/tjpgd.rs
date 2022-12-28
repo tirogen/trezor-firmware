@@ -218,24 +218,31 @@ fn create_qt_tbl(mut jd: &mut JDEC, mut ndata: usize) -> JRESULT {
     let mut d: u8;
     let mut data_idx = 0;
     while ndata != 0 {
+        /* Process all tables in the segment */
         if ndata < 65 {
+            /* Err: table size is unaligned */
             return JRESULT::FMT1;
         }
         ndata -= 65;
 
-        d = unwrap!(jd.inbuf.as_ref())[data_idx];
+        d = unwrap!(jd.inbuf.as_ref())[data_idx]; /* Get table property */
         data_idx += 1;
         if d & 0xf0 != 0 {
+            /* Err: not 8-bit resolution */
             return JRESULT::FMT1;
         }
-        i = (d & 3) as u32;
+        i = (d & 3) as u32; /* Get table ID */
 
+        /* Allocate a memory block for the table */
         let pb = unsafe { alloc_pool_slice(jd, 64) };
         if pb.is_err() {
+            /* Err: not enough memory */
             return JRESULT::MEM1;
         }
-        jd.qttbl[i as usize] = Some(unwrap!(pb));
+        jd.qttbl[i as usize] = Some(unwrap!(pb)); /* Register the table */
         for zi in ZIG {
+            /* Load the table */
+            /* Apply scale factor of Arai algorithm to the de-quantizers */
             unwrap!(jd.qttbl[i as usize].as_mut())[zi as usize] =
                 ((unwrap!(jd.inbuf.as_ref())[data_idx] as u32) * IPFS[zi as usize] as u32) as i32;
             data_idx += 1;
@@ -248,7 +255,6 @@ fn create_qt_tbl(mut jd: &mut JDEC, mut ndata: usize) -> JRESULT {
 /* Create huffman code tables with a DHT segment */
 /* ----------------------------------------------------------------------- */
 fn create_huffman_tbl(mut jd: &mut JDEC, mut ndata: usize) -> JRESULT {
-    let mut i: u32;
     let mut j: u32;
     let mut b: u32;
     let mut cls: usize;
@@ -258,133 +264,139 @@ fn create_huffman_tbl(mut jd: &mut JDEC, mut ndata: usize) -> JRESULT {
     let mut hc: u16;
     let mut data_idx = 0;
     while ndata != 0 {
+        /* Process all tables in the segment */
         if ndata < 17 {
+            /* Err: wrong data size */
             return JRESULT::FMT1;
         }
         ndata -= 17;
-        d = unwrap!(jd.inbuf.as_ref())[data_idx];
+        d = unwrap!(jd.inbuf.as_ref())[data_idx]; /* Get table number and class */
         data_idx += 1;
         if d & 0xee != 0 {
+            /* Err: invalid class/number */
             return JRESULT::FMT1;
         }
-        cls = d as usize >> 4;
-        num = d as usize & 0xf;
+        cls = d as usize >> 4; /* class = dc(0)/ac(1) */
+        num = d as usize & 0xf; /* table number = 0/1 */
+        /* Allocate a memory block for the bit distribution table */
         let mem = unsafe { alloc_pool_slice(jd, 16) };
         if mem.is_err() {
+            /* Err: not enough memory */
             return JRESULT::MEM1;
         }
         jd.huffbits[num][cls] = Some(unwrap!(mem));
 
-        i = 0;
-        np = i as usize;
-        while i < 16 {
-            unwrap!(jd.huffbits[num][cls].as_mut())[i as usize] =
-                unwrap!(jd.inbuf.as_ref())[data_idx];
+        np = 0;
+        for i in 0..16 {
+            /* Load number of patterns for 1 to 16-bit code */
+            /* Get sum of code words for each code */
+            unwrap!(jd.huffbits[num][cls].as_mut())[i] = unwrap!(jd.inbuf.as_ref())[data_idx];
             np += unwrap!(jd.inbuf.as_ref())[data_idx] as usize;
             data_idx += 1;
-            i += 1;
         }
+        /* Allocate a memory block for the code word table */
         let mem = unsafe { alloc_pool_slice(jd, np) };
-        if mem.is_err() {
+        if mem.is_err() { /* Err: not enough memory */
             return JRESULT::MEM1;
         }
         jd.huffcode[num][cls] = Some(unwrap!(mem));
         jd.huffcode_len[num][cls] = np;
 
+
+        /* Re-build huffman code word table */
         hc = 0;
-        i = 0;
-        j = i;
-        while i < 16 {
-            b = unwrap!(jd.huffbits[num][cls].as_ref())[i as usize] as u32;
-            loop {
-                let fresh10 = b;
-                b -= 1;
-                if fresh10 == 0 {
-                    break;
-                }
-                let fresh11 = hc;
+        j = 0;
+        for i in 0..16 {
+            b = unwrap!(jd.huffbits[num][cls].as_ref())[i] as u32;
+            while b > 0 {
+                unwrap!(jd.huffcode[num][cls].as_mut())[j as usize] = hc;
                 hc += 1;
-                let fresh12 = j;
                 j += 1;
-                unwrap!(jd.huffcode[num][cls].as_mut())[fresh12 as usize] = fresh11;
+                b -= 1;
             }
             hc <<= 1;
-            i += 1;
         }
-        if ndata < np {
+        if ndata < np { /* Err: wrong data size */
             return JRESULT::FMT1;
         }
         ndata -= np;
+
+        /* Allocate a memory block for the decoded data */
         let mem = unsafe { alloc_pool_slice(jd, np) };
-        if mem.is_err() {
+        if mem.is_err() { /* Err: not enough memory */
             return JRESULT::MEM1;
         }
         jd.huffdata[num][cls] = Some(unwrap!(mem));
-        i = 0;
-        while i < np as u32 {
+
+        /* Load decoded data corresponds to each code word */
+        for i in 0..np {
             d = unwrap!(jd.inbuf.as_ref())[data_idx];
             data_idx += 1;
             if cls == 0 && d > 11 {
                 return JRESULT::FMT1;
             }
             unwrap!(jd.huffdata[num][cls].as_mut())[i as usize] = d;
-            i += 1;
         }
         if JD_FASTDECODE == 2 {
+            /* Create fast huffman decode table */
             let mut span: u32;
             let mut td: u32;
             let mut ti: u32;
             if cls != 0 {
+                /* LUT for AC elements */
                 let tbl_ac = unsafe { alloc_pool_slice(jd, HUFF_LEN as usize) };
-                if tbl_ac.is_err() {
+                if tbl_ac.is_err() { /* Err: not enough memory */
                     return JRESULT::MEM1;
                 }
                 jd.hufflut_ac[num] = Some(unwrap!(tbl_ac));
+                /* Default value (0xFFFF: may be long code) */
                 unwrap!(jd.hufflut_ac[num].as_mut()).fill(0xffff);
             } else {
+                /* LUT for DC elements */
                 let tbl_dc = unsafe { alloc_pool_slice(jd, HUFF_LEN as usize) };
-                if tbl_dc.is_err() {
+                if tbl_dc.is_err() { /* Err: not enough memory */
                     return JRESULT::MEM1;
                 }
                 jd.hufflut_dc[num] = Some(unwrap!(tbl_dc));
+                /* Default value (0xFF: may be long code) */
                 unwrap!(jd.hufflut_dc[num].as_mut()).fill(0xff);
             }
-            b = 0;
-            i = b;
-            while b < HUFF_BIT {
+            let mut i = 0;
+
+            /* Create LUT */
+            for b in 0..HUFF_BIT {
                 j = unwrap!(jd.huffbits[num][cls].as_ref())[b as usize] as u32;
                 while j != 0 {
-                    ti = (unwrap!(jd.huffcode[num][cls].as_ref())[i as usize]
+                    /* Index of input pattern for the code */
+                    ti = (unwrap!(jd.huffcode[num][cls].as_ref())[i]
                         << (((HUFF_BIT - 1) as u32) - b)) as u32
                         & HUFF_MASK;
 
                     if cls != 0 {
-                        td = unwrap!(jd.huffdata[num][cls].as_ref())[i as usize] as u32
-                            | (b + 1) << 8;
+                        /* b15..b8: code length, b7..b0: zero run and data length */
+                        td = unwrap!(jd.huffdata[num][cls].as_ref())[i] as u32 | (b + 1) << 8;
                         i += 1;
                         span = 1 << ((HUFF_BIT - 1) - b);
                         while span != 0 {
                             span -= 1;
-                            let fresh18 = ti;
+                            unwrap!(jd.hufflut_ac[num].as_mut())[ti as usize] = td as u16;
                             ti += 1;
-                            unwrap!(jd.hufflut_ac[num].as_mut())[fresh18 as usize] = td as u16;
                         }
                     } else {
-                        td = unwrap!(jd.huffdata[num][cls].as_ref())[i as usize] as u32
-                            | (b + 1) << 4;
+                        /* b7..b4: code length, b3..b0: data length */
+                        td = unwrap!(jd.huffdata[num][cls].as_ref())[i] as u32 | (b + 1) << 4;
                         i += 1;
                         span = 1 << ((HUFF_BIT - 1) - b);
                         while span != 0 {
                             span -= 1;
-                            let fresh20 = ti;
+                            unwrap!(jd.hufflut_dc[num].as_mut())[ti as usize] = td as u8;
                             ti += 1;
-                            unwrap!(jd.hufflut_dc[num].as_mut())[fresh20 as usize] = td as u8;
                         }
                     }
                     j -= 1;
                 }
-                b += 1;
             }
+            /* Code table offset for long code */
             jd.longofs[num][cls] = i as u8;
         }
     }
