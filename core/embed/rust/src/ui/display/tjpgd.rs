@@ -1583,3 +1583,20 @@ pub fn jpeg_info(data: &[u8]) -> Option<(Offset, u16)> {
 
     Some((Offset::new(jd.width as i16, jd.height as i16), mcu_height))
 }
+
+pub fn jpeg_test(data: &[u8]) -> bool {
+    let mut jd: JDEC = jd_init(data);
+    let res = jd_prepare(&mut jd);
+
+    let mcu_height = jd.msy as u16 * 8;
+
+    if mcu_height > 16 || res != JRESULT::OK {
+        return false;
+    }
+
+    let mut res = jd_decomp(&mut jd, 0);
+    while res == JRESULT::INTR {
+        res = jd_decomp(&mut jd, 0);
+    }
+    res == JRESULT::OK
+}

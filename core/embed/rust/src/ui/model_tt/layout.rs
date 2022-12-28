@@ -33,7 +33,7 @@ use crate::{
             obj::{ComponentMsgObj, LayoutObj},
             result::{CANCELLED, CONFIRMED, INFO},
             util::{
-                iter_into_array, iter_into_objs, upy_disable_animation, upy_jpeg_info, ConfirmBlob,
+                iter_into_array, iter_into_objs, upy_disable_animation, upy_jpeg_info, upy_jpeg_test, ConfirmBlob,
                 PropsList,
             },
         },
@@ -1265,6 +1265,10 @@ pub static mp_module_trezorui2: Module = obj_module! {
     /// def jpeg_info(data: bytes) -> (width: int, height: int, mcu_height: int):
     ///     """Get JPEG image dimensions."""
     Qstr::MP_QSTR_jpeg_info => obj_fn_1!(upy_jpeg_info).as_obj(),
+
+    /// def jpeg_test(data: bytes) -> bool:
+    ///     """Test JPEG image."""
+    Qstr::MP_QSTR_jpeg_test => obj_fn_1!(upy_jpeg_test).as_obj(),
 
     /// def confirm_action(
     ///     *,

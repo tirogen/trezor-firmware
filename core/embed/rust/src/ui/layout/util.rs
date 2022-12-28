@@ -20,6 +20,7 @@ use crate::{
 };
 use cstr_core::{cstr, CStr};
 use heapless::Vec;
+use crate::ui::display::tjpgd::jpeg_test;
 
 pub fn iter_into_objs<const N: usize>(iterable: Obj) -> Result<[Obj; N], Error> {
     let err = Error::ValueError(cstr!("Invalid iterable length"));
@@ -274,3 +275,21 @@ pub extern "C" fn upy_jpeg_info(data: Obj) -> Obj {
 
     unsafe { try_or_raise(block) }
 }
+
+
+pub extern "C" fn upy_jpeg_test(data: Obj) -> Obj {
+    let block = || {
+        let buffer = unsafe { get_buffer(data) };
+
+        if let Ok(buffer) = buffer {
+            let result = jpeg_test(buffer);
+            Ok(result.into())
+        } else {
+            let msg = unsafe { CStr::from_bytes_with_nul_unchecked(b"Buffer error.\0") };
+            Err(Error::ValueError(msg))
+        }
+    };
+
+    unsafe { try_or_raise(block) }
+}
+
