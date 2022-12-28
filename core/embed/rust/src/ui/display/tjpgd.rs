@@ -46,15 +46,15 @@ const NUM_DEQUANTIZER_TABLES: usize = 4;
 
 #[derive(PartialEq, Eq)]
 pub enum JRESULT {
-    FMT3 = 8,
-    FMT2 = 7,
-    FMT1 = 6,
-    PAR = 5,
-    MEM2 = 4,
-    MEM1 = 3,
-    INP = 2,
-    INTR = 1,
-    OK = 0,
+    FMT3 = 8, /* 8: Not supported JPEG standard */
+    FMT2 = 7, /* 7: Right format but not supported */
+    FMT1 = 6, /* 6: Data format error (may be broken data) */
+    PAR = 5,  /* 5: Parameter error */
+    MEM2 = 4, /* 4: Insufficient stream input buffer */
+    MEM1 = 3, /* 3: Insufficient memory pool for the image */
+    INP = 2,  /* 2: Device error or wrong termination of input stream */
+    INTR = 1, /* 1: Interrupted by output function */
+    OK = 0,   /* 0: Succeeded */
 }
 
 pub struct JDEC<'a> {
