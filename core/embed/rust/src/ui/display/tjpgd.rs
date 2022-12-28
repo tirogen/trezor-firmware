@@ -296,12 +296,12 @@ fn create_huffman_tbl(mut jd: &mut JDEC, mut ndata: usize) -> JRESULT {
         }
         /* Allocate a memory block for the code word table */
         let mem = unsafe { alloc_pool_slice(jd, np) };
-        if mem.is_err() { /* Err: not enough memory */
+        if mem.is_err() {
+            /* Err: not enough memory */
             return JRESULT::MEM1;
         }
         jd.huffcode[num][cls] = Some(unwrap!(mem));
         jd.huffcode_len[num][cls] = np;
-
 
         /* Re-build huffman code word table */
         hc = 0;
@@ -316,14 +316,16 @@ fn create_huffman_tbl(mut jd: &mut JDEC, mut ndata: usize) -> JRESULT {
             }
             hc <<= 1;
         }
-        if ndata < np { /* Err: wrong data size */
+        if ndata < np {
+            /* Err: wrong data size */
             return JRESULT::FMT1;
         }
         ndata -= np;
 
         /* Allocate a memory block for the decoded data */
         let mem = unsafe { alloc_pool_slice(jd, np) };
-        if mem.is_err() { /* Err: not enough memory */
+        if mem.is_err() {
+            /* Err: not enough memory */
             return JRESULT::MEM1;
         }
         jd.huffdata[num][cls] = Some(unwrap!(mem));
@@ -345,7 +347,8 @@ fn create_huffman_tbl(mut jd: &mut JDEC, mut ndata: usize) -> JRESULT {
             if cls != 0 {
                 /* LUT for AC elements */
                 let tbl_ac = unsafe { alloc_pool_slice(jd, HUFF_LEN as usize) };
-                if tbl_ac.is_err() { /* Err: not enough memory */
+                if tbl_ac.is_err() {
+                    /* Err: not enough memory */
                     return JRESULT::MEM1;
                 }
                 jd.hufflut_ac[num] = Some(unwrap!(tbl_ac));
@@ -354,7 +357,8 @@ fn create_huffman_tbl(mut jd: &mut JDEC, mut ndata: usize) -> JRESULT {
             } else {
                 /* LUT for DC elements */
                 let tbl_dc = unsafe { alloc_pool_slice(jd, HUFF_LEN as usize) };
-                if tbl_dc.is_err() { /* Err: not enough memory */
+                if tbl_dc.is_err() {
+                    /* Err: not enough memory */
                     return JRESULT::MEM1;
                 }
                 jd.hufflut_dc[num] = Some(unwrap!(tbl_dc));
@@ -416,13 +420,17 @@ fn huffext(mut jd: &mut JDEC, id: usize, cls: usize) -> Result<i32, JRESULT> {
     let mut wbit: u32 = (jd.dbit as i32 % 32) as u32;
     let mut w: u32 = jd.wreg & ((1 << wbit) - 1);
     while wbit < 16 {
+        /* Prepare 16 bits into the working register */
         if jd.marker != 0 {
-            d = 0xff;
+            d = 0xff; /* Input stream has stalled for a marker. Generate
+                       * stuff bits */
         } else {
             if dc == 0 {
-                dp = 0;
+                /* Buffer empty, re-fill input buffer */
+                dp = 0; /* Top of input buffer */
                 dc = jpeg_in(jd, Some(0), JD_SZBUF);
                 if dc == 0 {
+                    /* Err: read error or wrong stream termination */
                     return Err(JRESULT::INP);
                 }
             }
@@ -431,16 +439,21 @@ fn huffext(mut jd: &mut JDEC, id: usize, cls: usize) -> Result<i32, JRESULT> {
 
             dc -= 1;
             if flg != 0 {
-                flg = 0;
+                /* In flag sequence? */
+                flg = 0; /* Exit flag sequence */
                 if d != 0 {
+                    /* Not an escape of 0xFF but a marker */
                     jd.marker = d as u8;
                 }
                 d = 0xff;
             } else if d == 0xff {
+                /* Is start of flag sequence? */
+                /* Enter flag sequence, get trailing byte */
                 flg = 1;
                 continue;
             }
         }
+        /* Shift 8 bits in the working register */
         w = w << 8 | d;
         wbit += 8;
     }
@@ -453,41 +466,54 @@ fn huffext(mut jd: &mut JDEC, id: usize, cls: usize) -> Result<i32, JRESULT> {
     let mut hd_idx = 0;
 
     if JD_FASTDECODE == 2 {
-        d = w >> (wbit - HUFF_BIT);
+        /* Table serch for the short codes */
+        d = w >> (wbit - HUFF_BIT); /* Short code as table index */
         if cls != 0 {
-            d = unwrap!(jd.hufflut_ac[id].as_ref())[d as usize] as u32;
+            /* AC element */
+            d = unwrap!(jd.hufflut_ac[id].as_ref())[d as usize] as u32; /* Table decode */
             if d != 0xffff {
-                jd.dbit = (wbit - (d >> 8)) as u8;
-                return Ok((d & 0xff) as i32);
+                /* It is done if hit in short code */
+                jd.dbit = (wbit - (d >> 8)) as u8; /* Snip the code length */
+                return Ok((d & 0xff) as i32); /* b7..0: zero run and
+                                               * following data bits */
             }
         } else {
-            d = unwrap!(jd.hufflut_dc[id].as_ref())[d as usize] as u32;
+            /* DC element */
+            d = unwrap!(jd.hufflut_dc[id].as_ref())[d as usize] as u32; /* Table decode */
             if d != 0xff {
-                jd.dbit = (wbit - (d >> 4)) as u8;
-                return Ok((d & 0xf) as i32);
+                /* It is done if hit in short code */
+                jd.dbit = (wbit - (d >> 4)) as u8; /* Snip the code length */
+                return Ok((d & 0xf) as i32); /* b3..0: following data bits */
             }
         }
-        hb_idx = HUFF_BIT;
-        hc_idx = jd.longofs[id][cls];
-        hd_idx = jd.longofs[id][cls];
+
+        /* Incremental serch for the codes longer than HUFF_BIT */
+        hb_idx = HUFF_BIT; /* Bit distribution table */
+        hc_idx = jd.longofs[id][cls]; /* Code word table */
+        hd_idx = jd.longofs[id][cls]; /* Data table */
         bl = (HUFF_BIT + 1) as u32;
     } else {
+        /* Incremental serch for all codes */
         bl = 1;
     }
 
+    /* Incremental search */
     while bl <= 16 {
         nc = unwrap!(jd.huffbits[id][cls].as_ref())[hb_idx as usize] as u32;
         hb_idx += 1;
         if nc != 0 {
             d = w >> (wbit - bl);
             loop {
+                /* Search the code word in this bit length */
                 if hc_idx as usize >= jd.huffcode_len[id][cls] {
                     return Err(JRESULT::FMT1);
                 }
                 let fresh24 = unwrap!(jd.huffcode[id][cls].as_ref())[hc_idx as usize];
                 hc_idx += 1;
                 if d == fresh24 as u32 {
-                    jd.dbit = (wbit - bl) as u8;
+                    /* Matched? */
+                    jd.dbit = (wbit - bl) as u8; /* Snip the huffman code */
+                    /* Return the decoded data */
                     return Ok(unwrap!((jd.huffdata[id][cls]).as_ref())[hd_idx as usize] as i32);
                 }
                 hd_idx += 1;
@@ -499,6 +525,8 @@ fn huffext(mut jd: &mut JDEC, id: usize, cls: usize) -> Result<i32, JRESULT> {
         }
         bl += 1;
     }
+
+    /* Err: code not found (may be collapted data) */
     Err(JRESULT::FMT1)
 }
 
@@ -513,13 +541,16 @@ fn bitext(mut jd: &mut JDEC, nbit: u32) -> Result<i32, JRESULT> {
     let mut wbit: u32 = (jd.dbit as i32 % 32) as u32;
     let mut w: u32 = jd.wreg & ((1 << wbit) - 1);
     while wbit < nbit {
+        /* Prepare nbit bits into the working register */
         if jd.marker != 0 {
-            d = 0xff;
+            d = 0xff; /* Input stream stalled, generate stuff bits */
         } else {
             if dc == 0 {
-                dp = 0;
+                /* Buffer empty, re-fill input buffer */
+                dp = 0; /* Top of input buffer */
                 dc = jpeg_in(jd, Some(0), JD_SZBUF);
                 if dc == 0 {
+                    /* Err: read error or wrong stream termination */
                     return Err(JRESULT::INP);
                 }
             }
@@ -527,13 +558,16 @@ fn bitext(mut jd: &mut JDEC, nbit: u32) -> Result<i32, JRESULT> {
             dp += 1;
             dc -= 1;
             if flg != 0 {
-                flg = 0;
+                /* In flag sequence? */
+                flg = 0; /* Exit flag sequence */
                 if d != 0 {
+                    /* Not an escape of 0xFF but a marker */
                     jd.marker = d as u8;
                 }
                 d = 0xff;
             } else if d == 0xff {
-                flg = 1;
+                /* Is start of flag sequence? */
+                flg = 1; /* Enter flag sequence, get trailing byte */
                 continue;
             }
         }
@@ -552,37 +586,42 @@ fn bitext(mut jd: &mut JDEC, nbit: u32) -> Result<i32, JRESULT> {
 /* Process restart interval */
 /* ----------------------------------------------------------------------- */
 fn restart(mut jd: &mut JDEC, rstn: u16) -> JRESULT {
-    let mut i: u32;
     let mut dp = jd.dptr;
     let mut dc: usize = jd.dctr;
     let mut marker: u16;
     if jd.marker != 0 {
-        marker = (0xff00 | jd.marker as i32) as u16;
+        /* Generate a maker if it has been detected */
+        marker = 0xff00 | jd.marker as u16;
         jd.marker = 0;
     } else {
         marker = 0;
-        i = 0;
-        while i < 2 {
+        for _ in 0..2 {
+            /* Get a restart marker */
             if dc == 0 {
+                /* No input data is available, re-fill input buffer */
                 dp = 0;
                 dc = jpeg_in(jd, Some(0), JD_SZBUF);
                 if dc == 0 {
                     return JRESULT::INP;
                 }
             }
-            let fresh27 = unwrap!(jd.inbuf.as_ref())[dp] as u32;
+            /* Get a byte */
+            let b = unwrap!(jd.inbuf.as_ref())[dp] as u16;
+            marker = marker << 8 | b;
             dp += 1;
-            marker = ((marker as i32) << 8 | fresh27 as i32) as u16;
             dc -= 1;
-            i += 1;
         }
         jd.dptr = dp;
         jd.dctr = dc;
     }
-    if marker as i32 & 0xffd8 != 0xffd0 || marker as i32 & 7 != rstn as i32 & 7 {
+
+    /* Check the marker */
+    if marker & 0xffd8 != 0xffd0 || marker & 7 != rstn & 7 {
+        /* Err: expected RSTn marker was not detected (may be collapted data) */
         return JRESULT::FMT1;
     }
-    jd.dbit = 0;
+    jd.dbit = 0; /* Discard stuff bits */
+    /* Reset DC offset */
     jd.dcv[0] = 0;
     jd.dcv[1] = 0;
     jd.dcv[2] = 0;
