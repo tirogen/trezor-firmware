@@ -29,7 +29,7 @@ const JD_FORMAT: u32 = 1;
 const JD_USE_SCALE: u32 = 1;
 
 /* Optimization level
-/  0: Basic optimization. Suitable for 8/16-bit MCUs. NOT IMPLEMENTED
+/  0: NOT IMPLEMENTED Basic optimization. Suitable for 8/16-bit MCUs. NOT IMPLEMENTED
 /  1: + 32-bit barrel shifter. Suitable for 32-bit MCUs.
 /  2: + Table conversion for huffman decoding (wants 6 << HUFF_BIT bytes of RAM)
 */
@@ -895,17 +895,21 @@ fn mcu_load(mut jd: &mut JDEC) -> JRESULT {
 /* Output an MCU: Convert YCrCb to RGB and output it in RGB form */
 /* ----------------------------------------------------------------------- */
 fn mcu_output(jd: &mut JDEC, mut x: u32, mut y: u32) -> JRESULT {
+    /* Adaptive accuracy for both 16-/32-bit systems */
     let cvacc: i32 = if mem::size_of::<i32>() > 2 { 1024 } else { 128 };
     let mut ix: u32;
     let mut iy: u32;
-    let mut mx: u32;
     let mut yy: i32;
     let mut cb: i32;
     let mut cr: i32;
     let mut py_idx: usize;
     let mut pc_idx: usize;
-    mx = (jd.msx as i32 * 8) as u32;
+
+    /* MCU size (pixel) */
+    let mut mx = (jd.msx as i32 * 8) as u32;
     let my = (jd.msy as i32 * 8) as u32;
+
+    /* Output rectangular size (it may be clipped at right/bottom end of image) */
     let mut rx = if (x + mx) <= jd.width as u32 {
         mx
     } else {
@@ -938,44 +942,56 @@ fn mcu_output(jd: &mut JDEC, mut x: u32, mut y: u32) -> JRESULT {
     let mut op_idx: usize;
 
     if JD_USE_SCALE == 0 || jd.scale != 3 {
+        /* Not for 1/8 scaling */
         if JD_FORMAT != 2 {
+            /* RGB output (build an RGB MCU from Y/C component) */
             iy = 0;
             while iy < my {
                 py_idx = 0;
                 pc_idx = 0;
                 if my == 16 {
+                    /* Double block height? */
                     pc_idx += (64 * 4) + ((iy as usize >> 1) * 8);
                     if iy >= 8 {
                         py_idx += 64;
                     }
                 } else {
+                    /* Single block height */
                     pc_idx += (mx * 8 + iy * 8) as usize;
                 }
                 py_idx += (iy * 8) as usize;
                 ix = 0;
                 while ix < mx {
-                    cb = unwrap!(jd.mcubuf.as_mut())[pc_idx] as i32 - 128;
+                    cb = unwrap!(jd.mcubuf.as_mut())[pc_idx] as i32 - 128; /* Get Cb/Cr component and remove offset */
                     cr = unwrap!(jd.mcubuf.as_mut())[pc_idx + 64] as i32 - 128;
                     if mx == 16 {
+                        /* Double block width? */
                         if ix == 8 {
+                            /* Jump to next block if double block height */
                             py_idx += 64 - 8;
                         }
+                        /* Step forward chroma pointer every two pixels */
                         pc_idx += (ix & 1) as usize;
                     } else {
+                        /* Single block width */
+                        /* Step forward chroma pointer every pixel */
                         pc_idx += 1;
                     }
+                    /* Get Y component */
                     yy = unwrap!(jd.mcubuf.as_ref())[py_idx] as i32;
                     py_idx += 1;
-
+                    // R
                     workbuf[pix_idx] =
                         byte_clip(yy + (1.402f64 * cvacc as f64) as i32 * cr / cvacc);
                     pix_idx += 1;
+                    // G
                     workbuf[pix_idx] = byte_clip(
                         yy - ((0.344f64 * cvacc as f64) as i32 * cb
                             + (0.714f64 * cvacc as f64) as i32 * cr)
                             / cvacc,
                     );
                     pix_idx += 1;
+                    // B
                     workbuf[pix_idx] =
                         byte_clip(yy + (1.772f64 * cvacc as f64) as i32 * cb / cvacc);
                     pix_idx += 1;
@@ -984,17 +1000,22 @@ fn mcu_output(jd: &mut JDEC, mut x: u32, mut y: u32) -> JRESULT {
                 iy += 1;
             }
         } else {
+            /* Monochrome output (build a grayscale MCU from Y comopnent) */
             iy = 0;
             while iy < my {
                 py_idx = (iy * 8) as usize;
                 if my == 16 && iy >= 8 {
+                    /* Double block height? */
                     py_idx += 64;
                 }
                 ix = 0;
                 while ix < mx {
                     if mx == 16 && ix == 8 {
+                        /* Double block width? */
+                        /* Jump to next block if double block height */
                         py_idx += 64 - 8;
                     }
+                    /* Get and store a Y value as grayscale */
                     workbuf[pix_idx] = unwrap!(jd.mcubuf.as_ref())[py_idx] as u8;
                     pix_idx += 1;
                     py_idx += 1;
@@ -1003,15 +1024,17 @@ fn mcu_output(jd: &mut JDEC, mut x: u32, mut y: u32) -> JRESULT {
                 iy += 1;
             }
         }
+        /* Descale the MCU rectangular if needed */
         if JD_USE_SCALE != 0 && jd.scale != 0 {
             let mut x_0: u32;
             let mut y_0: u32;
             let mut r: u32;
             let mut g: u32;
             let mut b: u32;
-            let s = (jd.scale * 2) as u32;
-            let w = 1 << jd.scale as u32;
-            let a = (mx - w) * (if JD_FORMAT != 2 { 3 } else { 1 });
+            /* Get averaged RGB value of each square correcponds to a pixel */
+            let s = (jd.scale * 2) as u32; /* Number of shifts for averaging */
+            let w = 1 << jd.scale as u32; /* Width of square */
+            let a = (mx - w) * (if JD_FORMAT != 2 { 3 } else { 1 }); /* Bytes to skip for next line in the square */
             op_idx = 0;
             iy = 0;
             while iy < my {
@@ -1023,13 +1046,17 @@ fn mcu_output(jd: &mut JDEC, mut x: u32, mut y: u32) -> JRESULT {
                     r = 0;
                     y_0 = 0;
                     while y_0 < w {
+                        /* Accumulate RGB value in the square */
                         x_0 = 0;
                         while x_0 < w {
+                            /* Accumulate R or Y (monochrome output) */
                             r += workbuf[pix_idx] as u32;
                             pix_idx += 1;
                             if JD_FORMAT != 2 {
+                                /* Accumulate G */
                                 g += workbuf[pix_idx] as u32;
                                 pix_idx += 1;
+                                /* Accumulate B */
                                 b += workbuf[pix_idx] as u32;
                                 pix_idx += 1;
                             }
@@ -1038,11 +1065,16 @@ fn mcu_output(jd: &mut JDEC, mut x: u32, mut y: u32) -> JRESULT {
                         pix_idx += a as usize;
                         y_0 += 1;
                     }
+                    /* Put the averaged pixel value */
+                    /* Put R or Y (monochrome output) */
                     workbuf[op_idx] = (r >> s) as u8;
                     op_idx += 1;
                     if JD_FORMAT != 2 {
+                        /* RGB output? */
+                        /* Put G */
                         workbuf[op_idx] = (g >> s) as u8;
                         op_idx += 1;
+                        /* Put B */
                         workbuf[op_idx] = (b >> s) as u8;
                         op_idx += 1;
                     }
@@ -1052,9 +1084,12 @@ fn mcu_output(jd: &mut JDEC, mut x: u32, mut y: u32) -> JRESULT {
             }
         }
     } else {
+        /* For only 1/8 scaling (left-top pixel in each block are the DC value of the
+         * block) */
+        /* Build a 1/8 descaled RGB MCU from discrete comopnents */
         pix_idx = 0;
         pc_idx = (mx * my) as usize;
-        cb = unwrap!(jd.mcubuf.as_ref())[pc_idx] as i32 - 128;
+        cb = unwrap!(jd.mcubuf.as_ref())[pc_idx] as i32 - 128; /* Get Cb/Cr component and restore right level */
         cr = unwrap!(jd.mcubuf.as_ref())[pc_idx + 64] as i32 - 128;
         iy = 0;
         while iy < my {
@@ -1064,17 +1099,21 @@ fn mcu_output(jd: &mut JDEC, mut x: u32, mut y: u32) -> JRESULT {
             }
             ix = 0;
             while ix < mx {
+                /* Get Y component */
                 yy = unwrap!(jd.mcubuf.as_ref())[py_idx] as i32;
                 py_idx += 64;
                 if JD_FORMAT != 2 {
+                    // R
                     workbuf[pix_idx] =
                         byte_clip(yy + (1.402f64 * cvacc as f64) as i32 * cr / cvacc);
                     pix_idx += 1;
+                    // G
                     workbuf[pix_idx] = byte_clip(
                         yy - ((0.344f64 * cvacc as f64) as i32 * cb
                             + (0.714f64 * cvacc as f64) as i32 * cr)
                             / cvacc,
                     );
+                    //B
                     pix_idx += 1;
                     workbuf[pix_idx] =
                         byte_clip(yy + (1.772f64 * cvacc as f64) as i32 * cb / cvacc);
@@ -1088,8 +1127,11 @@ fn mcu_output(jd: &mut JDEC, mut x: u32, mut y: u32) -> JRESULT {
             iy += 8;
         }
     }
+
+    /* Squeeze up pixel table if a part of MCU is to be truncated */
     mx >>= jd.scale as i32;
     if rx < mx {
+        /* Is the MCU spans right edge? */
         let mut s_0_idx = 0;
         let mut d_idx = 0;
         let mut x_1: u32;
@@ -1098,6 +1140,7 @@ fn mcu_output(jd: &mut JDEC, mut x: u32, mut y: u32) -> JRESULT {
         while y_1 < ry {
             x_1 = 0;
             while x_1 < rx {
+                /* Copy effective pixels */
                 workbuf[d_idx] = workbuf[s_0_idx];
                 s_0_idx += 1;
                 d_idx += 1;
@@ -1111,20 +1154,26 @@ fn mcu_output(jd: &mut JDEC, mut x: u32, mut y: u32) -> JRESULT {
                 }
                 x_1 += 1;
             }
+            /* Skip truncated pixels */
             s_0_idx += ((mx - rx) * (if JD_FORMAT != 2 { 3 } else { 1 })) as usize;
 
             y_1 += 1;
         }
     }
+
+    /* Convert RGB888 to RGB565 if needed */
     if JD_FORMAT == 1 {
         let mut s_1_idx = 0;
         let mut d_0_idx = 0;
         let mut w_0: u16;
         for _ in 0..rx * ry {
+            /* RRRRR----------- */
             w_0 = ((workbuf[s_1_idx] as i32 & 0xf8) << 8) as u16;
             s_1_idx += 1;
+            /* -----GGGGGG----- */
             w_0 = (w_0 as i32 | (workbuf[s_1_idx] as i32 & 0xfc) << 3) as u16;
             s_1_idx += 1;
+            /* -----------BBBBB */
             w_0 = (w_0 as i32 | workbuf[s_1_idx] as i32 >> 3) as u16;
             s_1_idx += 1;
 
@@ -1133,6 +1182,8 @@ fn mcu_output(jd: &mut JDEC, mut x: u32, mut y: u32) -> JRESULT {
             d_0_idx += 2;
         }
     }
+
+    /* Output the rectangular */
     jpeg_out(jd, rect)
 }
 
@@ -1196,16 +1247,19 @@ pub fn jd_prepare(mut jd: &mut JDEC) -> JRESULT {
     let mut ofs: u32;
     let mut len: usize;
 
+    /* Allocate stream input buffer */
     let mem = unsafe { alloc_pool_slice(jd, JD_SZBUF) };
     if mem.is_err() {
         return JRESULT::MEM1;
     }
     jd.inbuf = Some(unwrap!(mem));
 
+    /* Find SOI marker */
     marker = 0;
     ofs = marker as u32;
     loop {
         if jpeg_in(jd, Some(0), 1) != 1 {
+            /* Err: SOI was not detected */
             return JRESULT::INP;
         }
         ofs += 1;
@@ -1215,150 +1269,203 @@ pub fn jd_prepare(mut jd: &mut JDEC) -> JRESULT {
         }
     }
     loop {
+        /* Parse JPEG segments */
+        /* Get a JPEG marker */
         if jpeg_in(jd, Some(0), 4) != 4 {
             return JRESULT::INP;
         }
+        /* Marker */
         marker = ((unwrap!(jd.inbuf.as_ref())[0] as i32) << 8
             | unwrap!(jd.inbuf.as_ref())[1] as i32) as u16;
+        /* Length field */
         len = ((unwrap!(jd.inbuf.as_ref())[2] as i32) << 8 | unwrap!(jd.inbuf.as_ref())[3] as i32)
             as usize;
         if len <= 2 || marker >> 8 != 0xff {
             return JRESULT::FMT1;
         }
-        len -= 2;
-        ofs += (4 + len) as u32;
+        len -= 2; /* Segment content size */
+        ofs += (4 + len) as u32; /* Number of bytes loaded */
 
         match marker & 0xff {
             0xC0 => {
+                /* SOF0 (baseline JPEG) */
                 if len > JD_SZBUF {
                     return JRESULT::MEM2;
                 }
+                /* Load segment data */
                 if jpeg_in(jd, Some(0), len) != len {
                     return JRESULT::INP;
                 }
+                /* Image width in unit of pixel */
                 jd.width = ((unwrap!(jd.inbuf.as_ref())[3] as i32) << 8
                     | unwrap!(jd.inbuf.as_ref())[4] as i32) as u16;
+                /* Image height in unit of pixel */
                 jd.height = ((unwrap!(jd.inbuf.as_ref())[1] as i32) << 8
                     | unwrap!(jd.inbuf.as_ref())[2] as i32) as u16;
+                /* Number of color components */
                 jd.ncomp = unwrap!(jd.inbuf.as_ref())[5];
                 if jd.ncomp != 3 && jd.ncomp != 1 {
+                    /* Err: Supports only Grayscale and Y/Cb/Cr */
                     return JRESULT::FMT3;
                 }
+                /* Check each image component */
                 i = 0;
                 while i < jd.ncomp as u32 {
+                    /* Get sampling factor */
                     b = unwrap!(jd.inbuf.as_ref())[(7 + 3 * i) as usize];
                     if i == 0 {
+                        /* Y component */
                         if b != 0x11 && b != 0x22 && b != 0x21 {
+                            /* Check sampling factor */
+                            /* Err: Supports only 4:4:4, 4:2:0 or 4:2:2 */
                             return JRESULT::FMT3;
                         }
+                        /* Size of MCU [blocks] */
                         jd.msx = (b as i32 >> 4) as u8;
                         jd.msy = (b as i32 & 15) as u8;
                     } else if b as i32 != 0x11 {
+                        /* Cb/Cr component */
+                        /* Err: Sampling factor of Cb/Cr must be 1 */
                         return JRESULT::FMT3;
                     }
+                    /* Get dequantizer table ID for this component */
                     jd.qtid[i as usize] = unwrap!(jd.inbuf.as_ref())[(8 + 3 * i) as usize];
                     if jd.qtid[i as usize] as i32 > 3 {
+                        /* Err: Invalid ID */
                         return JRESULT::FMT3;
                     }
                     i += 1;
                 }
             }
             0xDD => {
+                /* DRI - Define Restart Interval */
                 if len > JD_SZBUF {
                     return JRESULT::MEM2;
                 }
+                /* Load segment data */
                 if jpeg_in(jd, Some(0), len) != len {
                     return JRESULT::INP;
                 }
+                /* Get restart interval (MCUs) */
                 jd.nrst = ((unwrap!(jd.inbuf.as_ref())[0] as i32) << 8
                     | unwrap!(jd.inbuf.as_ref())[1] as i32) as u16;
             }
             0xC4 => {
+                /* DHT - Define Huffman Tables */
                 if len > JD_SZBUF {
                     return JRESULT::MEM2;
                 }
+                /* Load segment data */
                 if jpeg_in(jd, Some(0), len) != len {
                     return JRESULT::INP;
                 }
+                /* Create huffman tables */
                 let res = create_huffman_tbl(jd, len);
                 if res != JRESULT::OK {
                     return res;
                 }
             }
             0xDB => {
+                /* DQT - Define Quantizer Tables */
                 if len > JD_SZBUF {
                     return JRESULT::MEM2;
                 }
+                /* Load segment data */
                 if jpeg_in(jd, Some(0), len) != len {
                     return JRESULT::INP;
                 }
+                /* Create de-quantizer tables */
                 let res = create_qt_tbl(jd, len);
                 if res != JRESULT::OK {
                     return res;
                 }
             }
             0xDA => {
+                /* SOS - Start of Scan */
                 if len > JD_SZBUF {
                     return JRESULT::MEM2;
                 }
+                /* Load segment data */
                 if jpeg_in(jd, Some(0), len) != len {
                     return JRESULT::INP;
                 }
                 if jd.width == 0 || jd.height == 0 {
+                    /* Err: Invalid image size */
                     return JRESULT::FMT1;
                 }
                 if unwrap!(jd.inbuf.as_ref())[0] as i32 != jd.ncomp as i32 {
+                    /* Err: Wrong color components */
                     return JRESULT::FMT3;
                 }
+                /* Check if all tables corresponding to each components have been loaded */
                 i = 0;
                 while i < jd.ncomp as u32 {
+                    /* Get huffman table ID */
                     b = unwrap!(jd.inbuf.as_ref())[(2 + 2 * i) as usize];
                     if b != 0 && b != 0x11 {
+                        /* Err: Different table number for DC/AC element */
                         return JRESULT::FMT3;
                     }
-                    n = if i != 0 { 1 } else { 0 };
+                    n = if i != 0 { 1 } else { 0 }; /* Component class */
+                    /* Check huffman table for this component */
                     if (jd.huffbits[n as usize][0]).is_none()
                         || (jd.huffbits[n as usize][1]).is_none()
                     {
+                        /* Err: Not loaded */
                         return JRESULT::FMT1;
                     }
+                    /* Check dequantizer table for this component */
                     if (jd.qttbl[jd.qtid[i as usize] as usize]).is_none() {
+                        /* Err: Not loaded */
                         return JRESULT::FMT1;
                     }
                     i += 1;
                 }
-                n = (jd.msy as i32 * jd.msx as i32) as u32;
+                /* Allocate working buffer for MCU and pixel output */
+                n = (jd.msy as i32 * jd.msx as i32) as u32; /* Number of Y blocks in the MCU */
                 if n == 0 {
+                    /* Err: SOF0 has not been loaded */
                     return JRESULT::FMT1;
                 }
-                len = (n * 64 * 3 + 64) as usize;
+                len = (n * 64 * 3 + 64) as usize; /* Allocate buffer for IDCT and RGB output */
                 if len < 256 {
+                    /* but at least 256 byte is required for IDCT */
                     len = 256;
                 }
+
                 let mem = unsafe { alloc_pool_slice(jd, len / 4) };
                 if mem.is_err() {
+                    /* Err: not enough memory */
                     return JRESULT::MEM1;
                 }
                 jd.workbuf = Some(unwrap!(mem));
 
+                /* Allocate MCU working buffer */
                 let mcubuf = unsafe { alloc_pool_slice(jd, (n as usize + 2) * 64) };
                 if mcubuf.is_err() {
+                    /* Err: not enough memory */
                     return JRESULT::MEM1;
                 }
                 jd.mcubuf = Some(unwrap!(mcubuf));
 
+                /* Align stream read offset to JD_SZBUF */
                 ofs %= JD_SZBUF as u32;
                 if ofs != 0 {
                     jd.dctr = jpeg_in(jd, Some(ofs as usize), (JD_SZBUF as u32 - ofs) as usize);
                 }
                 jd.dptr = (ofs - (if JD_FASTDECODE != 0 { 0 } else { 1 })) as usize;
-                return JRESULT::OK;
+                return JRESULT::OK; /* Initialization succeeded. Ready to
+                                     * decompress the JPEG image. */
             }
+            /* SOF1, SOF2, SOF3, SOF5, SOF6, SOF7, SOF9, SOF10, SOF11, SOF13, SOF14, SOF15, EOI */
             0xC1 | 0xC2 | 0xC3 | 0xC5 | 0xC6 | 0xC7 | 0xC9 | 0xCA | 0xCB | 0xCD | 0xCF | 0xCE
             | 0xD9 => {
+                /* Unsupported JPEG standard (may be progressive JPEG) */
                 return JRESULT::FMT3;
             }
             _ => {
+                /* Unknown segment (comment, exif or etc..) */
+                /* Skip segment data (null pointer specifies to remove data from the stream) */
                 if jpeg_in(jd, None, len) != len {
                     return JRESULT::INP;
                 }
@@ -1375,13 +1482,16 @@ pub fn jd_decomp(mut jd: &mut JDEC, scale: u8) -> JRESULT {
         return JRESULT::PAR;
     }
     jd.scale = scale;
-    let mx = (jd.msx as i32 * 8) as u32;
-    let my = (jd.msy as i32 * 8) as u32;
+    let mx = (jd.msx as i32 * 8) as u32; /* Size of the MCU (pixel) */
+    let my = (jd.msy as i32 * 8) as u32; /* Size of the MCU (pixel) */
     let mut y = 0;
     while y < jd.height as u32 {
+        /* Vertical loop of MCUs */
         let mut x = 0;
         while x < jd.width as u32 {
+            /* Horizontal loop of MCUs */
             if jd.nrst != 0 && {
+                /* Process restart interval if enabled */
                 let val = jd.rst;
                 jd.rst += 1;
                 val == jd.nrst
@@ -1394,10 +1504,12 @@ pub fn jd_decomp(mut jd: &mut JDEC, scale: u8) -> JRESULT {
                 }
                 jd.rst = 1;
             }
+            /* Load an MCU (decompress huffman coded stream, dequantize and apply IDCT) */
             let rc = mcu_load(jd);
             if rc != JRESULT::OK {
                 return rc;
             }
+            /* Output the MCU (YCbCr to RGB, scaling and output) */
             let rc = mcu_output(jd, x, y);
             if rc != JRESULT::OK {
                 return rc;
