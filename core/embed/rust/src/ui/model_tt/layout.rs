@@ -33,8 +33,8 @@ use crate::{
             obj::{ComponentMsgObj, LayoutObj},
             result::{CANCELLED, CONFIRMED, INFO},
             util::{
-                iter_into_array, iter_into_objs, upy_disable_animation, upy_jpeg_info, upy_jpeg_test, ConfirmBlob,
-                PropsList,
+                iter_into_array, iter_into_objs, upy_disable_animation, upy_jpeg_info,
+                upy_jpeg_test, ConfirmBlob, PropsList,
             },
         },
     },

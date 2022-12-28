@@ -14,13 +14,12 @@ use crate::{
             paragraphs::{Paragraph, ParagraphSource, ParagraphStrType},
             TextStyle,
         },
-        display::tjpgd::jpeg_info,
+        display::tjpgd::{jpeg_info, jpeg_test},
         util::set_animation_disabled,
     },
 };
 use cstr_core::{cstr, CStr};
 use heapless::Vec;
-use crate::ui::display::tjpgd::jpeg_test;
 
 pub fn iter_into_objs<const N: usize>(iterable: Obj) -> Result<[Obj; N], Error> {
     let err = Error::ValueError(cstr!("Invalid iterable length"));
@@ -276,7 +275,6 @@ pub extern "C" fn upy_jpeg_info(data: Obj) -> Obj {
     unsafe { try_or_raise(block) }
 }
 
-
 pub extern "C" fn upy_jpeg_test(data: Obj) -> Obj {
     let block = || {
         let buffer = unsafe { get_buffer(data) };
@@ -292,4 +290,3 @@ pub extern "C" fn upy_jpeg_test(data: Obj) -> Obj {
 
     unsafe { try_or_raise(block) }
 }
-
