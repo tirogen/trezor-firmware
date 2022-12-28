@@ -648,11 +648,16 @@ fn block_idct(src: &mut &mut [i32], dst: &mut [i16]) {
     let mut t11: i32;
     let mut t12: i32;
     let mut t13: i32;
+
+    /* Process columns */
     for idx in 0..8 {
+        /* Get even elements */
         v0 = src[idx];
         v1 = src[idx + 8 * 2];
         v2 = src[idx + 8 * 4];
         v3 = src[idx + 8 * 6];
+
+        /* Process the even elements */
         t10 = v0 + v2;
         t12 = v0 - v2;
         t11 = ((v1 - v3) * m13) >> 12;
@@ -662,10 +667,14 @@ fn block_idct(src: &mut &mut [i32], dst: &mut [i16]) {
         v3 = t10 - v3;
         v1 = t11 + t12;
         v2 = t12 - t11;
+
+        /* Get odd elements */
         v4 = src[idx + 8 * 7];
         v5 = src[idx + 8];
         v6 = src[idx + 8 * 5];
         v7 = src[idx + 8 * 3];
+
+        /* Process the odd elements */
         t10 = v5 - v4;
         t11 = v5 + v4;
         t12 = v6 - v7;
@@ -677,6 +686,8 @@ fn block_idct(src: &mut &mut [i32], dst: &mut [i16]) {
         v6 = t13 - ((t12 * m4) >> 12) - v7;
         v5 -= v6;
         v4 -= v5;
+
+        /* Write-back transformed values */
         src[idx] = v0 + v7;
         src[idx + 8 * 7] = v0 - v7;
         src[idx + 8] = v1 + v6;
@@ -686,11 +697,16 @@ fn block_idct(src: &mut &mut [i32], dst: &mut [i16]) {
         src[idx + 8 * 3] = v3 + v4;
         src[idx + 8 * 4] = v3 - v4;
     }
+
+    /* Process rows */
     for idx in (0..64).step_by(8) {
-        v0 = src[idx] + (128 << 8);
+        /* Get even elements */
+        v0 = src[idx] + (128 << 8); // remove DC offset (-128) here
         v1 = src[idx + 2];
         v2 = src[idx + 4];
         v3 = src[idx + 6];
+
+        /* Process the even elements */
         t10 = v0 + v2;
         t12 = v0 - v2;
         t11 = ((v1 - v3) * m13) >> 12;
@@ -700,10 +716,14 @@ fn block_idct(src: &mut &mut [i32], dst: &mut [i16]) {
         v3 = t10 - v3;
         v1 = t11 + t12;
         v2 = t12 - t11;
+
+        /* Get odd elements */
         v4 = src[idx + 7];
         v5 = src[idx + 1];
         v6 = src[idx + 5];
         v7 = src[idx + 3];
+
+        /* Process the odd elements */
         t10 = v5 - v4;
         t11 = v5 + v4;
         t12 = v6 - v7;
@@ -715,6 +735,8 @@ fn block_idct(src: &mut &mut [i32], dst: &mut [i16]) {
         v6 = t13 - ((t12 * m4) >> 12) - v7;
         v5 -= v6;
         v4 -= v5;
+
+        /* Descale the transformed values 8 bits and output a row */
         dst[idx] = ((v0 + v7) >> 8) as i16;
         dst[idx + 7] = ((v0 - v7) >> 8) as i16;
         dst[idx + 1] = ((v1 + v6) >> 8) as i16;
@@ -737,75 +759,97 @@ fn mcu_load(mut jd: &mut JDEC) -> JRESULT {
     let mut z: u32;
     let mut id: u32;
     let mut cmp: u32;
-    let nby = (jd.msx as i32 * jd.msy as i32) as u32;
-    let mut mcu_buf_idx = 0;
+    let nby = (jd.msx as i32 * jd.msy as i32) as u32; /* Number of Y blocks (1, 2 or 4) */
+    let mut mcu_buf_idx = 0; /* Pointer to the first block of MCU */
     blk = 0;
     while blk < nby + 2 {
-        cmp = if blk < nby { 0 } else { blk - nby + 1 };
+        /* Get nby Y blocks and two C blocks */
+        cmp = if blk < nby { 0 } else { blk - nby + 1 }; /* Component number 0:Y, 1:Cb, 2:Cr */
         if cmp != 0 && jd.ncomp as i32 != 3 {
+            /* Clear C blocks if not exist (monochrome image) */
             for i in 0..64 {
                 unwrap!(jd.mcubuf.as_mut())[mcu_buf_idx + i] = 128;
             }
         } else {
-            id = if cmp != 0 { 1 } else { 0 };
-            let res = huffext(jd, id as usize, 0);
+            /* Load Y/C blocks from input stream */
+            id = if cmp != 0 { 1 } else { 0 }; /* Huffman table ID of this component */
+
+            /* Extract a DC element from input stream */
+            let res = huffext(jd, id as usize, 0); /* Extract a huffman coded data (bit length) */
             if let Ok(res) = res {
                 d = res;
             } else {
+                /* Err: invalid code or input */
                 return res.err().unwrap();
             }
             bc = d as u32;
-            d = jd.dcv[cmp as usize] as i32;
+            d = jd.dcv[cmp as usize] as i32; /* DC value of previous block */
             if bc != 0 {
-                let res = bitext(jd, bc);
+                /* If there is any difference from previous block */
+                let res = bitext(jd, bc); /* Extract data bits */
                 if let Ok(res) = res {
                     e = res;
                 } else {
+                    /* Err: input */
                     return res.err().unwrap();
                 }
-                bc = 1 << (bc - 1);
+                bc = 1 << (bc - 1); /* MSB position */
                 if e as u32 & bc == 0 {
-                    e -= ((bc << 1) - 1) as i32;
+                    e -= ((bc << 1) - 1) as i32; /* Restore negative value if
+                                                  * needed */
                 }
-                d += e;
-                jd.dcv[cmp as usize] = d as i16;
+                d += e; /* Get current value */
+                jd.dcv[cmp as usize] = d as i16; /* Save current DC value for
+                                                  * next block */
             }
+            /* De-quantizer table ID for this component */
             let dqidx = jd.qtid[cmp as usize] as usize;
             if dqidx >= NUM_DEQUANTIZER_TABLES {
                 return JRESULT::FMT1;
             }
+            /* De-quantize, apply scale factor of Arai algorithm and descale 8 bits */
             let dfq = unwrap!(jd.qttbl[dqidx].as_ref());
             unwrap!(jd.workbuf.as_mut())[0] = (d * dfq[0]) >> 8;
-            unwrap!(jd.workbuf.as_mut())[1..64].fill(0);
-            z = 1;
+
+            /* Extract following 63 AC elements from input stream */
+            unwrap!(jd.workbuf.as_mut())[1..64].fill(0); /* Initialize all AC elements */
+            z = 1; /* Top of the AC elements (in zigzag-order) */
             loop {
+                /* Extract a huffman coded value (zero runs and bit length) */
                 let res = huffext(jd, id as usize, 1);
                 if let Ok(res) = res {
                     d = res;
                 } else {
+                    /* Err: invalid code or input error */
                     return res.err().unwrap();
                 }
                 if d == 0 {
+                    /* EOB? */
                     break;
                 }
                 bc = d as u32;
-                z += bc >> 4;
+                z += bc >> 4; /* Skip leading zero run */
                 if z >= 64 {
+                    /* Too long zero run */
                     return JRESULT::FMT1;
                 }
                 bc &= 0xf;
                 if bc != 0 {
-                    let res = bitext(jd, bc);
+                    /* Bit length? */
+                    let res = bitext(jd, bc); /* Extract data bits */
                     if let Ok(res) = res {
                         d = res;
                     } else {
+                        /* Err: input device */
                         return res.err().unwrap();
                     }
-                    bc = 1 << (bc - 1);
+                    bc = 1 << (bc - 1); /* MSB position */
                     if d as u32 & bc == 0 {
+                        /* Restore negative value if needed */
                         d -= ((bc << 1) - 1) as i32;
                     }
-                    let i = ZIG[z as usize] as u32;
+                    let i = ZIG[z as usize] as u32; /* Get raster-order index */
+                    /* De-quantize, apply scale factor of Arai algorithm and descale 8 bits */
                     let dqidx = jd.qtid[cmp as usize] as usize;
                     if dqidx >= NUM_DEQUANTIZER_TABLES {
                         return JRESULT::FMT1;
@@ -818,7 +862,11 @@ fn mcu_load(mut jd: &mut JDEC) -> JRESULT {
                     break;
                 }
             }
+
+            /* C components may not be processed if in grayscale output */
             if JD_FORMAT != 2 || cmp == 0 {
+                /* If no AC element or scale ratio is 1/8, IDCT can be omitted and the block
+                 * is filled with DC value */
                 if z == 1 || JD_USE_SCALE != 0 && jd.scale == 3 {
                     d = (unwrap!(jd.workbuf.as_ref())[0] / 256 + 128) as i32;
                     if JD_FASTDECODE >= 1 {
@@ -829,6 +877,7 @@ fn mcu_load(mut jd: &mut JDEC) -> JRESULT {
                         unwrap!(jd.mcubuf.as_mut())[..64].fill(d as i16);
                     }
                 } else {
+                    /* Apply IDCT and store the block to the MCU buffer */
                     block_idct(
                         unwrap!(jd.workbuf.as_mut()),
                         &mut unwrap!(jd.mcubuf.as_mut())[mcu_buf_idx..],
@@ -836,10 +885,10 @@ fn mcu_load(mut jd: &mut JDEC) -> JRESULT {
                 }
             }
         }
-        mcu_buf_idx += 64;
+        mcu_buf_idx += 64; /* Next block */
         blk += 1;
     }
-    JRESULT::OK
+    JRESULT::OK /* All blocks have been loaded successfully */
 }
 
 /* ----------------------------------------------------------------------- */
