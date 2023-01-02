@@ -62,8 +62,8 @@ const JD_FORMAT: u32 = 1;
 const JD_USE_SCALE: u32 = 1;
 
 /// Optimization level
-/// 0: NOT IMPLEMENTED Basic optimization. Suitable for 8/16-bit MCUs. NOT
-/// IMPLEMENTED 1: + 32-bit barrel shifter. Suitable for 32-bit MCUs.
+/// 0: NOT IMPLEMENTED Basic optimization. Suitable for 8/16-bit MCUs.
+/// 1: + 32-bit barrel shifter. Suitable for 32-bit MCUs.
 /// 2: + Table conversion for huffman decoding (wants 6 << HUFF_BIT bytes of
 /// RAM)
 const JD_FASTDECODE: u32 = 2;
