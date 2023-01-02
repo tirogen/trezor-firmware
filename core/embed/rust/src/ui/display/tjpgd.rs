@@ -210,16 +210,6 @@ static IPFS: [u16; 64] = [
     (0.07612f64 * 8192_f64) as u16,
 ];
 
-fn byte_clip(val: i32) -> u8 {
-    if val < 0 {
-        return 0;
-    }
-    if val > 255 {
-        return 255;
-    }
-    val as u8
-}
-
 /// Allocate a memory block from memory pool
 /// `jd`: decompressor object reference
 /// `ndata` number of `T` items to allocate
@@ -440,6 +430,7 @@ fn create_huffman_tbl(mut jd: &mut JDEC, mut ndata: usize) -> JRESULT {
 /// `jd`: decompressor object reference
 /// `id`: table ID (0:Y, 1:C)
 /// `cls`: table class (0:DC, 1:AC)
+#[optimize(speed)]
 fn huffext(mut jd: &mut JDEC, id: usize, cls: usize) -> Result<i32, JRESULT> {
     let mut dc: usize = jd.dctr;
     let mut dp: usize = jd.dptr;
@@ -563,6 +554,7 @@ fn huffext(mut jd: &mut JDEC, id: usize, cls: usize) -> Result<i32, JRESULT> {
 /// Extract N bits from input stream
 /// `jd`: decompressor object reference
 /// `nbit`: number of bits to extract (1 to 16)
+#[optimize(speed)]
 fn bitext(mut jd: &mut JDEC, nbit: u32) -> Result<i32, JRESULT> {
     let mut dc: usize = jd.dctr;
     let mut dp: usize = jd.dptr;
@@ -615,6 +607,7 @@ fn bitext(mut jd: &mut JDEC, nbit: u32) -> Result<i32, JRESULT> {
 /// Process restart interval
 /// `jd`: decompressor object reference
 /// `rstn`: expected restart sequence number
+#[optimize(speed)]
 fn restart(mut jd: &mut JDEC, rstn: u16) -> JRESULT {
     let mut dp = jd.dptr;
     let mut dc: usize = jd.dctr;
@@ -661,6 +654,7 @@ fn restart(mut jd: &mut JDEC, rstn: u16) -> JRESULT {
 /// Apply Inverse-DCT in Arai Algorithm
 /// `src`: input block data (de-quantized and pre-scaled for Arai Algorithm)
 /// `dst`: destination to store the block as byte array
+#[optimize(speed)]
 fn block_idct(src: &mut &mut [i32], dst: &mut [i16]) {
     let m13: i32 = (SQRT_2 * 4096_f64) as i32;
     let m2: i32 = (1.08239f64 * 4096_f64) as i32;
@@ -780,6 +774,7 @@ fn block_idct(src: &mut &mut [i32], dst: &mut [i16]) {
 
 /// Load all blocks in an MCU into working buffer
 /// `jd`: decompressor object reference
+#[optimize(speed)]
 fn mcu_load(mut jd: &mut JDEC) -> JRESULT {
     let mut d: i32;
     let mut e: i32;
@@ -924,6 +919,7 @@ fn mcu_load(mut jd: &mut JDEC) -> JRESULT {
 /// `jd`: decompressor object reference
 /// `x`: MCU location in the image
 /// `y`: MCU location in the image
+#[optimize(speed)]
 fn mcu_output(jd: &mut JDEC, mut x: u32, mut y: u32) -> JRESULT {
     // Adaptive accuracy for both 16-/32-bit systems
     let cvacc: i32 = if mem::size_of::<i32>() > 2 { 1024 } else { 128 };
@@ -1008,18 +1004,18 @@ fn mcu_output(jd: &mut JDEC, mut x: u32, mut y: u32) -> JRESULT {
                     py_idx += 1;
                     // R
                     workbuf[pix_idx] =
-                        byte_clip(yy + (1.402f64 * cvacc as f64) as i32 * cr / cvacc);
+                        (yy + (1.402f64 * cvacc as f64) as i32 * cr / cvacc).clamp(0, 255) as u8;
                     pix_idx += 1;
                     // G
-                    workbuf[pix_idx] = byte_clip(
-                        yy - ((0.344f64 * cvacc as f64) as i32 * cb
+                    workbuf[pix_idx] = (yy
+                        - ((0.344f64 * cvacc as f64) as i32 * cb
                             + (0.714f64 * cvacc as f64) as i32 * cr)
-                            / cvacc,
-                    );
+                            / cvacc)
+                        .clamp(0, 255) as u8;
                     pix_idx += 1;
                     // B
                     workbuf[pix_idx] =
-                        byte_clip(yy + (1.772f64 * cvacc as f64) as i32 * cb / cvacc);
+                        (yy + (1.772f64 * cvacc as f64) as i32 * cb / cvacc).clamp(0, 255) as u8;
                     pix_idx += 1;
                 }
             }
@@ -1111,18 +1107,18 @@ fn mcu_output(jd: &mut JDEC, mut x: u32, mut y: u32) -> JRESULT {
                 if JD_FORMAT != 2 {
                     // R
                     workbuf[pix_idx] =
-                        byte_clip(yy + (1.402f64 * cvacc as f64) as i32 * cr / cvacc);
+                        (yy + (1.402f64 * cvacc as f64) as i32 * cr / cvacc).clamp(0, 255) as u8;
                     pix_idx += 1;
                     // G
-                    workbuf[pix_idx] = byte_clip(
-                        yy - ((0.344f64 * cvacc as f64) as i32 * cb
+                    workbuf[pix_idx] = (yy
+                        - ((0.344f64 * cvacc as f64) as i32 * cb
                             + (0.714f64 * cvacc as f64) as i32 * cr)
-                            / cvacc,
-                    );
+                            / cvacc)
+                        .clamp(0, 255) as u8;
                     //B
                     pix_idx += 1;
                     workbuf[pix_idx] =
-                        byte_clip(yy + (1.772f64 * cvacc as f64) as i32 * cb / cvacc);
+                        (yy + (1.772f64 * cvacc as f64) as i32 * cb / cvacc).clamp(0, 255) as u8;
                     pix_idx += 1;
                 } else {
                     workbuf[pix_idx] = yy as u8;
@@ -1463,6 +1459,7 @@ pub fn jd_prepare(mut jd: &mut JDEC) -> JRESULT {
 
 /// Start to decompress the JPEG picture
 /// `scale`: output de-scaling factor (0 to 3)
+#[optimize(speed)]
 pub fn jd_decomp(mut jd: &mut JDEC, scale: u8) -> JRESULT {
     if scale > (if JD_USE_SCALE != 0 { 3 } else { 0 }) {
         return JRESULT::PAR;
@@ -1507,6 +1504,7 @@ pub fn jd_decomp(mut jd: &mut JDEC, scale: u8) -> JRESULT {
     JRESULT::OK
 }
 
+#[optimize(speed)]
 fn jpeg_in(jd: &mut JDEC, inbuf_offset: Option<usize>, n_data: usize) -> usize {
     let n_data = n_data as usize;
     if let Some(inbuf_offset) = inbuf_offset {
@@ -1530,6 +1528,7 @@ fn jpeg_in(jd: &mut JDEC, inbuf_offset: Option<usize>, n_data: usize) -> usize {
     n_data as _
 }
 
+#[optimize(speed)]
 fn jpeg_out(jd: &mut JDEC, rect: Rect) -> JRESULT {
     let w = rect.width();
     let h = rect.height();
