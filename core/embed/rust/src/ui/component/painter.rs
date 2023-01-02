@@ -59,8 +59,3 @@ where
     };
     Painter::new(f)
 }
-
-pub fn image_painter(image: &'static [u8]) -> Painter<impl FnMut(Rect)> {
-    let f = move |area: Rect| display::image(area.center(), image);
-    Painter::new(f)
-}

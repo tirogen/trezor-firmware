@@ -5,7 +5,7 @@ use num_traits::FromPrimitive;
 
 use crate::trezorhal::buffers::BufferText;
 
-#[derive(PartialEq, Debug, Eq, FromPrimitive)]
+#[derive(PartialEq, Debug, Eq, FromPrimitive, Clone, Copy)]
 pub enum ToifFormat {
     FullColorBE = ffi::toif_format_t_TOIF_FULL_COLOR_BE as _,
     GrayScaleOH = ffi::toif_format_t_TOIF_GRAYSCALE_OH as _,

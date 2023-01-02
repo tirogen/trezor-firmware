@@ -1,23 +1,12 @@
 use crate::ui::{
     component::{Component, Event, EventCtx, Never},
     display,
-    display::{toif_info, Color},
-    geometry::{Alignment, Offset, Point, Rect},
+    display::{
+        toif::{Icon, Image},
+        Color,
+    },
+    geometry::{Offset, Point, Rect, CENTER},
 };
-
-pub struct Image {
-    image: &'static [u8],
-    area: Rect,
-}
-
-impl Image {
-    pub fn new(image: &'static [u8]) -> Self {
-        Self {
-            image,
-            area: Rect::zero(),
-        }
-    }
-}
 
 impl Component for Image {
     type Msg = Never;
@@ -32,13 +21,11 @@ impl Component for Image {
     }
 
     fn paint(&mut self) {
-        display::image(self.area.center(), self.image)
+        self.draw(self.area.center(), CENTER);
     }
 
     fn bounds(&self, sink: &mut dyn FnMut(Rect)) {
-        if let Some((size, _)) = display::toif_info(self.image) {
-            sink(Rect::from_center_and_size(self.area.center(), size));
-        }
+        sink(Rect::from_center_and_size(self.area.center(), self.size()));
     }
 }
 
@@ -51,8 +38,8 @@ impl crate::trace::Trace for Image {
 }
 
 pub struct BlendedImage {
-    bg: &'static [u8],
-    fg: &'static [u8],
+    bg: Icon,
+    fg: Icon,
     bg_color: Color,
     fg_color: Color,
     area_color: Color,
@@ -61,13 +48,7 @@ pub struct BlendedImage {
 }
 
 impl BlendedImage {
-    pub fn new(
-        bg: &'static [u8],
-        fg: &'static [u8],
-        bg_color: Color,
-        fg_color: Color,
-        area_color: Color,
-    ) -> Self {
+    pub fn new(bg: Icon, fg: Icon, bg_color: Color, fg_color: Color, area_color: Color) -> Self {
         Self {
             bg,
             fg,
@@ -93,15 +74,12 @@ impl Component for BlendedImage {
     type Msg = Never;
 
     fn place(&mut self, bounds: Rect) -> Rect {
-        let (bg_size, _) = unwrap!(toif_info(self.bg));
+        self.bg_top_left = self.bg.size().snap(bounds.center(), CENTER);
 
-        self.bg_top_left = bg_size.snap(bounds.center(), Alignment::Center, Alignment::Center);
+        let ft_top_left = self.fg.size().snap(bounds.center(), CENTER);
+        self.fg_offset = ft_top_left - self.bg_top_left;
 
-        if let Some((fg_size, _)) = toif_info(self.fg) {
-            let ft_top_left = fg_size.snap(bounds.center(), Alignment::Center, Alignment::Center);
-            self.fg_offset = ft_top_left - self.bg_top_left;
-        }
-        Rect::from_top_left_and_size(self.bg_top_left, bg_size)
+        Rect::from_top_left_and_size(self.bg_top_left, self.bg.size())
     }
 
     fn event(&mut self, _ctx: &mut EventCtx, _event: Event) -> Option<Self::Msg> {
@@ -113,9 +91,10 @@ impl Component for BlendedImage {
     }
 
     fn bounds(&self, sink: &mut dyn FnMut(Rect)) {
-        if let Some((size, _)) = display::toif_info(self.bg) {
-            sink(Rect::from_top_left_and_size(self.bg_top_left, size));
-        }
+        sink(Rect::from_top_left_and_size(
+            self.bg_top_left,
+            self.bg.size(),
+        ));
     }
 }
 

@@ -1,6 +1,7 @@
 use crate::ui::{
-    component::{Child, Component, Event, EventCtx, Image, Label},
+    component::{Child, Component, Event, EventCtx, Label},
     display,
+    display::Image,
     geometry::{Alignment, Insets, Rect},
     model_tt::component::{
         fido_icons::get_fido_icon_data,
@@ -63,7 +64,7 @@ where
             app_name: Label::new(app_name, Alignment::Center, theme::TEXT_BOLD),
             account_name: Label::new("".into(), Alignment::Center, theme::TEXT_BOLD),
             page_swipe,
-            icon: Child::new(Image::new(icon_data)),
+            icon: Child::new(Image::from_slice(icon_data)),
             get_account,
             scrollbar,
             fade: false,
