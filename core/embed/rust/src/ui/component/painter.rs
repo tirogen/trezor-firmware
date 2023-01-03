@@ -1,7 +1,8 @@
 use crate::ui::{
     component::{Component, Event, EventCtx, Never},
     display,
-    geometry::Rect,
+    display::Image,
+    geometry::{Rect, CENTER},
 };
 
 pub struct Painter<F> {
@@ -57,5 +58,10 @@ where
     let f = move |area: Rect| {
         display::qrcode(area.center(), data.as_ref(), max_size, case_sensitive).unwrap_or(())
     };
+    Painter::new(f)
+}
+
+pub fn image_painter(image: Image) -> Painter<impl FnMut(Rect)> {
+    let f = move |area: Rect| image.draw(area.center(), CENTER);
     Painter::new(f)
 }
