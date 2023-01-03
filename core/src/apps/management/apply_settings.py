@@ -33,6 +33,10 @@ def _validate_homescreen(homescreen: bytes) -> None:
         raise DataError("Homescreen must be 240x240 pixel large")
     if mcu_height > 16:
         raise DataError("Unsupported jpeg type")
+    try:
+        trezorui2.jpeg_test(homescreen)
+    except ValueError:
+        raise DataError("Invalid homescreen")
 
 
 async def apply_settings(ctx: Context, msg: ApplySettings) -> Success:
