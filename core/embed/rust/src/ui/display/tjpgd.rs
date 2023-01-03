@@ -1043,13 +1043,13 @@ fn mcu_output(jd: &mut JDEC, mut x: u32, mut y: u32) -> JRESULT {
         }
         // Descale the MCU rectangular if needed
         if JD_USE_SCALE != 0 && jd.scale != 0 {
-            // Get averaged RGB value of each square correcponds to a pixel
+            // Get averaged RGB value of each square corresponds to a pixel
             let s = (jd.scale * 2) as u32; // Number of shifts for averaging
             let w = 1 << jd.scale as u32; // Width of square
             let a = (mx - w) * (if JD_FORMAT != 2 { 3 } else { 1 }); // Bytes to skip for next line in the square
             op_idx = 0;
-            for iy in 0..my {
-                for ix in 0..mx {
+            for iy in (0..my).step_by(w as usize) {
+                for ix in (0..mx).step_by(w as usize) {
                     pix_idx = ((iy * mx + ix) * (if JD_FORMAT != 2 { 3 } else { 1 })) as usize;
                     let mut b = 0;
                     let mut g = 0;
