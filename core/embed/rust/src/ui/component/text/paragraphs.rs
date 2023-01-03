@@ -529,7 +529,7 @@ impl<T> Checklist<T> {
         }
     }
 
-    fn paint_icon(&self, layout: &TextLayout, icon: Icon, offset: Offset) {
+    fn paint_icon(&self, layout: &TextLayout, icon: &Icon, offset: Offset) {
         let top_left = Point::new(self.area.x0, layout.bounds.y0);
         icon.draw(
             top_left + offset,
@@ -562,10 +562,10 @@ where
 
         let current_visible = self.current.saturating_sub(self.paragraphs.offset.par);
         for layout in self.paragraphs.visible.iter().take(current_visible) {
-            self.paint_icon(layout, self.icon_done, Self::DONE_OFFSET);
+            self.paint_icon(layout, &self.icon_done, Self::DONE_OFFSET);
         }
         if let Some(layout) = self.paragraphs.visible.iter().nth(current_visible) {
-            self.paint_icon(layout, self.icon_current, Self::CURRENT_OFFSET);
+            self.paint_icon(layout, &self.icon_current, Self::CURRENT_OFFSET);
         }
     }
 

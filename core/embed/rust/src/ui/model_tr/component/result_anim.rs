@@ -85,7 +85,7 @@ impl ResultAnim {
             theme::FG,
             theme::BG,
             100 * done / 1000,
-            Some((self.icon, theme::FG)),
+            Some((&self.icon, theme::FG)),
         );
     }
 }

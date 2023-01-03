@@ -205,7 +205,7 @@ pub fn rect_rounded2_partial(
     fg_color: Color,
     bg_color: Color,
     show_percent: i16,
-    icon: Option<(Icon, Color)>,
+    icon: Option<(&Icon, Color)>,
 ) {
     const MAX_ICON_SIZE: i16 = 64;
 
@@ -543,8 +543,8 @@ pub fn text_over_image(
 #[cfg(feature = "dma2d")]
 pub fn icon_over_icon(
     bg_area: Option<Rect>,
-    bg: (Icon, Offset, Color),
-    fg: (Icon, Offset, Color),
+    bg: (&Icon, Offset, Color),
+    fg: (&Icon, Offset, Color),
     bg_color: Color,
 ) {
     let bg1 = unsafe { get_buffer_16bpp(0, true) };
@@ -645,8 +645,8 @@ pub fn icon_over_icon(
 #[cfg(not(feature = "dma2d"))]
 pub fn icon_over_icon(
     bg_area: Option<Rect>,
-    bg: (Icon, Offset, Color),
-    fg: (Icon, Offset, Color),
+    bg: (&Icon, Offset, Color),
+    fg: (&Icon, Offset, Color),
     bg_color: Color,
 ) {
     let (icon_bg, offset_bg, color_icon_bg) = bg;

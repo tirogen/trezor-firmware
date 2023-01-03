@@ -92,7 +92,7 @@ pub fn icon_precise(icon: &Icon, center: Point, fg_color: Color, bg_color: Color
 /// Lots of draw methods exist so that we can easily
 /// "glue" the toif together with other elements
 /// (text, display boundary, etc.) according to their position.
-#[derive(PartialEq, Eq, Clone, Copy)]
+#[derive(PartialEq, Eq)]
 pub struct Toif {
     data: &'static [u8],
     // Text is useful for debugging purposes.
@@ -129,7 +129,7 @@ impl Toif {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Copy)]
+#[derive(PartialEq, Eq)]
 pub struct Icon {
     toif: Toif,
     area: Rect,
@@ -211,7 +211,7 @@ impl Icon {
     }
 }
 
-#[derive(PartialEq, Eq, Clone, Copy)]
+#[derive(PartialEq, Eq)]
 pub struct Image {
     toif: Toif,
     pub area: Rect,

@@ -65,7 +65,7 @@ pub fn set_animation_disabled(_disabled: bool) {}
 /// Display an icon and a text centered relative to given `Point`.
 pub fn icon_text_center(
     baseline: Point,
-    icon: Icon,
+    icon: &Icon,
     space: i16,
     text: &str,
     style: TextStyle,

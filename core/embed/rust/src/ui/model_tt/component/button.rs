@@ -207,8 +207,8 @@ impl<T> Button<T> {
             }
             ButtonContent::IconBlend(bg, fg, offset) => display::icon_over_icon(
                 Some(self.area),
-                (*bg, Offset::zero(), style.button_color),
-                (*fg, *offset, style.text_color),
+                (bg, Offset::zero(), style.button_color),
+                (fg, *offset, style.text_color),
                 style.background_color,
             ),
         }

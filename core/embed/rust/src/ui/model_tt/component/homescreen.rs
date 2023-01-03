@@ -65,7 +65,7 @@ where
             let (color, icon) = Self::level_to_style(0);
             NotificationFrame::<Empty, T>::paint_notification(
                 AREA,
-                icon,
+                &icon,
                 "NO USB CONNECTION",
                 color,
             );
@@ -73,7 +73,7 @@ where
             let (color, icon) = Self::level_to_style(*level);
             NotificationFrame::<Empty, T>::paint_notification(
                 AREA,
-                icon,
+                &icon,
                 notification.as_ref(),
                 color,
             );
@@ -225,7 +225,7 @@ where
         };
         icon_text_center(
             TOP_CENTER + Offset::y(LOCKED_Y),
-            Icon::new(theme::ICON_LOCK),
+            &Icon::new(theme::ICON_LOCK),
             2,
             locked,
             theme::TEXT_BOLD,

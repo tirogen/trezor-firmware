@@ -174,13 +174,23 @@ impl Component for Loader {
                 self.styles.active
             };
 
-            display::loader(
-                progress,
-                self.offset_y,
-                style.loader_color,
-                style.background_color,
-                style.icon,
-            );
+            if let Some(i) = &style.icon {
+                display::loader(
+                    progress,
+                    self.offset_y,
+                    style.loader_color,
+                    style.background_color,
+                    Some((&i.0, i.1)),
+                );
+            } else {
+                display::loader(
+                    progress,
+                    self.offset_y,
+                    style.loader_color,
+                    style.background_color,
+                    None,
+                );
+            }
         }
     }
 }

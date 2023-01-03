@@ -63,8 +63,8 @@ impl BlendedImage {
     fn paint_image(&self) {
         display::icon_over_icon(
             None,
-            (self.bg, self.bg_top_left.into(), self.bg_color),
-            (self.fg, self.fg_offset, self.fg_color),
+            (&self.bg, self.bg_top_left.into(), self.bg_color),
+            (&self.fg, self.fg_offset, self.fg_color),
             self.area_color,
         );
     }

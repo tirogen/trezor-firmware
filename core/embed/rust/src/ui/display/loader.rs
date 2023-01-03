@@ -41,7 +41,7 @@ pub fn loader_uncompress(
     bg_color: Color,
     progress: u16,
     indeterminate: bool,
-    icon: Option<(Icon, Color)>,
+    icon: Option<(&Icon, Color)>,
 ) {
     const ICON_MAX_SIZE: i16 = constant::LOADER_ICON_MAX_SIZE;
 
@@ -75,14 +75,22 @@ pub extern "C" fn loader_uncompress_r(
     let bg = Color::from_u16(bg_color);
     let ic_color = Color::from_u16(icon_color);
 
-    let i = if icon_data != 0 {
+    if icon_data != 0 {
         let data_slice = unsafe { from_raw_parts(icon_data as _, icon_data_size as _) };
-        Some((Icon::from_slice(data_slice), ic_color))
-    } else {
-        None
-    };
+        let icon = Icon::from_slice(data_slice);
+        let i = Some((&icon, ic_color));
 
-    loader_uncompress(y_offset as _, fg, bg, progress as _, indeterminate != 0, i);
+        loader_uncompress(y_offset as _, fg, bg, progress as _, indeterminate != 0, i);
+    } else {
+        loader_uncompress(
+            y_offset as _,
+            fg,
+            bg,
+            progress as _,
+            indeterminate != 0,
+            None,
+        );
+    };
 }
 
 #[inline(always)]
@@ -192,7 +200,7 @@ pub fn loader_rust(
     bg_color: Color,
     progress: u16,
     indeterminate: bool,
-    icon: Option<(Icon, Color, Offset)>,
+    icon: Option<(&Icon, Color, Offset)>,
 ) {
     let center = screen().center() + Offset::new(0, y_offset);
     let r = Rect::from_center_and_size(center, Offset::uniform(LOADER_OUTER as i16 * 2));
@@ -273,7 +281,7 @@ pub fn loader_rust(
     bg_color: Color,
     progress: u16,
     indeterminate: bool,
-    icon: Option<(Icon, Color, Offset)>,
+    icon: Option<(&Icon, Color, Offset)>,
 ) {
     let center = screen().center() + Offset::new(0, y_offset);
     let r = Rect::from_center_and_size(center, Offset::uniform(LOADER_OUTER as i16 * 2));
@@ -380,7 +388,7 @@ pub fn loader(
     y_offset: i16,
     fg_color: Color,
     bg_color: Color,
-    icon: Option<(Icon, Color)>,
+    icon: Option<(&Icon, Color)>,
 ) {
     loader_uncompress(y_offset, fg_color, bg_color, progress, false, icon);
 }
@@ -390,7 +398,7 @@ pub fn loader_indeterminate(
     y_offset: i16,
     fg_color: Color,
     bg_color: Color,
-    icon: Option<(Icon, Color)>,
+    icon: Option<(&Icon, Color)>,
 ) {
     loader_uncompress(y_offset, fg_color, bg_color, progress, true, icon);
 }

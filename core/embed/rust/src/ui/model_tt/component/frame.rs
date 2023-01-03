@@ -129,7 +129,7 @@ where
         self.content.inner()
     }
 
-    pub fn paint_notification(area: Rect, icon: Icon, title: &str, color: Color) {
+    pub fn paint_notification(area: Rect, icon: &Icon, title: &str, color: Color) {
         let (area, _) = area
             .inset(Insets::uniform(Self::BORDER))
             .split_top(Self::HEIGHT);
@@ -168,7 +168,7 @@ where
     }
 
     fn paint(&mut self) {
-        Self::paint_notification(self.area, self.icon, self.title.as_ref(), Self::COLOR);
+        Self::paint_notification(self.area, &self.icon, self.title.as_ref(), Self::COLOR);
         self.content.paint();
     }
 
