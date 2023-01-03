@@ -1,7 +1,7 @@
 use crate::ui::{
     component::{Component, Event, EventCtx, Never},
     display,
-    geometry::Rect,
+    geometry::{Offset, Rect},
 };
 
 pub struct Painter<F> {
@@ -62,5 +62,11 @@ where
 
 pub fn image_painter(image: &'static [u8]) -> Painter<impl FnMut(Rect)> {
     let f = move |area: Rect| display::image(area.center(), image);
+    Painter::new(f)
+}
+
+pub fn jpeg_painter(image: &'static [u8], size: Offset, scale: u8) -> Painter<impl FnMut(Rect)> {
+    let off = Offset::new(size.x / (2 << scale), size.y / (2 << scale));
+    let f = move |area: Rect| display::tjpgd::jpeg(image, area.center() - off, scale);
     Painter::new(f)
 }
