@@ -26,7 +26,7 @@ pub fn consteq(buf1: &[u8], buf2: &[u8]) -> bool {
     diff == 0
 }
 
-pub fn load_salt(auth_key: &[u8], path: String<48>) -> Result<Option<[u8; 32]>, ()> {
+pub fn load_salt(auth_key: &[u8], path: String<49>) -> Result<Option<[u8; 32]>, ()> {
     let mut fil: FIL = FIL::default();
 
     if let Ok(()) = open(&mut fil, path.as_str(), 1) {
@@ -55,8 +55,8 @@ pub fn load_salt(auth_key: &[u8], path: String<48>) -> Result<Option<[u8; 32]>, 
 }
 
 pub fn load_sd_salt(key: &[u8]) -> LoadSDResult {
-    let mut salt_path: String<48> = String::new();
-    let mut new_salt_path: String<48> = String::new();
+    let mut salt_path: String<49> = String::new();
+    let mut new_salt_path: String<49> = String::new();
 
     let dev_id = get_device_id();
 
@@ -66,6 +66,8 @@ pub fn load_sd_salt(key: &[u8]) -> LoadSDResult {
 
     unwrap!(new_salt_path.push_str(salt_path.as_str()));
     unwrap!(new_salt_path.push_str(".new"));
+    unwrap!(new_salt_path.push_str("\0"));
+    unwrap!(salt_path.push_str("\0"));
 
     let mut ff: FATFS = FATFS::default();
 

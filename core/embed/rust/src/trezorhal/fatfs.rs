@@ -1,5 +1,5 @@
 use super::ffi;
-use core::{mem::MaybeUninit, ptr};
+use core::{ffi::CStr, mem::MaybeUninit, ptr};
 
 pub use ffi::{FATFS, FIL, FRESULT};
 
@@ -24,15 +24,33 @@ fn process_result(res: FRESULT) -> Result<(), FRESULT> {
 }
 
 pub fn mount(fs: &mut FATFS) -> Result<(), FRESULT> {
-    unsafe { process_result(ffi::f_mount(fs, "".as_ptr() as _, 1)) }
+    unsafe {
+        process_result(ffi::f_mount(
+            fs,
+            CStr::from_bytes_with_nul_unchecked(b"\0").as_ptr() as _,
+            1,
+        ))
+    }
 }
 
 pub fn unmount() -> Result<(), FRESULT> {
-    unsafe { process_result(ffi::f_mount(ptr::null_mut(), "".as_ptr() as _, 0)) }
+    unsafe {
+        process_result(ffi::f_mount(
+            ptr::null_mut(),
+            CStr::from_bytes_with_nul_unchecked(b"\0").as_ptr() as _,
+            0,
+        ))
+    }
 }
 
 pub fn open(fil: &mut FIL, path: &str, mode: u8) -> Result<(), FRESULT> {
-    unsafe { process_result(ffi::f_open(fil, path.as_ptr() as _, mode as _)) }
+    unsafe {
+        process_result(ffi::f_open(
+            fil,
+            CStr::from_bytes_with_nul_unchecked(path.as_bytes()).as_ptr() as _,
+            mode as _,
+        ))
+    }
 }
 
 pub fn close(fil: &mut FIL) -> Result<(), FRESULT> {
@@ -55,14 +73,18 @@ pub fn read(fil: &mut FIL, buff: &mut [u8]) -> Result<u32, FRESULT> {
 }
 
 pub fn unlink(path: &str) -> Result<(), FRESULT> {
-    unsafe { process_result(ffi::f_unlink(path.as_ptr() as _)) }
+    unsafe {
+        process_result(ffi::f_unlink(
+            CStr::from_bytes_with_nul_unchecked(path.as_bytes()).as_ptr() as _,
+        ))
+    }
 }
 
 pub fn rename(path_old: &str, path_new: &str) -> Result<(), FRESULT> {
     unsafe {
         process_result(ffi::f_rename(
-            path_old.as_ptr() as _,
-            path_new.as_ptr() as _,
+            CStr::from_bytes_with_nul_unchecked(path_old.as_bytes()).as_ptr() as _,
+            CStr::from_bytes_with_nul_unchecked(path_new.as_bytes()).as_ptr() as _,
         ))
     }
 }

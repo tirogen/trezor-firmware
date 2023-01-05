@@ -14,6 +14,7 @@ use crate::{
     },
 };
 
+use crate::trezorhal::alloc::{alloc_only, alloc_only_init};
 use render::{
     homescreen, homescreen_blurred, HomescreenNotification, HomescreenText, HOMESCREEN_IMAGE_SIZE,
 };
@@ -289,11 +290,20 @@ where
             },
         ];
 
-        let res = get_image();
-        if let Ok(data) = res {
-            homescreen_blurred(data.as_ref(), &texts);
+        if self.bootscreen {
+            let res = get_image_no_mpy();
+            if let Ok(data) = res {
+                homescreen_blurred(data, &texts);
+            } else {
+                homescreen_blurred(IMAGE_HOMESCREEN, &texts);
+            }
         } else {
-            homescreen_blurred(IMAGE_HOMESCREEN, &texts);
+            let res = get_image();
+            if let Ok(data) = res {
+                homescreen_blurred(data.as_ref(), &texts);
+            } else {
+                homescreen_blurred(IMAGE_HOMESCREEN, &texts);
+            }
         }
     }
 }
@@ -312,6 +322,25 @@ fn get_image() -> Result<Gc<[u8]>, ()> {
                     {
                         return Ok(buffer);
                     }
+                }
+            }
+        }
+    };
+    Err(())
+}
+
+fn get_image_no_mpy() -> Result<&'static [u8], ()> {
+    if let Ok(len) = get_avatar_len() {
+        alloc_only_init(true);
+        let buf = alloc_only(len);
+        if get_avatar(buf).is_ok() {
+            let jpeg = jpeg_info(buf);
+            if let Some((size, mcu_height)) = jpeg {
+                if size.x == HOMESCREEN_IMAGE_SIZE
+                    && size.y == HOMESCREEN_IMAGE_SIZE
+                    && mcu_height <= 16
+                {
+                    return Ok(buf);
                 }
             }
         }

@@ -20,7 +20,7 @@ pub const ERASE_HOLD_DURATION: Duration = Duration::from_millis(1500);
 pub const BACKLIGHT_NORMAL: i32 = 150;
 pub const BACKLIGHT_LOW: i32 = 45;
 pub const BACKLIGHT_DIM: i32 = 5;
-pub const BACKLIGHT_NONE: i32 = 2;
+pub const BACKLIGHT_NONE: i32 = 0;
 pub const BACKLIGHT_MAX: i32 = 255;
 
 // Color palette.

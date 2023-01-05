@@ -67,6 +67,7 @@ pub fn fade_backlight(target: i32) {
             time::sleep(BACKLIGHT_DELAY);
         }
     }
+    set_backlight(target);
 }
 
 pub fn rect_fill(r: Rect, fg_color: Color) {

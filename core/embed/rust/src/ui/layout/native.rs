@@ -125,7 +125,7 @@ where
     }
 
     pub fn process(&mut self) -> F::Msg {
-        display::fade_backlight(theme::BACKLIGHT_DIM);
+        display::fade_backlight(theme::BACKLIGHT_NONE);
         if self.clear {
             display::rect_fill(screen(), theme::BG);
         }

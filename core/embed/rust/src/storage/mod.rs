@@ -1,12 +1,7 @@
-use crate::{
-    micropython::ffi,
-    trezorhal::{
-        alloc::alloc_only,
-        random,
-        storage::{delete, get, get_length, set, set_counter},
-    },
+use crate::trezorhal::{
+    random,
+    storage::{delete, get, get_length, set, set_counter},
 };
-use core::slice;
 use cstr_core::CStr;
 use heapless::{String, Vec};
 
@@ -53,20 +48,20 @@ pub fn get_avatar_len() -> Result<usize, ()> {
     }
 }
 
-// pub fn get_avatar(buffer: &mut [u8]) -> Result<usize, ()> {
-//     let avatar_len_res = get_length(HOMESCREEN);
-//
-//     if let Ok(len) = avatar_len_res {
-//         if len <= buffer.len() {
-//             unwrap!(get(HOMESCREEN, buffer));
-//             Ok(len)
-//         } else {
-//             Err(())
-//         }
-//     } else {
-//         Err(())
-//     }
-// }
+pub fn get_avatar(buffer: &mut [u8]) -> Result<usize, ()> {
+    let avatar_len_res = get_length(HOMESCREEN);
+
+    if let Ok(len) = avatar_len_res {
+        if len <= buffer.len() {
+            unwrap!(get(HOMESCREEN, buffer));
+            Ok(len)
+        } else {
+            Err(())
+        }
+    } else {
+        Err(())
+    }
+}
 
 pub fn hexlify_bytes<const N: usize>(bytes: &[u8]) -> String<N> {
     let mut buf = String::<N>::from("");
@@ -144,27 +139,6 @@ pub fn init_unlocked() {
             unwrap!(set(INITIALIZED, &[1; 1]));
         }
     }
-}
-
-pub fn get_avatar(no_mpy: bool) -> Result<&'static mut [u8], ()> {
-    let avatar_len_res = get_length(HOMESCREEN);
-
-    return if let Ok(len) = avatar_len_res {
-        let buffer = if no_mpy {
-            alloc_only(len)
-        } else {
-            let data_ptr_raw = unsafe { ffi::gc_alloc(len, 0) };
-            unsafe { slice::from_raw_parts_mut(data_ptr_raw as _, len) }
-        };
-        if len <= buffer.len() {
-            unwrap!(get(HOMESCREEN, buffer));
-            Ok(&mut buffer[..len])
-        } else {
-            Err(())
-        }
-    } else {
-        Err(())
-    };
 }
 
 pub fn get_rotation() -> u16 {

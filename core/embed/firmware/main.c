@@ -110,15 +110,14 @@ int main(void) {
   display_set_little_endian();
 #endif
 
-  boot_screen_full();
-  display_backlight(150);
-
 #if !PRODUCTION
   // enable BUS fault and USAGE fault handlers
   SCB->SHCSR |= (SCB_SHCSR_USGFAULTENA_Msk | SCB_SHCSR_BUSFAULTENA_Msk);
 #endif
 
   display_reinit();
+  boot_screen_full();
+  display_backlight(150);
 
 #if defined TREZOR_MODEL_1
   button_init();
@@ -134,8 +133,6 @@ int main(void) {
   touch_init();
   sdcard_init();
 #endif
-
-  display_clear();
 
 #if !defined TREZOR_MODEL_1
   // jump to unprivileged mode
