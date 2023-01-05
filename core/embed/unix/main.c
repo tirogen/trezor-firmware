@@ -424,8 +424,6 @@ void main_clean_exit(int status) {
 #define PATHLIST_SEP_CHAR ':'
 #endif
 
-void rust_eh_personality() {}
-
 static int do_import_module(const char *modname) {
   mp_obj_t import_args[4];
   import_args[0] = mp_obj_new_str(modname, strlen(modname));
