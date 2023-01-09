@@ -1,8 +1,7 @@
 use crate::{
     error::Error,
     micropython::{
-        buffer::{get_buffer, hexlify_bytes, StrBuffer},
-        ffi::{mp_obj_new_int, mp_obj_new_tuple},
+        buffer::{hexlify_bytes, StrBuffer},
         gc::Gc,
         iter::{Iter, IterBuf},
         list::List,
@@ -14,12 +13,20 @@ use crate::{
             paragraphs::{Paragraph, ParagraphSource, ParagraphStrType},
             TextStyle,
         },
-        display::tjpgd::{jpeg_info, jpeg_test},
         util::set_animation_disabled,
     },
 };
-use cstr_core::{cstr, CStr};
+use cstr_core::cstr;
 use heapless::Vec;
+
+#[cfg(feature = "jpeg")]
+use crate::{
+    micropython::{
+        buffer::get_buffer,
+        ffi::{mp_obj_new_int, mp_obj_new_tuple},
+    },
+    ui::display::tjpgd::{jpeg_info, jpeg_test},
+};
 
 pub fn iter_into_objs<const N: usize>(iterable: Obj) -> Result<[Obj; N], Error> {
     let err = Error::ValueError(cstr!("Invalid iterable length"));
@@ -243,6 +250,7 @@ pub extern "C" fn upy_disable_animation(disable: Obj) -> Obj {
     unsafe { try_or_raise(block) }
 }
 
+#[cfg(feature = "jpeg")]
 pub extern "C" fn upy_jpeg_info(data: Obj) -> Obj {
     let block = || {
         let buffer = unsafe { get_buffer(data) };
@@ -262,19 +270,17 @@ pub extern "C" fn upy_jpeg_info(data: Obj) -> Obj {
 
                 Ok(obj)
             } else {
-                let msg =
-                    unsafe { CStr::from_bytes_with_nul_unchecked(b"Invalid image format.\0") };
-                Err(Error::ValueError(msg))
+                Err(Error::ValueError(cstr!("Invalid image format.")))
             }
         } else {
-            let msg = unsafe { CStr::from_bytes_with_nul_unchecked(b"Buffer error.\0") };
-            Err(Error::ValueError(msg))
+            Err(Error::ValueError(cstr!("Buffer error.")))
         }
     };
 
     unsafe { try_or_raise(block) }
 }
 
+#[cfg(feature = "jpeg")]
 pub extern "C" fn upy_jpeg_test(data: Obj) -> Obj {
     let block = || {
         let buffer = unsafe { get_buffer(data) };
@@ -283,8 +289,7 @@ pub extern "C" fn upy_jpeg_test(data: Obj) -> Obj {
             let result = jpeg_test(buffer);
             Ok(result.into())
         } else {
-            let msg = unsafe { CStr::from_bytes_with_nul_unchecked(b"Buffer error.\0") };
-            Err(Error::ValueError(msg))
+            Err(Error::ValueError(cstr!("Buffer error.")))
         }
     };
 
