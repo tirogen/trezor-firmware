@@ -9,16 +9,6 @@ def disable_animation(disable: bool) -> None:
 
 
 # rust/src/ui/model_t1/layout.rs
-def jpeg_info(data: bytes) -> (width: int, height: int, mcu_height: int):
-    """Get JPEG image dimensions."""
-
-
-# rust/src/ui/model_t1/layout.rs
-def jpeg_test(data: bytes) -> bool:
-    """Test JPEG image."""
-
-
-# rust/src/ui/model_t1/layout.rs
 def confirm_action(
     *,
     title: str,
@@ -47,16 +37,6 @@ CANCELLED: object
 # rust/src/ui/model_tr/layout.rs
 def disable_animation(disable: bool) -> None:
     """Disable animations, debug builds only."""
-
-
-# rust/src/ui/model_tr/layout.rs
-def jpeg_info(data: bytes) -> (width: int, height: int, mcu_height: int):
-    """Get JPEG image dimensions."""
-
-
-# rust/src/ui/model_tr/layout.rs
-def jpeg_test(data: bytes) -> bool:
-    """Test JPEG image."""
 
 
 # rust/src/ui/model_tr/layout.rs
