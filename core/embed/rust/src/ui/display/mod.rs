@@ -1,5 +1,6 @@
 #[cfg(any(feature = "model_tt", feature = "model_tr"))]
 pub mod loader;
+#[cfg(feature = "jpeg")]
 pub mod tjpgd;
 
 use super::{
