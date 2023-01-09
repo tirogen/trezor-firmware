@@ -1586,7 +1586,7 @@
 "TT_test_firmware_hash.py::test_firmware_hash_emu": "13e6dfd09491219099658c318245425216e2de77140afdb86937cb48a630113e",
 "TT_test_firmware_hash.py::test_firmware_hash_hw": "72d6d1cdc13cd36c83c4e6dff0e1533515be8fe181a3305a29cd88a18fbaf4ba",
 "TT_test_msg_applysettings.py::test_apply_homescreen_toif": "6531ff6ac0862f47c8d391301cf7bfd2f9f12c1921b2811f0eedfcf7fefc8d73",
-"TT_test_msg_applysettings.py::test_apply_homescreen_jpeg": "a2fb2ee68bbcf24b030cb0d1ff2e104b8109fc6f5429df265f3a9e2cbde4fb27",
+"TT_test_msg_applysettings.py::test_apply_homescreen_jpeg": "9ce09adb64a15f43c96188e73a314216230b0d94178f525172f993af76f9c77b",
 "TT_test_msg_applysettings.py::test_apply_homescreen_jpeg_wrong_size": "6531ff6ac0862f47c8d391301cf7bfd2f9f12c1921b2811f0eedfcf7fefc8d73",
 "TT_test_msg_applysettings.py::test_apply_homescreen_jpeg_progressive": "6531ff6ac0862f47c8d391301cf7bfd2f9f12c1921b2811f0eedfcf7fefc8d73",
 "TT_test_msg_applysettings.py::test_apply_settings": "35d34ef7cfaff95d07782881a25b795c1283f7f981d2402bd051e520de7001ce",
