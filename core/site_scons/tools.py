@@ -1,3 +1,6 @@
+import os.path
+
+
 def add_font(font_name, font, defines, sources):
     if font is not None:
         defines += [
@@ -42,3 +45,22 @@ def get_model_identifier(model):
         return "T2B1"
     else:
         raise Exception("Unknown model")
+
+
+def get_version(file):
+    major = 0
+    minor = 0
+    patch = 0
+
+    if not os.path.exists(file):
+        file = os.path.join("..", "..", file)
+
+    with open(file, 'r') as f:
+        for line in f:
+            if line.startswith('#define VERSION_MAJOR '):
+                major = line.split('VERSION_MAJOR')[1].strip()
+            if line.startswith('#define VERSION_MINOR '):
+                minor = line.split('VERSION_MINOR')[1].strip()
+            if line.startswith('#define VERSION_PATCH '):
+                patch = line.split('VERSION_PATCH')[1].strip()
+        return f'{major}.{minor}.{patch}'
