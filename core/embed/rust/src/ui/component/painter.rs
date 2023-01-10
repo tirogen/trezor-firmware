@@ -68,8 +68,12 @@ pub fn image_painter(image: &'static [u8]) -> Painter<impl FnMut(Rect)> {
 }
 
 #[cfg(feature = "jpeg")]
-pub fn jpeg_painter(image: &'static [u8], size: Offset, scale: u8) -> Painter<impl FnMut(Rect)> {
+pub fn jpeg_painter<'a>(
+    image: impl Fn() -> &'a [u8],
+    size: Offset,
+    scale: u8,
+) -> Painter<impl FnMut(Rect)> {
     let off = Offset::new(size.x / (2 << scale), size.y / (2 << scale));
-    let f = move |area: Rect| display::tjpgd::jpeg(image, area.center() - off, scale);
+    let f = move |area: Rect| display::tjpgd::jpeg(image(), area.center() - off, scale);
     Painter::new(f)
 }
