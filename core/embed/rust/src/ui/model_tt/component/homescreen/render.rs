@@ -189,7 +189,7 @@ fn homescreen_line_blurred(
     icon_data: &[u8],
     text_buffer: &mut BufferText,
     text_info: HomescreenTextInfo,
-    totals: &[[u16; HOMESCREEN_IMAGE_SIZE as usize]; COLORS],
+    blurring: &BlurringContext,
     y: i16,
 ) -> bool {
     let t_buffer = unsafe { get_buffer_4bpp((y & 0x1) as u16, true) };
@@ -201,9 +201,9 @@ fn homescreen_line_blurred(
 
             let coef = (65536_f32 * LOCKSCREEN_DIM) as u32;
 
-            let r = (totals[RED_IDX][x] as u32 * BLUR_DIV) >> 16;
-            let g = (totals[GREEN_IDX][x] as u32 * BLUR_DIV) >> 16;
-            let b = (totals[BLUE_IDX][x] as u32 * BLUR_DIV) >> 16;
+            let r = (blurring.totals[RED_IDX][x] as u32 * BLUR_DIV) >> 16;
+            let g = (blurring.totals[GREEN_IDX][x] as u32 * BLUR_DIV) >> 16;
+            let b = (blurring.totals[BLUE_IDX][x] as u32 * BLUR_DIV) >> 16;
 
             let r = (((coef * r) >> 8) & 0xF800) as u16;
             let g = (((coef * g) >> 13) & 0x07E0) as u16;
@@ -213,9 +213,9 @@ fn homescreen_line_blurred(
         } else {
             let x = x as usize;
 
-            let r = (((totals[RED_IDX][x] as u32 * BLUR_DIV) >> 8) & 0xF800) as u16;
-            let g = (((totals[GREEN_IDX][x] as u32 * BLUR_DIV) >> 13) & 0x07E0) as u16;
-            let b = (((totals[BLUE_IDX][x] as u32 * BLUR_DIV) >> 19) & 0x001F) as u16;
+            let r = (((blurring.totals[RED_IDX][x] as u32 * BLUR_DIV) >> 8) & 0xF800) as u16;
+            let g = (((blurring.totals[GREEN_IDX][x] as u32 * BLUR_DIV) >> 13) & 0x07E0) as u16;
+            let b = (((blurring.totals[BLUE_IDX][x] as u32 * BLUR_DIV) >> 19) & 0x001F) as u16;
             r | g | b
         };
 
@@ -323,60 +323,99 @@ fn update_accs_sub(data: &[u16], idx: usize, acc_r: &mut u16, acc_g: &mut u16, a
     *acc_b -= b;
 }
 
-// computes color averages for one line of image data
-fn compute_line_avgs(
-    avg_dest: &mut [[u16; HOMESCREEN_IMAGE_SIZE as usize]; COLORS],
-    buffer: &mut BufferJpeg,
+struct BlurringContext {
+    pub lines: &'static mut [[[u16; 240usize]; 3usize]],
+    pub totals: [[u16; HOMESCREEN_IMAGE_SIZE as usize]; COLORS],
     line_num: i16,
-    mcu_height: i16,
-) {
-    let mut acc_r = 0;
-    let mut acc_g = 0;
-    let mut acc_b = 0;
-    let data = get_data(buffer, line_num, mcu_height);
-
-    for i in -BLUR_RADIUS..=BLUR_RADIUS {
-        let ic = i.clamp(0, HOMESCREEN_IMAGE_SIZE as i16 - 1) as usize;
-        update_accs_add(data, ic, &mut acc_r, &mut acc_g, &mut acc_b);
-    }
-
-    for i in 0..HOMESCREEN_IMAGE_SIZE {
-        avg_dest[RED_IDX][i as usize] = acc_r;
-        avg_dest[GREEN_IDX][i as usize] = acc_g;
-        avg_dest[BLUE_IDX][i as usize] = acc_b;
-
-        // clamping handles left and right edges
-        let ic = (i - BLUR_RADIUS).clamp(0, HOMESCREEN_IMAGE_SIZE as i16 - 1) as usize;
-        let ic2 = (i + BLUR_SIZE as i16 - BLUR_RADIUS).clamp(0, HOMESCREEN_IMAGE_SIZE as i16 - 1)
-            as usize;
-        update_accs_add(data, ic2, &mut acc_r, &mut acc_g, &mut acc_b);
-        update_accs_sub(data, ic, &mut acc_r, &mut acc_g, &mut acc_b);
-    }
-}
-
-// adds one line of averages to sliding total averages
-fn vertical_avg_add(
-    totals: &mut [[u16; HOMESCREEN_IMAGE_SIZE as usize]; COLORS],
-    lines: &[[u16; HOMESCREEN_IMAGE_SIZE as usize]; COLORS],
-) {
-    for i in 0..HOMESCREEN_IMAGE_SIZE as usize {
-        totals[RED_IDX][i] += lines[RED_IDX][i];
-        totals[GREEN_IDX][i] += lines[GREEN_IDX][i];
-        totals[BLUE_IDX][i] += lines[BLUE_IDX][i];
-    }
-}
-
-// adds one line and removes one line of averages to/from sliding total averages
-fn vertical_avg(
-    totals: &mut [[u16; HOMESCREEN_IMAGE_SIZE as usize]; COLORS],
-    lines: &[[[u16; HOMESCREEN_IMAGE_SIZE as usize]; COLORS]],
     add_idx: usize,
     rem_idx: usize,
-) {
-    for i in 0..HOMESCREEN_IMAGE_SIZE as usize {
-        totals[RED_IDX][i] += lines[add_idx][RED_IDX][i] - lines[rem_idx][RED_IDX][i];
-        totals[GREEN_IDX][i] += lines[add_idx][GREEN_IDX][i] - lines[rem_idx][GREEN_IDX][i];
-        totals[BLUE_IDX][i] += lines[add_idx][BLUE_IDX][i] - lines[rem_idx][BLUE_IDX][i];
+}
+
+impl BlurringContext {
+    pub fn new() -> Self {
+        let mem = unsafe { get_blurring_buffer(0, true) };
+        Self {
+            lines: &mut mem.buffer[0..DECOMP_LINES],
+            totals: [[0; HOMESCREEN_IMAGE_SIZE as usize]; COLORS],
+            line_num: 0,
+            add_idx: 0,
+            rem_idx: 0,
+        }
+    }
+
+    fn clear(&mut self) {
+        for (i, total) in self.totals.iter_mut().enumerate() {
+            for line in self.lines.iter_mut() {
+                line[i].fill(0);
+            }
+            total.fill(0);
+        }
+    }
+
+    // computes color averages for one line of image data
+    fn compute_line_avgs(&mut self, buffer: &mut BufferJpeg, mcu_height: i16) {
+        let mut acc_r = 0;
+        let mut acc_g = 0;
+        let mut acc_b = 0;
+        let data = get_data(buffer, self.line_num, mcu_height);
+
+        for i in -BLUR_RADIUS..=BLUR_RADIUS {
+            let ic = i.clamp(0, HOMESCREEN_IMAGE_SIZE as i16 - 1) as usize;
+            update_accs_add(data, ic, &mut acc_r, &mut acc_g, &mut acc_b);
+        }
+
+        for i in 0..HOMESCREEN_IMAGE_SIZE {
+            self.lines[self.add_idx][RED_IDX][i as usize] = acc_r;
+            self.lines[self.add_idx][GREEN_IDX][i as usize] = acc_g;
+            self.lines[self.add_idx][BLUE_IDX][i as usize] = acc_b;
+
+            // clamping handles left and right edges
+            let ic = (i - BLUR_RADIUS).clamp(0, HOMESCREEN_IMAGE_SIZE as i16 - 1) as usize;
+            let ic2 = (i + BLUR_SIZE as i16 - BLUR_RADIUS)
+                .clamp(0, HOMESCREEN_IMAGE_SIZE as i16 - 1) as usize;
+            update_accs_add(data, ic2, &mut acc_r, &mut acc_g, &mut acc_b);
+            update_accs_sub(data, ic, &mut acc_r, &mut acc_g, &mut acc_b);
+        }
+        self.line_num += 1;
+    }
+
+    // adds one line of averages to sliding total averages
+    fn vertical_avg_add(&mut self) {
+        for i in 0..HOMESCREEN_IMAGE_SIZE as usize {
+            self.totals[RED_IDX][i] += self.lines[self.add_idx][RED_IDX][i];
+            self.totals[GREEN_IDX][i] += self.lines[self.add_idx][GREEN_IDX][i];
+            self.totals[BLUE_IDX][i] += self.lines[self.add_idx][BLUE_IDX][i];
+        }
+    }
+
+    // adds one line and removes one line of averages to/from sliding total averages
+    fn vertical_avg(&mut self) {
+        for i in 0..HOMESCREEN_IMAGE_SIZE as usize {
+            self.totals[RED_IDX][i] +=
+                self.lines[self.add_idx][RED_IDX][i] - self.lines[self.rem_idx][RED_IDX][i];
+            self.totals[GREEN_IDX][i] +=
+                self.lines[self.add_idx][GREEN_IDX][i] - self.lines[self.rem_idx][GREEN_IDX][i];
+            self.totals[BLUE_IDX][i] +=
+                self.lines[self.add_idx][BLUE_IDX][i] - self.lines[self.rem_idx][BLUE_IDX][i];
+        }
+    }
+
+    fn inc_add(&mut self) {
+        self.add_idx += 1;
+        if self.add_idx >= DECOMP_LINES {
+            self.add_idx = 0;
+        }
+    }
+
+    fn inc_rem(&mut self) {
+        self.rem_idx += 1;
+        if self.rem_idx >= DECOMP_LINES {
+            self.rem_idx = 0;
+        }
+    }
+
+    fn get_line_num(&self) -> i16 {
+        self.line_num
     }
 }
 
@@ -412,34 +451,26 @@ pub fn homescreen_blurred(data: &[u8], texts: &[HomescreenText]) {
         jd_decomp(&mut jd, 0);
     }
     let mcu_height = mcu_height as i16;
-    let mut line_num = 0;
 
     set_window(screen());
 
-    let avgs_mem = unsafe { get_blurring_buffer(0, true) };
-    let avgs = &mut avgs_mem.buffer[0..DECOMP_LINES];
-    let mut avgs_totals = [[0_u16; HOMESCREEN_IMAGE_SIZE as usize]; COLORS];
-
-    let mut add_idx = 0;
-    let mut rem_idx = 0;
+    let mut blurring = BlurringContext::new();
 
     // handling top edge case: preload the edge value N+1 times
-    compute_line_avgs(&mut avgs[add_idx], jd.buffer, line_num, mcu_height);
-    line_num += 1;
+    blurring.compute_line_avgs(jd.buffer, mcu_height);
 
     for _ in 0..=BLUR_RADIUS {
-        vertical_avg_add(&mut avgs_totals, &avgs[add_idx]);
+        blurring.vertical_avg_add();
     }
-    add_idx += 1;
+    blurring.inc_add();
 
     // load enough values to be able to compute first line averages
     for _ in 0..BLUR_RADIUS {
-        compute_line_avgs(&mut avgs[add_idx], jd.buffer, line_num, mcu_height);
-        line_num += 1;
-        vertical_avg_add(&mut avgs_totals, &avgs[add_idx]);
-        add_idx += 1;
+        blurring.compute_line_avgs(jd.buffer, mcu_height);
+        blurring.vertical_avg_add();
+        blurring.inc_add();
 
-        if (line_num % mcu_height) == 0 && jpeg_ok {
+        if (blurring.get_line_num() % mcu_height) == 0 && jpeg_ok {
             jd_decomp(&mut jd, 0);
         }
     }
@@ -448,49 +479,40 @@ pub fn homescreen_blurred(data: &[u8], texts: &[HomescreenText]) {
         // several lines have been already decompressed before this loop, adjust for
         // that
         if y < HOMESCREEN_IMAGE_SIZE - (BLUR_RADIUS + 1) {
-            compute_line_avgs(&mut avgs[add_idx], jd.buffer, line_num, mcu_height);
-            line_num += 1;
+            blurring.compute_line_avgs(jd.buffer, mcu_height);
         }
 
-        let done = homescreen_line_blurred(&icon_data, text_buffer, text_info, &avgs_totals, y);
+        let done = homescreen_line_blurred(&icon_data, text_buffer, text_info, &blurring, y);
 
         if done {
             (text_info, next_text_idx) =
                 homescreen_next_text(texts, text_buffer, &mut icon_data, text_info, next_text_idx);
         }
 
-        vertical_avg(&mut avgs_totals, avgs, add_idx, rem_idx);
+        blurring.vertical_avg();
 
         // handling bottom edge case: stop incrementing counter, adding the edge value
         // for the rest of image
         // the extra -1 is to indicate that this was the last decompressed line,
         // in the next pass the docompression and compute_line_avgs won't happen
         if y < HOMESCREEN_IMAGE_SIZE - (BLUR_RADIUS + 1) - 1 {
-            add_idx += 1;
-            if add_idx >= DECOMP_LINES {
-                add_idx = 0;
-            }
+            blurring.inc_add();
         }
 
         if y == HOMESCREEN_IMAGE_SIZE {
             // reached end of image, clear avgs (display black)
-            for (i, total) in avgs_totals.iter_mut().enumerate() {
-                for avg in avgs.iter_mut() {
-                    avg[i].fill(0);
-                }
-                total.fill(0);
-            }
+            blurring.clear();
         }
 
         // only start incrementing remove index when enough lines have been loaded
         if y >= (BLUR_RADIUS) {
-            rem_idx += 1;
-            if rem_idx >= DECOMP_LINES {
-                rem_idx = 0;
-            }
+            blurring.inc_rem();
         }
 
-        if (line_num % mcu_height) == 0 && (line_num < HEIGHT) && jpeg_ok {
+        if (blurring.get_line_num() % mcu_height) == 0
+            && (blurring.get_line_num() < HEIGHT)
+            && jpeg_ok
+        {
             jd_decomp(&mut jd, 0);
         }
     }
