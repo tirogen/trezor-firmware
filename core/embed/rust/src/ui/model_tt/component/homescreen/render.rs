@@ -20,7 +20,7 @@ use crate::{
 use crate::ui::{
     component::text::TextStyle,
     constant::{HEIGHT, WIDTH},
-    display::tjpgd::{jd_decomp, jd_init, jd_prepare, jpeg_info, JDEC},
+    display::tjpgd::{jd_decomp, jd_init, jd_prepare, jpeg_info, JDEC, JRESULT},
     model_tt::theme,
     util::icon_text_center,
 };
@@ -402,9 +402,11 @@ pub fn homescreen_blurred(data: &[u8], texts: &[HomescreenText]) {
         (Offset::zero(), 8)
     };
 
-    let jpeg_ok = jpeg_size.x == WIDTH && jpeg_size.y == HEIGHT && mcu_height <= 16;
+    let mut jpeg_ok = jpeg_size.x == WIDTH && jpeg_size.y == HEIGHT && mcu_height <= 16;
     let mut jd: JDEC = jd_init(data);
-    jd_prepare(&mut jd);
+    if jd_prepare(&mut jd) != JRESULT::OK {
+        jpeg_ok = false;
+    }
 
     if jpeg_ok {
         jd_decomp(&mut jd, 0);
@@ -531,10 +533,12 @@ pub fn homescreen(
     };
 
     let (jpeg_size, mcu_height) = jpeg_info(data).unwrap_or((Offset::zero(), 8));
-    let jpeg_ok = jpeg_size.x == WIDTH && jpeg_size.y == HEIGHT && mcu_height <= 16;
+    let mut jpeg_ok = jpeg_size.x == WIDTH && jpeg_size.y == HEIGHT && mcu_height <= 16;
 
     let mut jd: JDEC = jd_init(data);
-    jd_prepare(&mut jd);
+    if jd_prepare(&mut jd) != JRESULT::OK {
+        jpeg_ok = false;
+    }
 
     set_window(screen());
 
