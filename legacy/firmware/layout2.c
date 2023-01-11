@@ -141,7 +141,7 @@ static const char *address_n_str(const uint32_t *address_n,
       memzero(path, sizeof(path));
       strlcpy(path, abbr, sizeof(path));
       // Account naming:
-      // "Legacy", "Legacy SegWit", "SegWit", "Taproot" and "CoinJoin" for
+      // "Legacy", "Legacy SegWit", "SegWit", "Taproot" and "Coinjoin" for
       // BIP44/P2PKH, BIP49/P2SH-P2WPKH, BIP84/P2WPKH, BIP86/P2TR, SLIP25/P2TR
       // respectively. For non-segwit coins we use only BIP44 with no special
       // naming.
@@ -154,7 +154,7 @@ static const char *address_n_str(const uint32_t *address_n,
       } else if (account_type == ACCOUNT_BIP86) {
         strlcat(path, " Taproot", sizeof(path));
       } else if (account_type == ACCOUNT_SLIP25) {
-        strlcat(path, " CoinJoin", sizeof(path));
+        strlcat(path, " Coinjoin", sizeof(path));
       }
       if (address_is_account) {
         strlcat(path, " address #", sizeof(path));
