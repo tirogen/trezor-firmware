@@ -184,15 +184,10 @@ SOURCE_MOD += [
     'vendor/micropython/lib/uzlib/tinflate.c',
 ]
 
-SOURCE_SPEED = [
-
-]
-
 CPPDEFINES_MOD += [
     'TREZOR_UI2',
     'USE_RUST_LOADER'
 ]
-
 
 # modtrezorutils
 SOURCE_MOD += [
@@ -757,7 +752,6 @@ env.Append(LINKFLAGS=f' -l{RUST_LIB}')
 
 obj_program = []
 obj_program.extend(env.Object(source=SOURCE_MOD))
-obj_program.extend(env.Object(source=SOURCE_SPEED, COPT='-O3'))
 if FEATURE_FLAGS["SECP256K1_ZKP"]:
     obj_program.extend(env.Object(source=SOURCE_MOD_SECP256K1_ZKP, CCFLAGS='$CCFLAGS -Wno-unused-function'))
 obj_program.extend(env.Object(source=SOURCE_FIRMWARE))
