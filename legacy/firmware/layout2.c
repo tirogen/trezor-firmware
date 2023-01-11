@@ -769,7 +769,7 @@ void layoutAuthorizeCoinJoin(const CoinInfo *coin, uint64_t max_rounds,
 void layoutConfirmCoinjoinAccess(void) {
   layoutDialogSwipe(&bmp_icon_question, _("Cancel"), _("Confirm"), NULL,
                     _("Do you want to allow"), _("access to your"),
-                    _("CoinJoin account?"), NULL, NULL, NULL);
+                    _("coinjoin account?"), NULL, NULL, NULL);
 }
 
 void layoutVerifyAddress(const CoinInfo *coin, const char *address) {
