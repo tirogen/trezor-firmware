@@ -763,7 +763,7 @@ void fsm_msgAuthorizeCoinJoin(const AuthorizeCoinJoin *msg) {
     return;
   }
 
-  fsm_sendSuccess(_("CoinJoin authorized"));
+  fsm_sendSuccess(_("Coinjoin authorized"));
   layoutHome();
 }
 

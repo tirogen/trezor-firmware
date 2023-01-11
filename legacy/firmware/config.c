@@ -683,7 +683,7 @@ const AuthorizeCoinJoin *config_getCoinJoinAuthorization(void) {
   if (activeSessionCache->authorization_type !=
       MessageType_MessageType_AuthorizeCoinJoin) {
     fsm_sendFailure(FailureType_Failure_InvalidSession,
-                    "CoinJoin not authorized");
+                    "Coinjoin not authorized");
     return NULL;
   }
 

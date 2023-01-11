@@ -761,7 +761,7 @@ void layoutAuthorizeCoinJoin(const CoinInfo *coin, uint64_t max_rounds,
   formatFeeRate(max_fee_per_kvbyte, str_fee_rate, sizeof(str_fee_rate),
                 coin->has_segwit);
   layoutDialogSwipe(&bmp_icon_question, _("Cancel"), _("Confirm"),
-                    _("Authorize CoinJoin"), _("Maximum rounds:"),
+                    _("Authorize coinjoin"), _("Maximum rounds:"),
                     str_max_rounds, _("Maximum mining fee:"), str_fee_rate,
                     NULL, NULL);
 }
