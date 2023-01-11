@@ -545,11 +545,7 @@ pub fn homescreen(
         homescreen_position_text(unwrap!(texts.get(0)), text_buffer, &mut icon_data)
     };
 
-    let (jpeg_size, mcu_height) = if let Some((size, mcu)) = jpeg_info(data) {
-        (size, mcu)
-    } else {
-        (Offset::zero(), 8)
-    };
+    let (jpeg_size, mcu_height) = jpeg_info(data).unwrap_or((Offset::zero(), 8));
     let jpeg_ok = jpeg_size.x == WIDTH && jpeg_size.y == HEIGHT && mcu_height <= 16;
 
     let mut jd: JDEC = jd_init(data);
