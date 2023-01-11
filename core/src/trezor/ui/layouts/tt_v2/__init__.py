@@ -32,11 +32,12 @@ if __debug__:
 
 class RustLayout(ui.Layout):
     # pylint: disable=super-init-not-called
-    def __init__(self, layout: Any, is_backup: bool = False):
+    def __init__(self, layout: Any, is_backup: bool = False, color: int | None = None):
         self.layout = layout
         self.timer = loop.Timer()
         self.layout.attach_timer_fn(self.set_timer)
         self.is_backup = is_backup
+        self.color = color
 
         if __debug__ and self.is_backup:
             self.notify_backup()
@@ -52,6 +53,10 @@ class RustLayout(ui.Layout):
         import storage.cache as storage_cache
 
         painted = self.layout.paint()
+        if self.color is not None:
+            print("PAINTING")
+            ui.display.bar(0, 0, ui.WIDTH, ui.HEIGHT - 60, self.color)
+
         if storage_cache.homescreen_shown is not None and painted:
             storage_cache.homescreen_shown = None
 
@@ -218,6 +223,7 @@ async def confirm_action(
     reverse: bool = False,
     exc: ExceptionType = ActionCancelled,
     br_code: ButtonRequestType = BR_TYPE_OTHER,
+    color: int | None = None,
 ) -> None:
     if isinstance(verb, bytes) or isinstance(verb_cancel, bytes):
         raise NotImplementedError
@@ -244,7 +250,8 @@ async def confirm_action(
                     hold=hold,
                     hold_danger=hold_danger,
                     reverse=reverse,
-                )
+                ),
+                color=color,
             ),
             br_type,
             br_code,
