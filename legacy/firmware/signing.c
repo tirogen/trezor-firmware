@@ -1300,7 +1300,7 @@ static bool init_coinjoin(const SignTx *msg,
                           const AuthorizeCoinJoin *authorization) {
   if (!msg->has_coinjoin_request) {
     fsm_sendFailure(FailureType_Failure_DataError,
-                    _("Missing CoinJoin request."));
+                    _("Missing coinjoin request."));
     signing_abort();
     return false;
   }
@@ -2490,7 +2490,7 @@ static bool coinjoin_confirm_tx(void) {
     // success
   } else {
     fsm_sendFailure(FailureType_Failure_DataError,
-                    _("Invalid signature in CoinJoin request."));
+                    _("Invalid signature in coinjoin request."));
     signing_abort();
     return false;
   }
@@ -2548,7 +2548,7 @@ static bool coinjoin_confirm_tx(void) {
 
   if (coinjoin_authorization.max_rounds < 1) {
     fsm_sendFailure(FailureType_Failure_ProcessError,
-                    _("Exceeded number of CoinJoin rounds."));
+                    _("Exceeded number of coinjoin rounds."));
     signing_abort();
     return false;
   }
