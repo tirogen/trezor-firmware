@@ -367,7 +367,7 @@ void layoutBusyscreen(void) {
   layoutLast = layoutBusyscreen;
 
   layoutDialog(&bmp_icon_warning, NULL, NULL, NULL, _("Please wait"), NULL,
-               _("CoinJoin in progress."), NULL, _("Do not disconnect"),
+               _("Coinjoin in progress."), NULL, _("Do not disconnect"),
                _("your Trezor."));
 }
 
