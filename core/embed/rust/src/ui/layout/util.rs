@@ -283,14 +283,10 @@ pub extern "C" fn upy_jpeg_info(data: Obj) -> Obj {
 #[cfg(feature = "jpeg")]
 pub extern "C" fn upy_jpeg_test(data: Obj) -> Obj {
     let block = || {
-        let buffer = unsafe { get_buffer(data) };
-
-        if let Ok(buffer) = buffer {
-            let result = jpeg_test(buffer);
-            Ok(result.into())
-        } else {
-            Err(Error::ValueError(cstr!("Buffer error.")))
-        }
+        let buffer =
+            unsafe { get_buffer(data) }.map_err(|_| Error::ValueError(cstr!("Buffer error.")))?;
+        let result = jpeg_test(buffer);
+        Ok(result.into())
     };
 
     unsafe { try_or_raise(block) }
