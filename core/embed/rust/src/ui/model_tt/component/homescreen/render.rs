@@ -60,9 +60,8 @@ const TEXT_ICON_SPACE: i16 = 2;
 const HOMESCREEN_DIM_HIEGHT: i16 = 30;
 const HOMESCREEN_DIM_START: i16 = 195;
 const HOMESCREEN_DIM: f32 = 0.85;
+const HOMESCREEN_DIM_BORDER: i16 = 20;
 
-const LOCKSCREEN_DIM_HIEGHT: i16 = 30;
-const LOCKSCREEN_DIM_START: i16 = 195;
 const LOCKSCREEN_DIM: f32 = 0.85;
 const LOCKSCREEN_DIM_BG: f32 = 0.0;
 
@@ -170,6 +169,22 @@ fn homescreen_position_text(
     }
 }
 
+#[inline(always)]
+fn homescreen_dim_area(x: i16, y: i16) -> bool {
+    y >= HOMESCREEN_DIM_START
+        && (y > HOMESCREEN_DIM_START + 1
+            && y < (HOMESCREEN_DIM_START + HOMESCREEN_DIM_HIEGHT - 1)
+            && x > HOMESCREEN_DIM_BORDER
+            && x < WIDTH - HOMESCREEN_DIM_BORDER)
+        || (y > HOMESCREEN_DIM_START
+            && y < (HOMESCREEN_DIM_START + HOMESCREEN_DIM_HIEGHT)
+            && x > HOMESCREEN_DIM_BORDER + 1
+            && x < WIDTH - (HOMESCREEN_DIM_BORDER + 1))
+        || ((HOMESCREEN_DIM_START..=(HOMESCREEN_DIM_START + HOMESCREEN_DIM_HIEGHT)).contains(&y)
+            && x > HOMESCREEN_DIM_BORDER + 2
+            && x < WIDTH - (HOMESCREEN_DIM_BORDER + 2))
+}
+
 fn homescreen_line_blurred(
     icon_data: &[u8],
     text_buffer: &mut BufferText,
@@ -181,22 +196,7 @@ fn homescreen_line_blurred(
     let mut img_buffer = unsafe { get_buffer_16bpp((y & 0x1) as u16, false) };
 
     for x in 0..HOMESCREEN_IMAGE_SIZE {
-        const DIM_BORDER: i16 = 20;
-
-        let c = if y >= HOMESCREEN_DIM_START
-            && (y > HOMESCREEN_DIM_START + 1
-                && y < (HOMESCREEN_DIM_START + HOMESCREEN_DIM_HIEGHT - 1)
-                && x > DIM_BORDER
-                && x < WIDTH - DIM_BORDER)
-            || (y > HOMESCREEN_DIM_START
-                && y < (HOMESCREEN_DIM_START + HOMESCREEN_DIM_HIEGHT)
-                && x > DIM_BORDER + 1
-                && x < WIDTH - (DIM_BORDER + 1))
-            || ((HOMESCREEN_DIM_START..=(HOMESCREEN_DIM_START + HOMESCREEN_DIM_HIEGHT))
-                .contains(&y)
-                && x > DIM_BORDER + 2
-                && x < WIDTH - (DIM_BORDER + 2))
-        {
+        let c = if homescreen_dim_area(x, y) {
             let x = x as usize;
 
             let coef = (65536_f32 * LOCKSCREEN_DIM) as u32;
@@ -250,22 +250,7 @@ fn homescreen_line(
     for x in 0..HOMESCREEN_IMAGE_SIZE {
         let d = image_data[x as usize];
 
-        const DIM_BORDER: i16 = 20;
-
-        let c = if y >= HOMESCREEN_DIM_START
-            && ((y > HOMESCREEN_DIM_START + 1
-                && y < (HOMESCREEN_DIM_START + HOMESCREEN_DIM_HIEGHT - 1)
-                && x > DIM_BORDER
-                && x < WIDTH - DIM_BORDER)
-                || (y > HOMESCREEN_DIM_START
-                    && y < (HOMESCREEN_DIM_START + HOMESCREEN_DIM_HIEGHT)
-                    && x > DIM_BORDER + 1
-                    && x < WIDTH - (DIM_BORDER + 1))
-                || ((HOMESCREEN_DIM_START..=(HOMESCREEN_DIM_START + HOMESCREEN_DIM_HIEGHT))
-                    .contains(&y)
-                    && x > DIM_BORDER + 2
-                    && x < WIDTH - (DIM_BORDER + 2)))
-        {
+        let c = if homescreen_dim_area(x, y) {
             let coef = (65536_f32 * HOMESCREEN_DIM) as u32;
 
             let r = (d & 0xF800) >> 8;
