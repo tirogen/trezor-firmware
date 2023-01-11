@@ -461,7 +461,6 @@ pub fn homescreen_blurred(data: &[u8], texts: &[HomescreenText]) {
         // several lines have been already decompressed before this loop, adjust for
         // that
         if y < HOMESCREEN_IMAGE_SIZE - (BLUR_RADIUS + 1) {
-            //dest = get_data(jd.buffer, line_num, mcu_height);
             compute_line_avgs(&mut avgs[add_idx], jd.buffer, line_num, mcu_height);
             line_num += 1;
         }
@@ -565,7 +564,6 @@ pub fn homescreen(
             jd_decomp(&mut jd, 0);
         }
 
-        //let dest = get_data(jd.buffer, y, mcu_height);
         let done = homescreen_line(&icon_data, text_buffer, text_info, jd.buffer, mcu_height, y);
 
         if done {
