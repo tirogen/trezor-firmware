@@ -5,7 +5,7 @@ use crate::trezorhal::{
 };
 use crate::{
     trezorhal::{
-        buffers::{get_blurring_buffer, BufferJpeg},
+        buffers::{get_blurring_buffer, get_jpeg_buffer, get_jpeg_work_buffer, BufferJpeg},
         display,
         display::{bar_radius_buffer, ToifFormat},
         uzlib::UzlibContext,
@@ -20,7 +20,7 @@ use crate::{
 use crate::ui::{
     component::text::TextStyle,
     constant::{HEIGHT, WIDTH},
-    display::tjpgd::{jd_decomp, jd_init, jd_prepare, jpeg_info, JDEC},
+    display::tjpgd::{BufferInput, BufferOutput, JDEC},
     model_tt::theme,
     util::icon_text_center,
 };
@@ -435,29 +435,27 @@ pub fn homescreen_blurred(data: &[u8], texts: &[HomescreenText]) {
     let mut text_info =
         homescreen_position_text(unwrap!(texts.get(0)), text_buffer, &mut icon_data);
 
-    let (jpeg_size, mcu_height) = if let Some((size, mcu)) = jpeg_info(data) {
-        (size, mcu)
-    } else {
-        (Offset::zero(), 8)
-    };
+    let jpeg_pool = unsafe { get_jpeg_work_buffer(0, true).buffer.as_mut_slice() };
+    let jpeg_buffer = unsafe { get_jpeg_buffer(0, true) };
+    let mut jpeg_input = BufferInput(data);
+    let mut jpeg_output = BufferOutput::new(jpeg_buffer, WIDTH, 16);
+    let mut mcu_height = 8;
+    let mut jd: Option<JDEC> = JDEC::new(&mut jpeg_input, jpeg_pool).ok();
 
-    let mut jpeg_ok = jpeg_size.x == WIDTH && jpeg_size.y == HEIGHT && mcu_height <= 16;
-    let mut jd: JDEC = jd_init(data);
-    if jd_prepare(&mut jd).is_err() {
-        jpeg_ok = false;
+    if let Some(dec) = &jd {
+        mcu_height = dec.mcu_height();
+        if !(dec.width() == WIDTH && dec.height() == HEIGHT && mcu_height <= 16) {
+            jd = None
+        }
     }
-
-    if jpeg_ok {
-        let _ = jd_decomp(&mut jd, 0);
-    }
-    let mcu_height = mcu_height as i16;
+    jd.as_mut().map(|dec| dec.decomp(&mut jpeg_output));
 
     set_window(screen());
 
     let mut blurring = BlurringContext::new();
 
     // handling top edge case: preload the edge value N+1 times
-    blurring.compute_line_avgs(jd.buffer, mcu_height);
+    blurring.compute_line_avgs(jpeg_output.buffer(), mcu_height);
 
     for _ in 0..=BLUR_RADIUS {
         blurring.vertical_avg_add();
@@ -466,12 +464,12 @@ pub fn homescreen_blurred(data: &[u8], texts: &[HomescreenText]) {
 
     // load enough values to be able to compute first line averages
     for _ in 0..BLUR_RADIUS {
-        blurring.compute_line_avgs(jd.buffer, mcu_height);
+        blurring.compute_line_avgs(jpeg_output.buffer(), mcu_height);
         blurring.vertical_avg_add();
         blurring.inc_add();
 
-        if (blurring.get_line_num() % mcu_height) == 0 && jpeg_ok {
-            let _ = jd_decomp(&mut jd, 0);
+        if (blurring.get_line_num() % mcu_height) == 0 {
+            jd.as_mut().map(|dec| dec.decomp(&mut jpeg_output));
         }
     }
 
@@ -479,7 +477,7 @@ pub fn homescreen_blurred(data: &[u8], texts: &[HomescreenText]) {
         // several lines have been already decompressed before this loop, adjust for
         // that
         if y < HOMESCREEN_IMAGE_SIZE - (BLUR_RADIUS + 1) {
-            blurring.compute_line_avgs(jd.buffer, mcu_height);
+            blurring.compute_line_avgs(jpeg_output.buffer(), mcu_height);
         }
 
         let done = homescreen_line_blurred(&icon_data, text_buffer, text_info, &blurring, y);
@@ -509,11 +507,8 @@ pub fn homescreen_blurred(data: &[u8], texts: &[HomescreenText]) {
             blurring.inc_rem();
         }
 
-        if (blurring.get_line_num() % mcu_height) == 0
-            && (blurring.get_line_num() < HEIGHT)
-            && jpeg_ok
-        {
-            let _ = jd_decomp(&mut jd, 0);
+        if (blurring.get_line_num() % mcu_height) == 0 && (blurring.get_line_num() < HEIGHT) {
+            jd.as_mut().map(|dec| dec.decomp(&mut jpeg_output));
         }
     }
     dma2d_wait_for_transfer();
@@ -554,24 +549,38 @@ pub fn homescreen(
         homescreen_position_text(unwrap!(texts.get(0)), text_buffer, &mut icon_data)
     };
 
-    let (jpeg_size, mcu_height) = jpeg_info(data).unwrap_or((Offset::zero(), 8));
-    let mut jpeg_ok = jpeg_size.x == WIDTH && jpeg_size.y == HEIGHT && mcu_height <= 16;
+    let jpeg_pool = unsafe { get_jpeg_work_buffer(0, true).buffer.as_mut_slice() };
+    let jpeg_buffer = unsafe { get_jpeg_buffer(0, true) };
+    let mut jpeg_input = BufferInput(data);
+    let mut jpeg_output = BufferOutput::new(jpeg_buffer, WIDTH, 16);
+    let mut mcu_height = 8;
+    let mut jd: Option<JDEC> = JDEC::new(&mut jpeg_input, jpeg_pool).ok();
 
-    let mut jd: JDEC = jd_init(data);
-    if jd_prepare(&mut jd).is_err() {
-        jpeg_ok = false;
+    if let Some(dec) = &jd {
+        mcu_height = dec.mcu_height();
+        if !(dec.width() == WIDTH && dec.height() == HEIGHT && mcu_height <= 16) {
+            jd = None
+        }
     }
+    jd.as_mut().map(|dec| dec.decomp(&mut jpeg_output));
 
     set_window(screen());
 
     let mcu_height = mcu_height as i16;
 
     for y in 0..HEIGHT {
-        if (y % mcu_height) == 0 && jpeg_ok {
-            let _ = jd_decomp(&mut jd, 0);
+        if (y % mcu_height) == 0 {
+            jd.as_mut().map(|dec| dec.decomp(&mut jpeg_output));
         }
 
-        let done = homescreen_line(&icon_data, text_buffer, text_info, jd.buffer, mcu_height, y);
+        let done = homescreen_line(
+            &icon_data,
+            text_buffer,
+            text_info,
+            jpeg_output.buffer(),
+            mcu_height,
+            y,
+        );
 
         if done {
             if notification.is_some() && next_text_idx == 0 {
