@@ -1004,6 +1004,7 @@ extern "C" fn new_request_number(n_args: usize, args: *const Obj, kwargs: *mut M
         let max_count: u32 = kwargs.get(Qstr::MP_QSTR_max_count)?.try_into()?;
         let count: u32 = kwargs.get(Qstr::MP_QSTR_count)?.try_into()?;
         let description_callback: Obj = kwargs.get(Qstr::MP_QSTR_description)?;
+        assert!(description_callback != Obj::const_none());
 
         let callback = move |i: u32| {
             StrBuffer::try_from(
@@ -1528,7 +1529,7 @@ pub static mp_module_trezorui2: Module = obj_module! {
     ///     count: int,
     ///     min_count: int,
     ///     max_count: int,
-    ///     description: Callable[[int], str],
+    ///     description: Callable[[int], str] | None = None,
     /// ) -> object:
     ///    """Number input with + and - buttons, description, and info button."""
     Qstr::MP_QSTR_request_number => obj_fn_kw!(0, new_request_number).as_obj(),

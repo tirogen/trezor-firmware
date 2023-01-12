@@ -1108,6 +1108,7 @@ pub static mp_module_trezorui2: Module = obj_module! {
     ///     count: int,
     ///     min_count: int,
     ///     max_count: int,
+    ///     description: Callable[[int], str] | None = None,  # unused on TR
     /// ) -> object:
     ///    """Number input with + and - buttons, description, and info button."""
     Qstr::MP_QSTR_request_number => obj_fn_kw!(0, new_request_number).as_obj(),
