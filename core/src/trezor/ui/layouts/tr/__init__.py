@@ -1261,6 +1261,7 @@ async def request_pin_on_device(
     prompt: str,
     attempts_remaining: int | None,
     allow_cancel: bool,
+    wrong_pin: bool = False,
 ) -> str:
     from trezor import wire
 

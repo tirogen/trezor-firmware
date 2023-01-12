@@ -1056,6 +1056,7 @@ pub static mp_module_trezorui2: Module = obj_module! {
     ///     prompt: str,
     ///     subprompt: str | None = None,
     ///     allow_cancel: bool = True,
+    ///     wrong_pin: bool = False,  # unused on TR
     /// ) -> str | object:
     ///     """Request pin on device."""
     Qstr::MP_QSTR_request_pin => obj_fn_kw!(0, new_request_pin).as_obj(),

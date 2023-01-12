@@ -22,7 +22,7 @@ def can_lock_device() -> bool:
 
 async def request_pin(
     ctx: GenericContext,
-    prompt: str = "Enter your PIN",
+    prompt: str,
     attempts_remaining: int | None = None,
     allow_cancel: bool = True,
 ) -> str:
@@ -44,7 +44,7 @@ async def request_pin_confirm(ctx: Context, *args: Any, **kwargs: Any) -> str:
 
 
 async def request_pin_and_sd_salt(
-    ctx: Context, prompt: str = "Enter your PIN", allow_cancel: bool = True
+    ctx: Context, prompt: str, allow_cancel: bool = True
 ) -> tuple[str, bytearray | None]:
     if config.has_pin():
         pin = await request_pin(ctx, prompt, config.get_pin_rem(), allow_cancel)
@@ -64,7 +64,7 @@ def _set_last_unlock_time() -> None:
 
 async def verify_user_pin(
     ctx: GenericContext = wire.DUMMY_CONTEXT,
-    prompt: str = "Enter your PIN",
+    prompt: str = "Enter PIN",
     allow_cancel: bool = True,
     retry: bool = True,
     cache_time_ms: int = 0,
@@ -106,7 +106,7 @@ async def verify_user_pin(
 
     while retry:
         pin = await request_pin_on_device(  # type: ignore ["request_pin_on_device" is possibly unbound]
-            ctx, "Wrong PIN", config.get_pin_rem(), allow_cancel
+            ctx, "Enter PIN", config.get_pin_rem(), allow_cancel, wrong_pin=True
         )
         if config.unlock(pin, salt):
             _set_last_unlock_time()

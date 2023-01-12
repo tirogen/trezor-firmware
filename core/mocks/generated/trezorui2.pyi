@@ -119,6 +119,7 @@ def request_pin(
     prompt: str,
     subprompt: str | None = None,
     allow_cancel: bool = True,
+    wrong_pin: bool = False,  # unused on TR
 ) -> str | object:
     """Request pin on device."""
 
@@ -461,7 +462,7 @@ def request_pin(
     prompt: str,
     subprompt: str,
     allow_cancel: bool = True,
-    warning: str | None = None,
+    wrong_pin: bool = False,
 ) -> str | object:
     """Request pin on device."""
 

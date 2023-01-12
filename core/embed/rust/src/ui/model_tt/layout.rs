@@ -914,7 +914,12 @@ extern "C" fn new_request_pin(n_args: usize, args: *const Obj, kwargs: *mut Map)
         let prompt: StrBuffer = kwargs.get(Qstr::MP_QSTR_prompt)?.try_into()?;
         let subprompt: StrBuffer = kwargs.get(Qstr::MP_QSTR_subprompt)?.try_into()?;
         let allow_cancel: bool = kwargs.get_or(Qstr::MP_QSTR_allow_cancel, true)?;
-        let warning: Option<StrBuffer> = kwargs.get(Qstr::MP_QSTR_warning)?.try_into_option()?;
+        let warning: bool = kwargs.get_or(Qstr::MP_QSTR_wrong_pin, false)?;
+        let warning = if warning {
+            Some("Wrong PIN".into())
+        } else {
+            None
+        };
         let obj = LayoutObj::new(PinKeyboard::new(prompt, subprompt, warning, allow_cancel))?;
         Ok(obj.into())
     };
@@ -1472,7 +1477,7 @@ pub static mp_module_trezorui2: Module = obj_module! {
     ///     prompt: str,
     ///     subprompt: str,
     ///     allow_cancel: bool = True,
-    ///     warning: str | None = None,
+    ///     wrong_pin: bool = False,
     /// ) -> str | object:
     ///     """Request pin on device."""
     Qstr::MP_QSTR_request_pin => obj_fn_kw!(0, new_request_pin).as_obj(),

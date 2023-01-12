@@ -130,4 +130,5 @@ static void _librust_qstrs(void) {
   MP_QSTR_show_receive_address;
   MP_QSTR_derivation_path;
   MP_QSTR_address_qr;
+  MP_QSTR_wrong_pin;
 }
