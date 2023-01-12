@@ -444,7 +444,7 @@ async def _placeholder_confirm(
     description: str | None = None,
     *,
     verb: str = "CONFIRM",
-    verb_cancel: str | None = None,
+    verb_cancel: str | None = "",
     hold: bool = False,
     br_code: ButtonRequestType = BR_TYPE_OTHER,
 ) -> Any:
@@ -507,7 +507,7 @@ async def confirm_action(
     description: str | None = None,
     description_param: str | None = None,
     verb: str = "CONFIRM",
-    verb_cancel: str | None = None,
+    verb_cancel: str | None = "",
     hold: bool = False,
     hold_danger: bool = False,
     reverse: bool = False,
