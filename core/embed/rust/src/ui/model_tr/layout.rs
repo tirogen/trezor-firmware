@@ -744,14 +744,15 @@ extern "C" fn new_request_slip39(n_args: usize, args: *const Obj, kwargs: *mut M
 
 extern "C" fn new_select_word(n_args: usize, args: *const Obj, kwargs: *mut Map) -> Obj {
     let block = |_args: &[Obj], kwargs: &Map| {
-        let title: StrBuffer = kwargs.get(Qstr::MP_QSTR_title)?.try_into()?;
+        // we ignore passed in title and use `description` in its place
+        let description: StrBuffer = kwargs.get(Qstr::MP_QSTR_description)?.try_into()?;
         let words_iterable: Obj = kwargs.get(Qstr::MP_QSTR_words)?;
         let words: Vec<StrBuffer, 3> = iter_into_vec(words_iterable)?;
 
         // Returning the index of the selected word, not the word itself
         let obj = LayoutObj::new(
             Frame::new(
-                title,
+                description,
                 SimpleChoice::new(words, false)
                     .with_show_incomplete()
                     .with_return_index(),
@@ -1086,6 +1087,7 @@ pub static mp_module_trezorui2: Module = obj_module! {
     /// def select_word(
     ///     *,
     ///     title: str,
+    ///     description: str,
     ///     words: Iterable[str],
     /// ) -> int:
     ///    """Select mnemonic word from three possibilities - seed check after backup. The

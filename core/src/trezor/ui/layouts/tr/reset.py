@@ -82,8 +82,9 @@ async def select_word(
     assert len(words) == 3
     result = await ctx.wait(
         RustLayout(
-            trezorui2.select_word(  # type: ignore [Argument missing for parameter "description"]
-                title=f"SELECT {format_ordinal(checked_index + 1).upper()} WORD",
+            trezorui2.select_word(
+                title="",
+                description=f"SELECT {format_ordinal(checked_index + 1).upper()} WORD",
                 words=(words[0].lower(), words[1].lower(), words[2].lower()),
             )
         )

@@ -153,6 +153,7 @@ def request_slip39(
 def select_word(
     *,
     title: str,
+    description: str,
     words: Iterable[str],
 ) -> int:
    """Select mnemonic word from three possibilities - seed check after backup. The
