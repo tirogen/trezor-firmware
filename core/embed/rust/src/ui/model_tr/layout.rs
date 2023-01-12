@@ -963,6 +963,7 @@ pub static mp_module_trezorui2: Module = obj_module! {
     ///     verb: str = "CONFIRM",
     ///     verb_cancel: str | None = None,
     ///     hold: bool = False,
+    ///     hold_danger: bool = False,
     ///     reverse: bool = False,
     /// ) -> object:
     ///     """Confirm action."""

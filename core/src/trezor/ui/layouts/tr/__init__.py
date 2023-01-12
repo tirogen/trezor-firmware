@@ -444,7 +444,7 @@ async def _placeholder_confirm(
     description: str | None = None,
     *,
     verb: str = "CONFIRM",
-    verb_cancel: str | bytes | None = "",
+    verb_cancel: str | None = None,
     hold: bool = False,
     br_code: ButtonRequestType = BR_TYPE_OTHER,
 ) -> Any:
@@ -506,25 +506,19 @@ async def confirm_action(
     action: str | None = None,
     description: str | None = None,
     description_param: str | None = None,
-    verb: str | bytes = "CONFIRM",
-    verb_cancel: str | bytes | None = "",
+    verb: str = "CONFIRM",
+    verb_cancel: str | None = None,
     hold: bool = False,
     hold_danger: bool = False,
     reverse: bool = False,
     exc: ExceptionType = ActionCancelled,
     br_code: ButtonRequestType = BR_TYPE_OTHER,
 ) -> None:
-    if isinstance(verb, bytes) or isinstance(verb_cancel, bytes):
-        raise NotImplementedError
+    if verb_cancel is not None:
+        verb_cancel = verb_cancel.upper()
 
     if description is not None and description_param is not None:
         description = description.format(description_param)
-
-    # Making the button text UPPERCASE, so it is better readable
-    if isinstance(verb, str):
-        verb = verb.upper()
-    if isinstance(verb_cancel, str):
-        verb_cancel = verb_cancel.upper()
 
     await raise_if_cancelled(
         interact(
@@ -534,9 +528,10 @@ async def confirm_action(
                     title=title.upper(),
                     action=action,
                     description=description,
-                    verb=verb,
+                    verb=verb.upper(),
                     verb_cancel=verb_cancel,
                     hold=hold,
+                    hold_danger=hold_danger,
                     reverse=reverse,
                 )
             ),
