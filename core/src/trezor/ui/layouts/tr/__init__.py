@@ -511,7 +511,6 @@ async def confirm_action(
     hold: bool = False,
     hold_danger: bool = False,
     reverse: bool = False,
-    uppercase_title: bool = True,
     exc: ExceptionType = ActionCancelled,
     br_code: ButtonRequestType = BR_TYPE_OTHER,
 ) -> None:
@@ -532,7 +531,7 @@ async def confirm_action(
             ctx,
             RustLayout(
                 trezorui2.confirm_action(
-                    title=title.upper() if uppercase_title else title,
+                    title=title.upper(),
                     action=action,
                     description=description,
                     verb=verb,
@@ -1250,7 +1249,7 @@ async def request_passphrase_on_device(ctx: GenericContext, max_len: int) -> str
     result = await ctx.wait(
         RustLayout(
             trezorui2.request_passphrase(
-                prompt="ENTER PASSPHRASE",
+                prompt="Enter passphrase",
                 max_len=max_len,
             )
         )

@@ -169,7 +169,6 @@ async def slip39_prompt_threshold(
         description="= number of shares needed for recovery",
         verb="BEGIN",
         verb_cancel=None,
-        uppercase_title=False,
     )
 
     count = num_of_shares // 2 + 1
@@ -203,7 +202,6 @@ async def slip39_prompt_number_of_shares(
         description="= total number of unique word lists used for wallet backup",
         verb="BEGIN",
         verb_cancel=None,
-        uppercase_title=False,
     )
 
     count = 5
