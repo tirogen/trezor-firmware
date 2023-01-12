@@ -1,4 +1,3 @@
-#[cfg(any(feature = "model_tt", feature = "model_tr"))]
 pub mod loader;
 
 use super::{
@@ -26,7 +25,7 @@ use crate::{
 };
 use core::slice;
 
-#[cfg(any(feature = "model_tt", feature = "model_tr"))]
+// Reexports
 pub use loader::{loader, loader_indeterminate, LOADER_MAX, LOADER_MIN};
 
 pub fn backlight() -> i32 {

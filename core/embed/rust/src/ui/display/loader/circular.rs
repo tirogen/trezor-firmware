@@ -6,7 +6,6 @@ use crate::{
         geometry::{Offset, Point, Rect},
     },
 };
-use core::slice::from_raw_parts;
 
 #[cfg(feature = "dma2d")]
 use crate::trezorhal::{
@@ -18,9 +17,6 @@ use crate::ui::{
     constant::{screen, LOADER_OUTER},
     display::toif_info_ensure,
 };
-
-pub const LOADER_MIN: u16 = 0;
-pub const LOADER_MAX: u16 = 1000;
 
 const LOADER_SIZE: i32 = (LOADER_OUTER * 2.0) as i32;
 
@@ -35,7 +31,7 @@ const INNER_OUTER_ANTI: i32 = ((INNER + 2.5) * (INNER + 2.5)) as i32;
 const OUTER_OUT_ANTI: i32 = ((OUTER - 1.5) * (OUTER - 1.5)) as i32;
 const OUTER_MAX: i32 = ((OUTER - 0.5) * (OUTER - 0.5)) as i32;
 
-pub fn loader_uncompress(
+pub fn loader_circular_uncompress(
     y_offset: i16,
     fg_color: Color,
     bg_color: Color,
@@ -61,29 +57,24 @@ pub fn loader_uncompress(
     }
 }
 
-#[no_mangle]
-pub extern "C" fn loader_uncompress_r(
-    y_offset: cty::int32_t,
-    fg_color: cty::uint16_t,
-    bg_color: cty::uint16_t,
-    icon_color: cty::uint16_t,
-    progress: cty::int32_t,
-    indeterminate: cty::int32_t,
-    icon_data: cty::uintptr_t,
-    icon_data_size: cty::uint32_t,
+pub fn loader_circular(
+    progress: u16,
+    y_offset: i16,
+    fg_color: Color,
+    bg_color: Color,
+    icon: Option<(&[u8], Color)>,
 ) {
-    let fg = Color::from_u16(fg_color);
-    let bg = Color::from_u16(bg_color);
-    let ic_color = Color::from_u16(icon_color);
+    loader_circular_uncompress(y_offset, fg_color, bg_color, progress, false, icon);
+}
 
-    let i = if icon_data != 0 {
-        let data_slice = unsafe { from_raw_parts(icon_data as _, icon_data_size as _) };
-        Some((data_slice, ic_color))
-    } else {
-        None
-    };
-
-    loader_uncompress(y_offset as _, fg, bg, progress as _, indeterminate != 0, i);
+pub fn loader_circular_indeterminate(
+    progress: u16,
+    y_offset: i16,
+    fg_color: Color,
+    bg_color: Color,
+    icon: Option<(&[u8], Color)>,
+) {
+    loader_circular_uncompress(y_offset, fg_color, bg_color, progress, true, icon);
 }
 
 #[inline(always)]
@@ -373,24 +364,4 @@ pub fn loader_rust(
     }
 
     dma2d_wait_for_transfer();
-}
-
-pub fn loader(
-    progress: u16,
-    y_offset: i16,
-    fg_color: Color,
-    bg_color: Color,
-    icon: Option<(&[u8], Color)>,
-) {
-    loader_uncompress(y_offset, fg_color, bg_color, progress, false, icon);
-}
-
-pub fn loader_indeterminate(
-    progress: u16,
-    y_offset: i16,
-    fg_color: Color,
-    bg_color: Color,
-    icon: Option<(&[u8], Color)>,
-) {
-    loader_uncompress(y_offset, fg_color, bg_color, progress, true, icon);
 }
