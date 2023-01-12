@@ -18,6 +18,7 @@ def confirm_action(
     verb: str = "CONFIRM",
     verb_cancel: str | None = None,
     hold: bool = False,
+    hold_danger: bool = False,  # unused on TR
     reverse: bool = False,
 ) -> object:
     """Confirm action."""
@@ -92,7 +93,9 @@ def tutorial() -> object:
 # rust/src/ui/model_tr/layout.rs
 def confirm_fido(
     *,
+    title: str,
     app_name: str,
+    icon_name: str | None,  # unused on TR
     accounts: list[str | None],
 ) -> int | object:
     """FIDO confirmation.

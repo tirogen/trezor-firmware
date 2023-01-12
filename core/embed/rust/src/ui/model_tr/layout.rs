@@ -963,7 +963,7 @@ pub static mp_module_trezorui2: Module = obj_module! {
     ///     verb: str = "CONFIRM",
     ///     verb_cancel: str | None = None,
     ///     hold: bool = False,
-    ///     hold_danger: bool = False,
+    ///     hold_danger: bool = False,  # unused on TR
     ///     reverse: bool = False,
     /// ) -> object:
     ///     """Confirm action."""
@@ -1031,7 +1031,9 @@ pub static mp_module_trezorui2: Module = obj_module! {
 
     /// def confirm_fido(
     ///     *,
+    ///     title: str,
     ///     app_name: str,
+    ///     icon_name: str | None,  # unused on TR
     ///     accounts: list[str | None],
     /// ) -> int | object:
     ///     """FIDO confirmation.
