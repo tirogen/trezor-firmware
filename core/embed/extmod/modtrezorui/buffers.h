@@ -38,8 +38,10 @@
 #define TEXT_BUFFER_SIZE (BUFFER_PIXELS * TEXT_BUFFER_HEIGHT) / 2
 #define JPEG_BUFFER_SIZE (BUFFER_PIXELS * 16)
 
-// 3100 is needed according to tjpgd docs, 6 << 10 is for huffman decoding table
-#define JPEG_WORK_SIZE (3100 + (6 << 10))
+// 3100 is needed according to tjpgd docs,
+// 256 because we need non overlapping memory in rust
+// 6 << 10 is for huffman decoding table
+#define JPEG_WORK_SIZE (3100 + 256 + (6 << 10))
 
 #if defined BOOTLOADER
 #define BUFFER_SECTION __attribute__((section(".buf")))
