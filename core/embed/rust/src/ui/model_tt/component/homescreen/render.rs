@@ -20,7 +20,7 @@ use crate::{
 use crate::ui::{
     component::text::TextStyle,
     constant::{HEIGHT, WIDTH},
-    display::tjpgd::{jd_decomp, jd_init, jd_prepare, jpeg_info, JDEC, JRESULT},
+    display::tjpgd::{jd_decomp, jd_init, jd_prepare, jpeg_info, JDEC},
     model_tt::theme,
     util::icon_text_center,
 };
@@ -443,12 +443,12 @@ pub fn homescreen_blurred(data: &[u8], texts: &[HomescreenText]) {
 
     let mut jpeg_ok = jpeg_size.x == WIDTH && jpeg_size.y == HEIGHT && mcu_height <= 16;
     let mut jd: JDEC = jd_init(data);
-    if jd_prepare(&mut jd) != JRESULT::OK {
+    if jd_prepare(&mut jd).is_err() {
         jpeg_ok = false;
     }
 
     if jpeg_ok {
-        jd_decomp(&mut jd, 0);
+        let _ = jd_decomp(&mut jd, 0);
     }
     let mcu_height = mcu_height as i16;
 
@@ -471,7 +471,7 @@ pub fn homescreen_blurred(data: &[u8], texts: &[HomescreenText]) {
         blurring.inc_add();
 
         if (blurring.get_line_num() % mcu_height) == 0 && jpeg_ok {
-            jd_decomp(&mut jd, 0);
+            let _ = jd_decomp(&mut jd, 0);
         }
     }
 
@@ -513,7 +513,7 @@ pub fn homescreen_blurred(data: &[u8], texts: &[HomescreenText]) {
             && (blurring.get_line_num() < HEIGHT)
             && jpeg_ok
         {
-            jd_decomp(&mut jd, 0);
+            let _ = jd_decomp(&mut jd, 0);
         }
     }
     dma2d_wait_for_transfer();
@@ -558,7 +558,7 @@ pub fn homescreen(
     let mut jpeg_ok = jpeg_size.x == WIDTH && jpeg_size.y == HEIGHT && mcu_height <= 16;
 
     let mut jd: JDEC = jd_init(data);
-    if jd_prepare(&mut jd) != JRESULT::OK {
+    if jd_prepare(&mut jd).is_err() {
         jpeg_ok = false;
     }
 
@@ -568,7 +568,7 @@ pub fn homescreen(
 
     for y in 0..HEIGHT {
         if (y % mcu_height) == 0 && jpeg_ok {
-            jd_decomp(&mut jd, 0);
+            let _ = jd_decomp(&mut jd, 0);
         }
 
         let done = homescreen_line(&icon_data, text_buffer, text_info, jd.buffer, mcu_height, y);
