@@ -19,6 +19,7 @@ use crate::{
             image::BlendedImage,
             paginated::{PageMsg, Paginate},
             painter,
+            placed::GridPlaced,
             text::{
                 paragraphs::{
                     Checklist, Paragraph, ParagraphSource, ParagraphStrType, ParagraphVecLong,
@@ -26,7 +27,7 @@ use crate::{
                 },
                 TextStyle,
             },
-            Border, Component, Empty, Timeout, TimeoutMsg,
+            Border, Component, Empty, FormattedText, Timeout, TimeoutMsg,
         },
         geometry,
         layout::{
@@ -317,6 +318,16 @@ where
     }
 }
 
+impl<T, S> ComponentMsgObj for (GridPlaced<Paragraphs<T>>, GridPlaced<FormattedText<S, S>>)
+where
+    T: ParagraphSource,
+    S: AsRef<str>,
+{
+    fn msg_try_into_obj(&self, _msg: Self::Msg) -> Result<Obj, Error> {
+        unreachable!()
+    }
+}
+
 extern "C" fn new_confirm_action(n_args: usize, args: *const Obj, kwargs: *mut Map) -> Obj {
     let block = move |_args: &[Obj], kwargs: &Map| {
         let title: StrBuffer = kwargs.get(Qstr::MP_QSTR_title)?.try_into()?;
@@ -468,22 +479,38 @@ extern "C" fn new_confirm_properties(n_args: usize, args: *const Obj, kwargs: *m
 extern "C" fn new_confirm_reset_device(n_args: usize, args: *const Obj, kwargs: *mut Map) -> Obj {
     let block = move |_args: &[Obj], kwargs: &Map| {
         let title: StrBuffer = kwargs.get(Qstr::MP_QSTR_title)?.try_into()?;
-        let prompt: StrBuffer = kwargs.get(Qstr::MP_QSTR_prompt)?.try_into()?;
-        let description: StrBuffer = "\nBy continuing you agree to".into();
-        let url: StrBuffer = "https://trezor.io/tos".into();
+        let button: StrBuffer = kwargs.get(Qstr::MP_QSTR_button)?.try_into()?;
 
-        let paragraphs = Paragraphs::new([
-            Paragraph::new(&theme::TEXT_BOLD, prompt),
-            Paragraph::new(&theme::TEXT_NORMAL, description),
-            Paragraph::new(&theme::TEXT_BOLD, url),
-        ]);
-
-        let buttons = Button::cancel_confirm_text(None, "CONTINUE");
-        let obj = LayoutObj::new(Frame::left_aligned(
-            theme::label_title(),
-            title,
-            SwipePage::new(paragraphs, buttons, theme::BG),
-        ))?;
+        let paragraphs = Paragraphs::new(Paragraph::new(
+            &theme::TEXT_NORMAL,
+            StrBuffer::from("By continuing you agree\nto Trezor Company terms and conditions."),
+        ));
+        let url = FormattedText::new(
+            theme::TEXT_NORMAL,
+            theme::FORMATTED,
+            "More info at {demibold}trezor.io/tos",
+        );
+        let buttons = Button::cancel_confirm(
+            Button::with_icon(theme::ICON_CANCEL),
+            Button::with_text(button).styled(theme::button_confirm()),
+            3,
+        );
+        let obj = LayoutObj::new(
+            Frame::left_aligned(
+                theme::label_title(),
+                title,
+                Dialog::new(
+                    (
+                        GridPlaced::new(paragraphs)
+                            .with_grid(3, 1)
+                            .with_from_to((0, 0), (1, 0)),
+                        GridPlaced::new(url).with_grid(3, 1).with_row_col(2, 0),
+                    ),
+                    buttons,
+                ),
+            )
+            .with_border(theme::borders()),
+        )?;
         Ok(obj.into())
     };
     unsafe { util::try_with_args_and_kwargs(n_args, args, kwargs, block) }
@@ -1338,7 +1365,7 @@ pub static mp_module_trezorui2: Module = obj_module! {
     /// def confirm_reset_device(
     ///     *,
     ///     title: str,
-    ///     prompt: str,
+    ///     button: str,
     /// ) -> object:
     ///     """Confirm TOS before device setup."""
     Qstr::MP_QSTR_confirm_reset_device => obj_fn_kw!(0, new_confirm_reset_device).as_obj(),
