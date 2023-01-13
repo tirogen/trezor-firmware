@@ -25,9 +25,12 @@ _DEFAULT_BACKUP_TYPE = BAK_T_BIP39
 
 async def reset_device(ctx: Context, msg: ResetDevice) -> Success:
     from trezor import config
-    from trezor.ui.loader import LoadingAnimation
     from apps.common.request_pin import request_pin_confirm
-    from trezor.ui.layouts import confirm_backup, confirm_reset_device
+    from trezor.ui.layouts import (
+        confirm_backup,
+        confirm_reset_device,
+        time_based_loader,
+    )
     from trezor.crypto import bip39, random
     from trezor.messages import Success, EntropyAck, EntropyRequest
 
@@ -44,7 +47,20 @@ async def reset_device(ctx: Context, msg: ResetDevice) -> Success:
     else:
         prompt = "Do you want to create\na new wallet?"
     await confirm_reset_device(ctx, prompt)
-    await LoadingAnimation()
+
+    # Giving user the visual feedback that the device is creating the wallet.
+    # (Nothing is actually happening during this time, but it is better
+    # than seemingly freezing the screen after user confirms the action.)
+    # TODO: we might achieve the same just by showing the static screen
+    # "Creating wallet..." - and we would "save" that one second of "wasted"
+    # loader time - probably just a design decision.
+    time_based_loader(
+        "CREATING WALLET",
+        "Please wait",
+        "Wallet created!",
+        1000,
+        20,
+    )
 
     # wipe storage to make sure the device is in a clear state
     storage.reset()

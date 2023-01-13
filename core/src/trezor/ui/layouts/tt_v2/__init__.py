@@ -1169,3 +1169,47 @@ def monero_live_refresh_progress() -> ProgressLayout:
 
 def monero_transaction_progress_inner() -> ProgressLayout:
     return RustProgress("SIGNING TRANSACTION", description="")
+
+
+def time_based_loader(
+    main_text: str,
+    waiting_text: str,
+    final_text: str,
+    time_ms: int,
+    steps: int,
+) -> None:
+    """Loads a full progress bar during a given amount of time.
+
+    Used when we want to announce that some longer action is
+    about to happen, but that action cannot control the
+    classical progress bar via events.
+
+    Nothing else can happen during this time, it is more of a
+    "cheat" to indicate users something is probably
+    happening on the background.
+
+    After the loader finishes, the control flow can "finally"
+    go to the action this loader announced - so the final screen
+    will be visible for some time.
+    """
+    import utime
+    from trezor import utils
+
+    # Not slowing down builds with disabled animations
+    if utils.DISABLE_ANIMATION:
+        return
+
+    layout = RustProgress(main_text)
+
+    one_step_ms = time_ms // steps
+    one_step_progress = 1000 // steps
+
+    now = utime.ticks_ms()
+    for i in range(steps):
+        time_to_report = now + i * one_step_ms
+        while True:
+            if utime.ticks_ms() >= time_to_report:
+                layout.report(i * one_step_progress, waiting_text)
+                break
+
+    layout.report(1000, final_text)
