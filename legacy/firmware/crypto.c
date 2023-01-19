@@ -538,9 +538,10 @@ bool coin_path_check(const CoinInfo *coin, InputScriptType script_type,
         valid = valid && (address_n[3] <= 1000000);
         valid = valid && (address_n[4] <= PATH_MAX_ADDRESS_INDEX);
       } else {
-        // Casa proposed "universal multisig" pattern with unhardened components.
+        // Casa proposed "universal multisig" pattern with unhardened parts.
         // m/45'/coin_type/account/change/address_index
-        valid = valid && check_cointype(coin, address_n[1] | PATH_HARDENED, full_check);
+        valid = valid &&
+                check_cointype(coin, address_n[1] | PATH_HARDENED, full_check);
         valid = valid && (address_n[2] <= PATH_MAX_ACCOUNT);
         valid = valid && (address_n[3] <= PATH_MAX_CHANGE);
         valid = valid && (address_n[4] <= PATH_MAX_ADDRESS_INDEX);
