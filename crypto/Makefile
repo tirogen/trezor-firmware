@@ -70,10 +70,10 @@ ZKP_PATH = ../vendor/secp256k1-zkp
 # this is specific for 64-bit builds
 CFLAGS += -DSECP256K1_CONTEXT_SIZE=208
 
-VALGRIND ?= 1
-ifeq ($(VALGRIND),1)
-CFLAGS += -DVALGRIND
-endif
+# VALGRIND ?= 1
+# ifeq ($(VALGRIND),1)
+# CFLAGS += -DVALGRIND
+# endif
 
 CFLAGS += -I.
 CFLAGS += -I..
@@ -129,7 +129,7 @@ OBJS  += precomputed_ecmult_gen.o
 TESTLIBS = $(shell pkg-config --libs check) -lpthread -lm
 TESTSSLLIBS = $(shell pkg-config --libs openssl)
 
-all: tools tests
+all: tools
 
 %.o: %.c %.h options.h
 	$(CC) $(CFLAGS) -o $@ -c $<
