@@ -88,7 +88,7 @@ Issue Date: 20/12/2007
 #define _AESOPT_H
 
 #if defined( __cplusplus )
-#include "aescpp.h"
+#include "aes.h"
 #else
 #include "aes.h"
 #endif

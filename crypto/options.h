@@ -23,6 +23,14 @@
 #ifndef __OPTIONS_H__
 #define __OPTIONS_H__
 
+#ifndef AES_128
+#define AES_128 1
+#endif
+
+#ifndef AES_VAR
+#define AES_VAR 1
+#endif
+
 // use precomputed Curve Points (some scalar multiples of curve base point G)
 #ifndef USE_PRECOMPUTED_CP
 #define USE_PRECOMPUTED_CP 1
